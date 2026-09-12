@@ -1,0 +1,58 @@
+name: 🙋 Help wanted
+description: Ask for guidance when something does not work as you expect.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template when you are not sure whether the behaviour is a bug.
+
+        For a quick chat, the [AyuGram group](https://t.me/ayugramchat) is
+        usually faster than an issue.
+  - type: textarea
+    attributes:
+      label: What are you trying to do?
+      placeholder: Describe the goal, not only the error you ran into.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: What have you tried?
+      placeholder: Steps you already took, settings you already changed.
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Operating system
+      description: >
+        Your operating system name, version and desktop environment.
+        **Don't use kernel version (uname), it's useless.**
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Version of AyuGram Desktop
+      description: See Settings > AyuGram > About.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Installation source
+      multiple: false
+      options:
+        - Binary from GitHub / @AyuGramReleases channel
+        - Arch Linux (ayugram-desktop / ayugram-desktop-git)
+        - Arch Linux (ayugram-desktop-bin)
+        - flatpak by 0FL01
+        - Built from source
+        - Other (unofficial) source
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Logs
+      description: >
+        You can find log.txt using the `viewlogs`
+        [cheat code](https://github.com/telegramdesktop/tdesktop/wiki/Cheat-Codes).
+      placeholder: Insert log.txt here (if necessary)
+      render: shell

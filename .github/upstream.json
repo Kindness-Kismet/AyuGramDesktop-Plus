@@ -1,0 +1,92 @@
+{
+  "$comment": [
+    "Records which upstream state AyuGram is adapted to. Bump the commit",
+    "fields only after the corresponding upstream changes are merged and",
+    "the build passes -- these values are the baseline every diff is",
+    "measured from, so a premature bump silently hides pending work.",
+    "Run the upstream-diff skill to compare these baselines against the",
+    "current upstream heads."
+  ],
+  "tdesktop": {
+    "repository": "telegramdesktop/tdesktop",
+    "branch": "dev",
+    "version": "7.2.8",
+    "commit": "272f6f5c2d29d8cdb3aec15907d616b87451a3ca",
+    "commit_date": "2026-09-10",
+    "synced_at": "2026-09-12",
+    "merge_commit": "e7b9b3091cb61528d9b7c51fe5dabde13e847ed3"
+  },
+  "submodules": {
+    "Telegram/lib_ui": {
+      "repository": "desktop-app/lib_ui",
+      "branch": "master",
+      "fork_point": "0b7594e385d647b40b3ed6898b6c7f0742ea6a13",
+      "$patches_comment": "Lives in the Kindness-Kismet/lib_ui fork (branch master-ui): wide message multipliers, avatar corner radius, monospace font handling.",
+      "customised_paths": [
+        "CMakeLists.txt",
+        "ayu/",
+        "ui/basic.style",
+        "ui/colors.palette",
+        "ui/effects/panel_animation.cpp",
+        "ui/image/image_prepare.cpp",
+        "ui/image/image_prepare.h",
+        "ui/integration.cpp",
+        "ui/integration.h",
+        "ui/layers/layers.style",
+        "ui/style/style_core_font.cpp",
+        "ui/text/text.h",
+        "ui/text/text_entity.h",
+        "ui/text/text_utilities.cpp",
+        "ui/text/text_utilities.h",
+        "ui/widgets/checkbox.cpp",
+        "ui/widgets/fields/input_field.cpp",
+        "ui/widgets/popup_menu.cpp",
+        "ui/widgets/widgets.style",
+        "ui/wrap/slide_wrap.cpp",
+        "ui/wrap/slide_wrap.h"
+      ]
+    },
+    "Telegram/lib_tl": {
+      "repository": "desktop-app/lib_tl",
+      "branch": "master",
+      "fork_point": "29746d31247c915a9ec870241399a9d103c39f87",
+      "$patches_comment": "Rewrites is_noforwards/is_restricted so the client ignores them.",
+      "customised_paths": [
+        "tl/generate_tl.py"
+      ]
+    },
+    "Telegram/codegen": {
+      "repository": "desktop-app/codegen",
+      "branch": "master",
+      "fork_point": "51cc8c564555914f0cf2f9eba9e9ea9df339192a",
+      "$patches_comment": "Wide message multipliers applied while generating styles.",
+      "customised_paths": [
+        "codegen/style/generator.cpp",
+        "codegen/style/generator.h"
+      ]
+    },
+    "cmake": {
+      "repository": "desktop-app/cmake_helpers",
+      "branch": "master",
+      "fork_point": "428f37a41f936922cd3bb0159a357cca22ad359c",
+      "$patches_comment": "No fork. Points at the official submodule; customisations are applied at build time by scripts/build_support/cmake_patch.py: LIBS_LOC override in variables.cmake / validate_special_target.cmake, Python3_EXECUTABLE guard in the root CMakeLists.txt, cmark-gfm warning suppression.",
+      "customised_paths": [
+        "external/cmark_gfm/CMakeLists.txt",
+        "validate_special_target.cmake",
+        "variables.cmake"
+      ]
+    },
+    "Telegram/lib_icu": {
+      "repository": null,
+      "$comment": "Authored by AyuGram, no upstream to track."
+    }
+  },
+  "deferred": {
+    "$comment": "Upstream changes we deliberately do not follow yet. prepare marks matching paths in the manifest so the decision does not silently drift.",
+    "Telegram/ThirdParty/rlottie": "上游改用 tlottie 预编译库；跟随需连带 prebuild stage 与 lib_lottie 指针，暂缓",
+    "Telegram/lib_lottie": "上游 master 已切 external_tlottie，跟随需 prebuild 支撑，暂缓",
+    "Telegram/lib_base": "指针保持 7.2.5；出现编译必需的新接口时再 bump",
+    "Telegram/lib_spellcheck": "指针保持 7.2.5；同上",
+    "Telegram/lib_webview": "指针保持 7.2.5；同上"
+  }
+}

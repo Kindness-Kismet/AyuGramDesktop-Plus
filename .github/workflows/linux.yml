@@ -1,0 +1,193 @@
+name: Linux
+
+on:
+  push:
+    # Pushes to the canary branches run only canary.yml, see there.
+    branches-ignore:
+      - public-canary
+      - private-canary
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'changelog.txt'
+      - 'LEGAL'
+      - 'LICENSE'
+      - '.github/**'
+      - '!.github/workflows/linux.yml'
+      - 'snap/**'
+      - 'scripts/**'
+      - 'Telegram/build/**'
+      - '!Telegram/build/docker/centos_env/**'
+      - 'Telegram/Resources/uwp/**'
+      - 'Telegram/Resources/winrc/**'
+      - 'Telegram/SourceFiles/platform/win/**'
+      - 'Telegram/SourceFiles/platform/mac/**'
+      - 'Telegram/Telegram/**'
+      - 'Telegram/configure.bat'
+      - 'Telegram/Telegram.plist'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'changelog.txt'
+      - 'LEGAL'
+      - 'LICENSE'
+      - '.github/**'
+      - '!.github/workflows/linux.yml'
+      - 'snap/**'
+      - 'scripts/**'
+      - 'Telegram/build/**'
+      - '!Telegram/build/docker/centos_env/**'
+      - 'Telegram/Resources/uwp/**'
+      - 'Telegram/Resources/winrc/**'
+      - 'Telegram/SourceFiles/platform/win/**'
+      - 'Telegram/SourceFiles/platform/mac/**'
+      - 'Telegram/Telegram/**'
+      - 'Telegram/configure.bat'
+      - 'Telegram/Telegram.plist'
+  workflow_dispatch:
+
+concurrency:
+  group: linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Rocky Linux 8
+    runs-on: ubuntu-latest
+
+    env:
+      UPLOAD_ARTIFACT: 'true'
+      IMAGE_TAG: ayugram:centos_env
+
+    steps:
+      - name: Clone.
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: First set up.
+        run: |
+          sudo apt update
+          curl -sSL https://install.python-poetry.org | python3 -
+          curl -sSL https://github.com/ccache/ccache/releases/download/v4.13.6/ccache-4.13.6-linux-x86_64-glibc.tar.xz \
+          | sudo tar xJ -C /usr/local/bin --strip-components=1 ccache-4.13.6-linux-x86_64-glibc/ccache
+          echo "CCACHE_DIR=$RUNNER_TEMP/.ayugram-cache" >> $GITHUB_ENV
+          cd Telegram/build/docker/centos_env
+          poetry install
+          DOCKERFILE=$(DEBUG= LTO= poetry run gen_dockerfile)
+          echo "$DOCKERFILE" > Dockerfile
+          rm -rf __pycache__
+
+      - name: Free up some disk space.
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
+        with:
+          tool-cache: true
+
+      - name: Set up Docker Buildx.
+        id: setup-buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Libraries cache.
+        id: cache-libs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/.buildx-cache
+            ${{ runner.temp }}/.mount-cache
+          key: ${{ runner.OS }}-libs-${{ hashFiles('Telegram/build/docker/centos_env/**') }}
+          restore-keys: ${{ runner.OS }}-libs-
+
+      - name: Restore Docker cache mounts.
+        uses: reproducible-containers/buildkit-cache-dance@5422eac04292c961a382e0f584ea0f03ad9da723
+        with:
+          builder: ${{ steps.setup-buildx.outputs.name }}
+          cache-dir: ${{ runner.temp }}/.mount-cache
+          dockerfile: Telegram/build/docker/centos_env/Dockerfile
+          skip-extraction: ${{ steps.cache-libs.outputs.cache-hit }}
+
+      - name: Libraries.
+        uses: docker/build-push-action@v6
+        with:
+          context: Telegram/build/docker/centos_env
+          load: true
+          tags: ${{ env.IMAGE_TAG }}
+          cache-from: type=local,src=${{ runner.temp }}/.buildx-cache
+          cache-to: type=local,dest=${{ runner.temp }}/.buildx-cache-new,mode=max
+
+      - name: Move cache.
+        run: |
+          rm -rf ${{ runner.temp }}/.buildx-cache
+          mv ${{ runner.temp }}/.buildx-cache{-new,}
+
+      - name: Restore build cache.
+        id: cache-build
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.OS }}-ayugram-${{ github.run_id }}
+          restore-keys: ${{ runner.OS }}-ayugram-
+
+      - name: AyuGram Desktop build.
+        run: |
+          ccache -z
+
+          docker run --rm \
+          -u $(id -u) \
+          -v $PWD:/usr/src/tdesktop \
+          -v ${{ env.CCACHE_DIR }}:/var/cache/ccache \
+          -e CONFIG=Debug \
+          -e CCACHE_SLOPPINESS=pch_defines,time_macros \
+          $IMAGE_TAG \
+          env -u CCACHE_DISABLE /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
+          -D CMAKE_CONFIGURATION_TYPES=Debug \
+          -D CMAKE_C_FLAGS_DEBUG="-O0 -fpch-preprocess" \
+          -D CMAKE_CXX_FLAGS_DEBUG="-O0 -fpch-preprocess" \
+          -D TDESKTOP_API_TEST=ON \
+          -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF \
+          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF
+
+      - name: Count ccache misses.
+        id: ccache-stats
+        run: |
+          MISSES=$(ccache --print-stats | sed -n 's/^cache_miss\t//p' | head -1)
+          case "$MISSES" in (*[!0-9]*|'') MISSES=0;; esac
+          echo "misses=$MISSES" >> $GITHUB_OUTPUT
+          echo "ccache misses this run: $MISSES"
+
+      - name: Save build cache.
+        if: >
+          github.ref_name == github.event.repository.default_branch
+            && fromJSON(steps.ccache-stats.outputs.misses) > 300
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.cache-build.outputs.cache-primary-key }}
+
+      - name: Check.
+        run: |
+          filePath="out/Debug/AyuGram"
+          if test -f "$filePath"; then
+            echo "Build successfully done! :)"
+            size=$(stat -c %s "$filePath")
+            echo "File size of ${filePath}: ${size} Bytes."
+          else
+            echo "Build error, output file does not exist."
+            exit 1
+          fi
+
+      - name: Move artifact.
+        if: env.UPLOAD_ARTIFACT == 'true'
+        run: |
+          cd out/Debug
+          mkdir artifact
+          mv AyuGram artifact/
+          test -f Updater && mv Updater artifact/ || true
+
+      - uses: actions/upload-artifact@v4
+        if: env.UPLOAD_ARTIFACT == 'true'
+        name: Upload artifact.
+        with:
+          name: AyuGram-Linux
+          path: out/Debug/artifact/
+          retention-days: 7

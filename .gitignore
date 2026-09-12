@@ -1,0 +1,102 @@
+/out/
+/build/
+Debug/
+Release/
+# 上面两条是 MSVC 输出目录，但 Windows/macOS 的 git 大小写不敏感，会一并吞掉
+# 源码里的 ayu/debug/。目录必须显式放行，放行目录内的单个文件是无效的。
+!/Telegram/SourceFiles/ayu/debug/
+/ThirdParty/
+/Telegram/build/target
+/Telegram/build/ai-machine-tag
+/Telegram/tests/
+/Telegram/gyp/tests/*.test
+/Telegram/out/
+/Telegram/*.user
+*.vcxproj*
+*.sln
+*.suo
+*.sdf
+*.opensdf
+*.opendb
+*.VC.db
+*.aps
+*.xcodeproj
+ipch/
+.vs/
+.vscode/
+.cache/
+compile_commands.json
+
+/Telegram/log.txt
+/Telegram/data
+/Telegram/data_config
+/Telegram/DebugLogs/
+/Telegram/tdata/
+/Telegram/tdumps/
+
+.DS_Store
+._*
+.qmake.stash
+/Mac/
+project.xcworkspace
+xcuserdata
+
+parts
+prime
+stage
+*.snap
+.snapcraft
+/snap/gui/*.png
+/snap/gui/*.desktop
+/snap/plugins/__pycache__
+__pycache__/
+*.pyc
+
+/Telegram/*.user.*
+*.txt.user
+*.pro.user
+/Linux/
+/Telegram/Makefile
+*.*~
+.idea/
+cmake-build-debug/
+*.qsb
+
+# Local configuration files
+settings.local.json
+*.local.json
+.env
+.env.local
+.env.*.local
+
+# Cursor IDE local settings (but keep .cursor/rules/)
+.cursor/*
+!.cursor/rules/
+
+# AI work folder (session-specific, not for version control)
+.ai
+
+# AI assistant config: only shared skills are tracked, local settings stay out
+.claude/*
+!.claude/skills/
+.codex/*
+!.codex/skills/
+
+# Pi agent state: only the shared settings file is tracked
+.pi/*
+!.pi/settings.json
+
+# Python bytecode from skill scripts
+__pycache__/
+
+# Generated changelog page (built by CI, deployed to GitHub Pages)
+/docs/changelog/
+
+# Project specific
+Telegram/SourceFiles/_other/packer_private.h
+/Telegram/build/CMakeFiles/
+/Telegram/build/CMakeCache.txt
+/Telegram/build/.cmake/
+
+# Session exports (local conversation dumps)
+pi-session*.html
