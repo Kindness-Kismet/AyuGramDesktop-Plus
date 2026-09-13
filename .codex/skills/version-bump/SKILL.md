@@ -9,9 +9,8 @@ description: "Verify and record the official version bump after adapting upstrea
 
 版本号跟随官方 tdesktop，不自行发明。上游适配（upstream-diff skill）完成时，
 `Telegram/build/version`、`version.h`、两个 `.rc` 已随适配更新为官方版本号并保留
-AyuGram 品牌。本 skill 是适配流程的收尾环节：核对版本一致性，补全登记字段。
-
-不存在独立的发版提交与更新日志；版本号变化包含在上游适配提交里。
+AyuGram 品牌。本 skill 是适配流程的收尾环节：核对版本一致性，补全登记字段，
+并把 `.github/CHANGELOG.md` 更新到新版本。
 
 ## 触发时机
 
@@ -53,6 +52,25 @@ python .claude/skills/version-bump/scripts/version_sync.py --write   # 校验 + 
   的产物定位，适配完成后的首次 `app.ensure` 会自动使用新目录，旧目录的 `tdata`
   需要人工迁移一次
 
+## 更新日志
+
+`.github/CHANGELOG.md` 是发布说明的唯一来源，Release 流程直接把它的内容作为
+发布正文。每个版本一个 `## <版本>` 小节，按下列顺序组织：
+
+1. **官方段**：从上游 `changelog.txt` 提炼该大版本的用户可见变化，只保留
+   功能性条目，修复崩溃类的琐碎条目可省略
+2. **自身段**：本仓库在上次发布之后累积的改动，逐条列出用户能感知的变化
+
+每段先英文后中文，中文段与英文段内容一一对应，用 `---` 分隔。
+
+写作要求：
+
+- 面向最终用户，只写“新增了什么、改了什么、修了什么”
+- 不写内部实现、不写开发过程、不写提交号
+- 用词平实，不使用术语和缩写
+
+版本提升时把新版本小节加在文件头部；发布后的改动记入下一个版本的小节。
+
 ## 提交
 
 `--write` 改动了 `upstream.json` 时单独提交，标题：
@@ -61,4 +79,4 @@ python .claude/skills/version-bump/scripts/version_sync.py --write   # 校验 + 
 chore: sync version tracking to <版本>
 ```
 
-版本文件本身不产生额外提交（已包含在上游适配提交里）。
+CHANGELOG 的更新与版本文件一起包含在上游适配提交里，不单独提交。

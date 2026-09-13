@@ -2,10 +2,8 @@ name: MacOS
 
 on:
   push:
-    # Pushes to the canary branches run only canary.yml, see there.
-    branches-ignore:
-      - public-canary
-      - private-canary
+    branches:
+      - main
     paths-ignore:
       - 'docs/**'
       - '**.md'
@@ -51,23 +49,24 @@ jobs:
   macos:
     name: MacOS
     runs-on: macos-latest
+    timeout-minutes: 359
 
     env:
-      UPLOAD_ARTIFACT: 'true'
       PREPARE_PATH: 'Telegram/build/prepare/prepare.py'
 
     steps:
       - name: Get repository name.
         run: echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
 
-      - name: Clone.
-        uses: actions/checkout@v4
+      - name: Check out repository.
+        uses: actions/checkout@v7
         with:
           submodules: recursive
           path: ${{ env.REPO_NAME }}
 
       - name: First set up.
         run: |
+          set -euo pipefail
           sudo chown -R `whoami`:admin /usr/local/share
 
           brew update
@@ -79,12 +78,9 @@ jobs:
 
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
-          # tdesktop links a stripped Debug build; -g would blow up link time.
-          sudo sed -i '' '/CMAKE_${lang}_FLAGS_DEBUG_INIT/s/ -g//' /opt/homebrew/share/cmake/Modules/Compiler/GNU.cmake
-
-      - name: Libraries cache.
+      - name: Restore libraries cache.
         id: cache-libs
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             Libraries
@@ -92,29 +88,46 @@ jobs:
           key: ${{ runner.OS }}-libs-${{ hashFiles(format('{0}/{1}', env.REPO_NAME, env.PREPARE_PATH)) }}
           restore-keys: ${{ runner.OS }}-libs-
 
-      - name: Libraries.
+      - name: Build dependencies.
         run: |
-          ./$REPO_NAME/Telegram/build/prepare/mac.sh skip-release silent
+          set -euo pipefail
+          # 正式版不传 skip-release，依赖按 Release 配置编译
+          ./$REPO_NAME/Telegram/build/prepare/mac.sh silent
 
-      - name: Free up some disk space.
-        run: find Libraries '(' '(' ! '(' -name '*.a' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -name '*.pc' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' -o -perm +111 ')' -type f ')' -o -empty ')' -delete
-
-      - name: AyuGram Desktop build.
+      - name: Free up disk space.
         run: |
+          set -euo pipefail
+          find Libraries '(' '(' ! '(' -name '*.a' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -name '*.pc' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' -o -perm +111 ')' -type f ')' -o -empty ')' -delete
+
+      # 瘦身后立即入库，后续构建失败不再连带丢失依赖缓存
+      - name: Save libraries cache.
+        if: steps.cache-libs.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            Libraries
+            ThirdParty
+          key: ${{ steps.cache-libs.outputs.cache-primary-key }}
+
+      - name: Build AyuGram Desktop.
+        run: |
+          set -euo pipefail
           cd $REPO_NAME/Telegram
 
           ./configure.sh \
-          -D CMAKE_CONFIGURATION_TYPES=Debug \
+          -D CMAKE_CONFIGURATION_TYPES=Release \
           -D CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
-          -D TDESKTOP_API_TEST=ON \
+          -D TDESKTOP_API_ID=2040 \
+          -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
           -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF \
           -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF
 
-          cmake --build ../out --config Debug --parallel
+          cmake --build ../out --config Release --parallel
 
-      - name: Check.
+      - name: Check release output.
         run: |
-          appPath="$REPO_NAME/out/Debug/AyuGram.app"
+          set -euo pipefail
+          appPath="$REPO_NAME/out/Release/AyuGram.app"
           if test -d "$appPath"; then
             echo "Build successfully done! :)"
           else
@@ -122,18 +135,19 @@ jobs:
             exit 1
           fi
 
-      - name: Move artifact.
-        if: env.UPLOAD_ARTIFACT == 'true'
+      - name: Package release output.
         run: |
-          cd $REPO_NAME/out/Debug
-          mkdir artifact
-          mv AyuGram.app artifact/
-          test -f Updater && mv Updater artifact/ || true
+          set -euo pipefail
+          version=$(sed -n 's/^AppVersionStrSmall //p' $REPO_NAME/Telegram/build/version)
+          test -n "$version"
+          cd $REPO_NAME/out/Release
+          rm -f "AyuGram-v${version}-macos.zip"
+          zip -r "AyuGram-v${version}-macos.zip" AyuGram.app
+          test ! -f Updater || zip "AyuGram-v${version}-macos.zip" Updater
 
-      - uses: actions/upload-artifact@v4
-        if: env.UPLOAD_ARTIFACT == 'true'
-        name: Upload artifact.
+      - name: Upload artifact.
+        uses: actions/upload-artifact@v7
         with:
           name: AyuGram-macOS
-          path: ${{ env.REPO_NAME }}/out/Debug/artifact/
+          path: ${{ env.REPO_NAME }}/out/Release/AyuGram-v*-macos.zip
           retention-days: 7

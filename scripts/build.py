@@ -38,6 +38,8 @@ def main() -> None:
             api_hash=args.api_hash,
             reconfigure=args.reconfigure,
             jobs=args.jobs,
+            pack=args.pack,
+            clean_pack=args.clean_pack,
         )
 
 
@@ -92,6 +94,16 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=8,
         help="Parallel compile jobs (default: 8)",
+    )
+    parser.add_argument(
+        "--pack",
+        action="store_true",
+        help="Package the output directory into a zip archive under build/",
+    )
+    parser.add_argument(
+        "--clean-pack",
+        action="store_true",
+        help="Remove runtime leftovers from the output directory before packaging",
     )
     args = parser.parse_args()
     args.configurations = resolve_configurations(args)

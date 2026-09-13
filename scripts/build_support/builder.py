@@ -1,7 +1,9 @@
+import os
 import shutil
 import subprocess
 import sys
 import time
+import zipfile
 from pathlib import Path
 
 from build_support.cmake_patch import LIBS_LOC_OPTION, PYTHON_OPTION, ensure_libs_loc_override
@@ -37,7 +39,40 @@ def output_dir(profile: str) -> Path:
     return BUILD_DIR / f"{APP_NAME}-v{version}-win-x64-{profile}"
 
 
-def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bool, jobs: int | None) -> None:
+def clean_output_dir(profile: str) -> int:
+    """删除产物目录里的运行残留，只保留构建产物，返回删除项数。"""
+    directory = output_dir(profile)
+    wanted = set(PRODUCT_BINARIES + (DEBUG_SYMBOLS if profile == "dev" else ()))
+    removed = 0
+    for entry in directory.iterdir():
+        if entry.name in wanted:
+            continue
+        if entry.is_dir():
+            shutil.rmtree(entry, ignore_errors=True)
+        else:
+            entry.unlink(missing_ok=True)
+        removed += 1
+    return removed
+
+
+def zip_output(profile: str) -> Path:
+    # release 是发布产物不带后缀，dev 本地调试用带 -dev 区分
+    version = parse_version(read_current_version()).original
+    suffix = "" if profile == "release" else f"-{profile}"
+    archive = BUILD_DIR / f"{APP_NAME}-v{version}-win-x64{suffix}.zip"
+    if archive.exists():
+        archive.unlink()
+    # 目录里可能残留运行期数据（tdata、日志），只打包构建产物本身
+    wanted = PRODUCT_BINARIES + (DEBUG_SYMBOLS if profile == "dev" else ())
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
+        for name in wanted:
+            source = output_dir(profile) / name
+            if source.is_file():
+                bundle.write(source, name)
+    return archive
+
+
+def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bool, jobs: int | None, pack: bool = False, clean_pack: bool = False) -> None:
     environment = msvc_environment()
     # cmake/external/qt 靠 %QT% 定位 Qt-<版本> 目录，缺失会直接 FATAL_ERROR
     environment["QT"] = QT_VERSION
@@ -69,6 +104,14 @@ def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bo
             compile_target(environment, cmake_config, jobs)
         with timed_step(f"Collect {cmake_config}"):
             produced.extend(collect(cmake_config, profile))
+        if pack:
+            if clean_pack:
+                with timed_step(f"Clean {cmake_config} output"):
+                    removed = clean_output_dir(profile)
+                    print(f"  removed {removed} runtime entries", flush=True)
+            with timed_step(f"Package {cmake_config}"):
+                archive = zip_output(profile)
+                print(f"  {archive.name}  {format_bytes(archive.stat().st_size)}", flush=True)
 
     total = sum(path.stat().st_size for _, path in produced)
     print_summary(
@@ -132,7 +175,11 @@ def compile_target(environment: dict[str, str], cmake_config: str, jobs: int | N
         command.extend(["--parallel", str(jobs)])
     # /MP 会让每个 cl.exe 再自行开满逻辑核，绕过 --parallel。Telegram 的 PCH 约
     # 514 MB 且每个进程各映射一份，撞上提交上限就是 C3859/C1076，故显式限流。
-    command.extend(["--", f"/p:CL_MPCount={jobs or _DEFAULT_CL_JOBS}"])
+    msbuild_args = [f"/p:CL_MPCount={jobs or _DEFAULT_CL_JOBS}"]
+    # /m 与 /MP 相乘才是真实并发，云端 16 GB 内存会僵死 runner
+    if os.environ.get("AYUGRAM_SINGLE_PROJECT_BUILD") == "1":
+        msbuild_args.insert(0, "/m:1")
+    command.extend(["--"] + msbuild_args)
     run(command, ROOT, environment, f"Build {cmake_config}")
 
 

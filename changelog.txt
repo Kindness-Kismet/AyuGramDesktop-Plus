@@ -1,0 +1,5 @@
+7.2.8 (13.09.26)
+- Sync with upstream Telegram Desktop 7.2.8
+- Automatic spacing between CJK and Latin text
+- Simplified Chinese translation built in
+- UI customization options

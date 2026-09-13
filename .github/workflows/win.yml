@@ -2,10 +2,8 @@ name: Windows
 
 on:
   push:
-    # Pushes to the canary branches run only canary.yml, see there.
-    branches-ignore:
-      - public-canary
-      - private-canary
+    branches:
+      - main
     paths-ignore:
       - 'docs/**'
       - '**.md'
@@ -53,21 +51,22 @@ jobs:
   windows:
     name: Windows x64
     runs-on: windows-latest
+    timeout-minutes: 359
 
     env:
-      UPLOAD_ARTIFACT: 'true'
-      # 每个 cl.exe 各映射一份约 514 MB 的 PCH，runner 只有 16 GB，
-      # 并发开满会撞提交上限并报 C3859/C1076。
-      BUILD_JOBS: '4'
+      # /m 与 /MP 相乘耗尽内存会僵死 runner，锁定单项目串行
+      AYUGRAM_SINGLE_PROJECT_BUILD: '1'
+      # tg_owt 模板单元单个 2 GB 以上，并发顶格 2
+      BUILD_JOBS: '2'
 
     steps:
-      - name: Clone.
-        uses: actions/checkout@v4
+      - name: Check out repository.
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Set up Python.
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -76,47 +75,72 @@ jobs:
         with:
           arch: x64
 
-      - name: Free up some disk space.
+      - name: Free up disk space.
         shell: bash
         run: |
+          set -euo pipefail
           rm -rf "/c/Program Files/dotnet" || true
           rm -rf "/c/Program Files (x86)/Android" || true
           rm -rf "/c/Program Files/Microsoft SDKs/Azure" || true
           df -h /c
 
-      - name: Libraries cache.
+      - name: Restore libraries cache.
         id: cache-libs
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v6
         with:
-          path: build/tmp/Libraries
-          key: ${{ runner.OS }}-libs-${{ hashFiles('scripts/build_support/recipes.py') }}
-          restore-keys: ${{ runner.OS }}-libs-
+          path: |
+            build/tmp/Libraries
+            build/tmp/ThirdParty
+          key: win-libs-${{ hashFiles('scripts/prebuild.py', 'scripts/build_support/recipes.py', 'scripts/build_support/dependency_cache.py') }}
+          restore-keys: win-libs-
 
-      - name: Libraries.
+      # 缓存归档保不住符号链接，msys2 的 mtab 与 dev 由运行时重建
+      - name: Clean broken msys2 links.
+        if: steps.cache-libs.outputs.cache-hit == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f build/tmp/ThirdParty/msys64/etc/mtab
+          rm -rf build/tmp/ThirdParty/msys64/dev || true
+
+      - name: Build dependencies.
         shell: cmd
         run: python scripts/prebuild.py
 
-      - name: AyuGram Desktop build.
-        shell: cmd
-        run: python scripts/build.py --jobs %BUILD_JOBS%
-
-      - name: Check.
+      # 中间产物不入库可把缓存压到 10 GB 限制内，恢复后阶段标记仍完整
+      - name: Trim intermediate build files.
         shell: bash
         run: |
-          filePath="build/packages/release/AyuGram.exe"
-          if test -f "$filePath"; then
-            echo "Build successfully done! :)"
-            size=$(stat -c %s "$filePath")
-            echo "File size of ${filePath}: ${size} Bytes."
-          else
-            echo "Build error, output file does not exist."
-            exit 1
-          fi
+          set -euo pipefail
+          find build/tmp/Libraries build/tmp/ThirdParty \
+            \( -name '*.obj' -o -name '*.pdb' -o -name '*.pch' \) -type f -delete
 
-      - uses: actions/upload-artifact@v4
-        if: env.UPLOAD_ARTIFACT == 'true'
-        name: Upload artifact.
+      # 依赖建好立即入库，后续构建失败不再连带丢失 prebuild 缓存
+      - name: Save libraries cache.
+        if: steps.cache-libs.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            build/tmp/Libraries
+            build/tmp/ThirdParty
+          key: ${{ steps.cache-libs.outputs.cache-primary-key }}
+
+      - name: Build AyuGram Desktop.
+        shell: cmd
+        run: python scripts/build.py --jobs %BUILD_JOBS% --pack --clean-pack
+
+      - name: Check release output.
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact=$(ls build/AyuGram-v*-win-x64.zip | head -1)
+          test -n "$artifact"
+          size=$(stat -c %s "$artifact")
+          echo "File size of ${artifact}: ${size} Bytes."
+
+      - name: Upload artifact.
+        uses: actions/upload-artifact@v7
         with:
           name: AyuGram-Windows-x64
-          path: build/packages/release/
+          path: build/AyuGram-v*-win-x64.zip
           retention-days: 7

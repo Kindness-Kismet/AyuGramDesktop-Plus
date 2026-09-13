@@ -2,14 +2,11 @@ name: Linux
 
 on:
   push:
-    # Pushes to the canary branches run only canary.yml, see there.
-    branches-ignore:
-      - public-canary
-      - private-canary
+    branches:
+      - main
     paths-ignore:
       - 'docs/**'
       - '**.md'
-      - 'changelog.txt'
       - 'LEGAL'
       - 'LICENSE'
       - '.github/**'
@@ -29,7 +26,6 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**.md'
-      - 'changelog.txt'
       - 'LEGAL'
       - 'LICENSE'
       - '.github/**'
@@ -55,19 +51,20 @@ jobs:
   linux:
     name: Rocky Linux 8
     runs-on: ubuntu-latest
+    timeout-minutes: 359
 
     env:
-      UPLOAD_ARTIFACT: 'true'
       IMAGE_TAG: ayugram:centos_env
 
     steps:
-      - name: Clone.
-        uses: actions/checkout@v4
+      - name: Check out repository.
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: First set up.
         run: |
+          set -euo pipefail
           sudo apt update
           curl -sSL https://install.python-poetry.org | python3 -
           curl -sSL https://github.com/ccache/ccache/releases/download/v4.13.6/ccache-4.13.6-linux-x86_64-glibc.tar.xz \
@@ -75,22 +72,23 @@ jobs:
           echo "CCACHE_DIR=$RUNNER_TEMP/.ayugram-cache" >> $GITHUB_ENV
           cd Telegram/build/docker/centos_env
           poetry install
+          # 正式版：DEBUG 与 LTO 均关闭
           DOCKERFILE=$(DEBUG= LTO= poetry run gen_dockerfile)
           echo "$DOCKERFILE" > Dockerfile
           rm -rf __pycache__
 
-      - name: Free up some disk space.
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
+      - name: Free up disk space.
+        uses: jlumbroso/free-disk-space@v1.3.1
         with:
           tool-cache: true
 
       - name: Set up Docker Buildx.
         id: setup-buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
-      - name: Libraries cache.
+      - name: Restore libraries cache.
         id: cache-libs
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ${{ runner.temp }}/.buildx-cache
@@ -99,15 +97,15 @@ jobs:
           restore-keys: ${{ runner.OS }}-libs-
 
       - name: Restore Docker cache mounts.
-        uses: reproducible-containers/buildkit-cache-dance@5422eac04292c961a382e0f584ea0f03ad9da723
+        uses: reproducible-containers/buildkit-cache-dance@v3.4.0
         with:
           builder: ${{ steps.setup-buildx.outputs.name }}
           cache-dir: ${{ runner.temp }}/.mount-cache
           dockerfile: Telegram/build/docker/centos_env/Dockerfile
           skip-extraction: ${{ steps.cache-libs.outputs.cache-hit }}
 
-      - name: Libraries.
-        uses: docker/build-push-action@v6
+      - name: Build dependencies.
+        uses: docker/build-push-action@v7
         with:
           context: Telegram/build/docker/centos_env
           load: true
@@ -117,39 +115,51 @@ jobs:
 
       - name: Move cache.
         run: |
+          set -euo pipefail
           rm -rf ${{ runner.temp }}/.buildx-cache
           mv ${{ runner.temp }}/.buildx-cache{-new,}
 
+      # 依赖层建好立即入库，后续应用构建失败不再连带丢失镜像缓存
+      - name: Save libraries cache.
+        if: steps.cache-libs.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ${{ runner.temp }}/.buildx-cache
+            ${{ runner.temp }}/.mount-cache
+          key: ${{ steps.cache-libs.outputs.cache-primary-key }}
+
       - name: Restore build cache.
         id: cache-build
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ runner.OS }}-ayugram-${{ github.run_id }}
           restore-keys: ${{ runner.OS }}-ayugram-
 
-      - name: AyuGram Desktop build.
+      - name: Build AyuGram Desktop.
         run: |
+          set -euo pipefail
           ccache -z
 
           docker run --rm \
           -u $(id -u) \
           -v $PWD:/usr/src/tdesktop \
           -v ${{ env.CCACHE_DIR }}:/var/cache/ccache \
-          -e CONFIG=Debug \
+          -e CONFIG=Release \
           -e CCACHE_SLOPPINESS=pch_defines,time_macros \
           $IMAGE_TAG \
           env -u CCACHE_DISABLE /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
-          -D CMAKE_CONFIGURATION_TYPES=Debug \
-          -D CMAKE_C_FLAGS_DEBUG="-O0 -fpch-preprocess" \
-          -D CMAKE_CXX_FLAGS_DEBUG="-O0 -fpch-preprocess" \
-          -D TDESKTOP_API_TEST=ON \
+          -D CMAKE_CONFIGURATION_TYPES=Release \
+          -D TDESKTOP_API_ID=2040 \
+          -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
           -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF \
           -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF
 
       - name: Count ccache misses.
         id: ccache-stats
         run: |
+          set -euo pipefail
           MISSES=$(ccache --print-stats | sed -n 's/^cache_miss\t//p' | head -1)
           case "$MISSES" in (*[!0-9]*|'') MISSES=0;; esac
           echo "misses=$MISSES" >> $GITHUB_OUTPUT
@@ -159,14 +169,15 @@ jobs:
         if: >
           github.ref_name == github.event.repository.default_branch
             && fromJSON(steps.ccache-stats.outputs.misses) > 300
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ steps.cache-build.outputs.cache-primary-key }}
 
-      - name: Check.
+      - name: Check release output.
         run: |
-          filePath="out/Debug/AyuGram"
+          set -euo pipefail
+          filePath="out/Release/AyuGram"
           if test -f "$filePath"; then
             echo "Build successfully done! :)"
             size=$(stat -c %s "$filePath")
@@ -176,18 +187,19 @@ jobs:
             exit 1
           fi
 
-      - name: Move artifact.
-        if: env.UPLOAD_ARTIFACT == 'true'
+      - name: Package release output.
         run: |
-          cd out/Debug
-          mkdir artifact
-          mv AyuGram artifact/
-          test -f Updater && mv Updater artifact/ || true
+          set -euo pipefail
+          version=$(sed -n 's/^AppVersionStrSmall //p' Telegram/build/version)
+          test -n "$version"
+          cd out/Release
+          rm -f "AyuGram-v${version}-linux-x64.zip"
+          zip "AyuGram-v${version}-linux-x64.zip" AyuGram
+          test ! -f Updater || zip "AyuGram-v${version}-linux-x64.zip" Updater
 
-      - uses: actions/upload-artifact@v4
-        if: env.UPLOAD_ARTIFACT == 'true'
-        name: Upload artifact.
+      - name: Upload artifact.
+        uses: actions/upload-artifact@v7
         with:
           name: AyuGram-Linux
-          path: out/Debug/artifact/
+          path: out/Release/AyuGram-v*-linux-x64.zip
           retention-days: 7

@@ -5,9 +5,10 @@ from pathlib import Path
 VSWHERE = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Microsoft Visual Studio" / "Installer" / "vswhere.exe"
 
 # 已切到 VS 2026 的 v145 工具集，不再支持 Windows 7
-TOOLSET_VERSION = "14.51"
-CMAKE_TOOLSET = "v145"
-CMAKE_GENERATOR = "Visual Studio 18 2026"
+# CI 可用同名 AYUGRAM_* 环境变量覆盖，指向 runner 上实际安装的 VS 版本
+TOOLSET_VERSION = os.environ.get("AYUGRAM_TOOLSET_VERSION", "14.51")
+CMAKE_TOOLSET = os.environ.get("AYUGRAM_CMAKE_TOOLSET", "v145")
+CMAKE_GENERATOR = os.environ.get("AYUGRAM_CMAKE_GENERATOR", "Visual Studio 18 2026")
 
 # 调用环境带进来的这些变量会改写构建工具的行为，一律剔除以对齐上游的干净 cmd 环境：
 # MSYSTEM 让 msys2 切到 MINGW64 模式，mingw 原生 perl 会抢在 msys2 perl 之前；

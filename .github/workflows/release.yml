@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: [Windows, Linux, MacOS]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    name: Publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository.
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      # 每个平台完成各触发一次本流程；三平台未全部成功时静默跳过发布
+      - name: Verify all platforms succeeded.
+        id: verify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          ready="true"
+          for w in win linux mac; do
+            count=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${w}.yml/runs?head_sha=${HEAD_SHA}&status=success&per_page=1" --jq '.total_count')
+            if [ "$count" -eq 0 ]; then
+              echo "${w} has no successful run for ${HEAD_SHA}"
+              ready="false"
+            fi
+          done
+          echo "ready=${ready}" >> $GITHUB_OUTPUT
+          test "$ready" = "true" || echo "Release skipped, waiting for remaining platforms."
+
+      - name: Read version.
+        if: steps.verify.outputs.ready == 'true'
+        id: version
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^AppVersionStrSmall //p' Telegram/build/version)
+          test -n "$version"
+          echo "version=${version}" >> $GITHUB_OUTPUT
+          echo "tag=v${version}" >> $GITHUB_OUTPUT
+
+      - name: Collect run ids.
+        if: steps.verify.outputs.ready == 'true'
+        id: runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          for w in win linux mac; do
+            run_id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${w}.yml/runs?head_sha=${HEAD_SHA}&status=success&per_page=1" --jq '.workflow_runs[0].id')
+            echo "${w}=${run_id}" >> $GITHUB_OUTPUT
+          done
+
+      - name: Download Windows artifact.
+        if: steps.verify.outputs.ready == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: AyuGram-Windows-x64
+          run-id: ${{ steps.runs.outputs.win }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts
+
+      - name: Download Linux artifact.
+        if: steps.verify.outputs.ready == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: AyuGram-Linux
+          run-id: ${{ steps.runs.outputs.linux }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts
+
+      - name: Download macOS artifact.
+        if: steps.verify.outputs.ready == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: AyuGram-macOS
+          run-id: ${{ steps.runs.outputs.mac }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts
+
+      - name: List release files.
+        if: steps.verify.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          ls -la artifacts/
+          test "$(find artifacts -name '*.zip' | wc -l)" -ge 3
+
+      - name: Publish release.
+        if: steps.verify.outputs.ready == 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: AyuGram Desktop Plus ${{ steps.version.outputs.version }}
+          body_path: .github/CHANGELOG.md
+          files: artifacts/*.zip
+          draft: false
+          prerelease: false
+          overwrite_files: true
+          make_latest: true

@@ -37,6 +37,7 @@
 [submodule "cmake"]
 	path = cmake
 	url = https://github.com/desktop-app/cmake_helpers.git
+	ignore = dirty
 [submodule "Telegram/ThirdParty/expected"]
 	path = Telegram/ThirdParty/expected
 	url = https://github.com/TartanLlama/expected

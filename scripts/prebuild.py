@@ -89,7 +89,15 @@ def clean_dependencies() -> None:
 
 def report() -> None:
     entries = [path for path in (LIBRARIES_DIR, THIRD_PARTY_DIR) if path.is_dir()]
-    total = sum(sum(f.stat().st_size for f in path.rglob("*") if f.is_file()) for path in entries)
+
+    def size_of(path: Path) -> int:
+        # 缓存恢复可能留下无法访问的符号链接，统计体积时跳过
+        try:
+            return path.stat().st_size if path.is_file() else 0
+        except OSError:
+            return 0
+
+    total = sum(sum(size_of(f) for f in path.rglob("*")) for path in entries)
     print_summary(f"Location {TMP_DIR}", f"Total {format_bytes(total)}")
 
 
