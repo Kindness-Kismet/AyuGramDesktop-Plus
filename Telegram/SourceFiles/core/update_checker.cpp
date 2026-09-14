@@ -120,6 +120,18 @@ inline auto MakeBIO(const void *buf, int len) {
 	};
 }
 
+// 更新包的签名长度由密钥位数决定，不写死 1024 位（128 字节）。
+[[nodiscard]] int32 UpdatesSignatureLength() {
+	const auto bio = MakeBIO(UpdatesPublicKey, -1);
+	const auto key = PEM_read_bio_RSAPublicKey(bio.get(), 0, 0, 0);
+	if (!key) {
+		return 0;
+	}
+	const auto result = int32(RSA_size(key));
+	RSA_free(key);
+	return result;
+}
+
 class Checker : public base::has_weak_ptr {
 public:
 	Checker(bool testing);
@@ -708,10 +720,14 @@ bool UnpackUpdate(const QString &filepath) {
 	}
 
 #if defined Q_OS_WIN && !defined TDESKTOP_USE_PACKAGED // use Lzma SDK for win
-	const int32 hSigLen = 128, hShaLen = 20, hPropsLen = LZMA_PROPS_SIZE, hOriginalSizeLen = sizeof(int32), hSize = hSigLen + hShaLen + hPropsLen + hOriginalSizeLen; // header
+	const int32 hSigLen = UpdatesSignatureLength(), hShaLen = 20, hPropsLen = LZMA_PROPS_SIZE, hOriginalSizeLen = sizeof(int32), hSize = hSigLen + hShaLen + hPropsLen + hOriginalSizeLen; // header
 #else // Q_OS_WIN && !TDESKTOP_USE_PACKAGED
-	const int32 hSigLen = 128, hShaLen = 20, hPropsLen = 0, hOriginalSizeLen = sizeof(int32), hSize = hSigLen + hShaLen + hOriginalSizeLen; // header
+	const int32 hSigLen = UpdatesSignatureLength(), hShaLen = 20, hPropsLen = 0, hOriginalSizeLen = sizeof(int32), hSize = hSigLen + hShaLen + hOriginalSizeLen; // header
 #endif // Q_OS_WIN && !TDESKTOP_USE_PACKAGED
+	if (hSigLen <= 0) {
+		LOG(("Update Error: cant determine the signature length."));
+		return false;
+	}
 
 	QByteArray compressed = input.readAll();
 	input.close();

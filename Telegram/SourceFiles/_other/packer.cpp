@@ -31,9 +31,12 @@ Core::Updates::Target V2Target;
 
 const char *PublicKey = "\
 -----BEGIN RSA PUBLIC KEY-----\n\
-MIGJAoGBAOIENxe1sfT2t7b+HUMpnT6RnN/sCqY0JjK7/1A/59daDc6i/K4023jw\n\
-Us+187Pa2VSaPh3kDywp9PfLDFgFiPTD9BsBvpaSK9p3zyG8k6an3+GbUTlUgmFv\n\
-eI0pg7vmceIl0Lcy9nndfEx27UQId3Y3dQTMuwwFYGtjJAMHNNq5AgMBAAE=\n\
+MIIBCgKCAQEA2zWY7Txno6HPAYpLBVYB2tCPzMFa8pxfwFcJPXbUv/g+T7LWbLtZ\n\
+0jR7JpzLb635HDtL1Az/Wn5LLJx+wsQ4VPxT4gUBwO1krb0pluccav/CnEBl9gwT\n\
+uTbkPUDa4rcwUcXtcQhQzdechEaqCceHBhA1fjsJOZFb1Vh1gvoQHRpKWOzZ11Pm\n\
+JJHHQCiGHjmdZuOAkU1/sTN+RXcVrqt0W3kkoN20PhzzBaDEKc3kge0v9ss3tPhP\n\
+4Pd9TDBM9aCcju1u2EbETq9LzpssbEBhuUFYocOOj0KDiz0RKJCy6AvUXreH42Ej\n\
+EL+jcroKQqzLcjgc7wTXTAW+aPhHmvgAswIDAQAB\n\
 -----END RSA PUBLIC KEY-----\
 ";
 
@@ -79,6 +82,23 @@ inline auto makeBIO(const void *buf, int len) {
 	return std::unique_ptr<BIO, BIODeleter>{
 		BIO_new_mem_buf(buf, len),
 	};
+}
+
+// 签名长度由私钥位数决定，不写死 1024 位（128 字节）。
+[[nodiscard]] int32 PackerSignatureLength() {
+	const auto bio = makeBIO(
+		const_cast<char*>(
+			(BetaChannel || AlphaVersion)
+				? PrivateBetaKey
+				: PrivateKey),
+		-1);
+	const auto key = PEM_read_bio_RSAPrivateKey(bio.get(), 0, 0, 0);
+	if (!key) {
+		return 0;
+	}
+	const auto result = int32(RSA_size(key));
+	RSA_free(key);
+	return result;
 }
 
 inline uint32 sha1Shift(uint32 v, uint32 shift) {
@@ -792,7 +812,11 @@ int main(int argc, char *argv[])
 
 	QByteArray compressed, resultCheck;
 #if defined Q_OS_WIN && !defined PACKER_USE_PACKAGED // use Lzma SDK for win
-	const int32 hSigLen = 128, hShaLen = 20, hPropsLen = LZMA_PROPS_SIZE, hOriginalSizeLen = sizeof(int32), hSize = hSigLen + hShaLen + hPropsLen + hOriginalSizeLen; // header
+	const int32 hSigLen = PackerSignatureLength(), hShaLen = 20, hPropsLen = LZMA_PROPS_SIZE, hOriginalSizeLen = sizeof(int32), hSize = hSigLen + hShaLen + hPropsLen + hOriginalSizeLen; // header
+	if (hSigLen <= 0) {
+		cout << "Could not determine the signature length!\n";
+		return -1;
+	}
 
 	compressed.resize(hSize + resultSize + 1024 * 1024); // rsa signature + sha1 + lzma props + max compressed size
 
@@ -835,7 +859,11 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 #else // use liblzma for others
-	const int32 hSigLen = 128, hShaLen = 20, hPropsLen = 0, hOriginalSizeLen = sizeof(int32), hSize = hSigLen + hShaLen + hOriginalSizeLen; // header
+	const int32 hSigLen = PackerSignatureLength(), hShaLen = 20, hPropsLen = 0, hOriginalSizeLen = sizeof(int32), hSize = hSigLen + hShaLen + hOriginalSizeLen; // header
+	if (hSigLen <= 0) {
+		cout << "Could not determine the signature length!\n";
+		return -1;
+	}
 
 	compressed.resize(hSize + resultSize + 1024 * 1024); // rsa signature + sha1 + lzma props + max compressed size
 
