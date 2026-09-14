@@ -803,11 +803,12 @@ void MainMenu::setupMenu() {
 				{ &st::menuIconArchive },
 				u"archiveChats"_q
 		)->setClickedCallback([=] {
-				if (const auto folder = controller->session().data().folderLoaded(
+			if (const auto folder = controller->session().data().folderLoaded(
 					Data::Folder::kId)) {
-					controller->openFolder(folder);
-				}
-			});
+				controller->openFolder(folder);
+			}
+			controller->window().hideSettingsAndLayer();
+		});
 		}
 
 		if (settings.showLReadToggleInDrawer()) {
