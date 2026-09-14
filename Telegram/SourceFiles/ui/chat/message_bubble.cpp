@@ -17,11 +17,62 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 
+#include <QtGui/QPainterPath>
 
 namespace Ui {
 namespace {
 
 using Corner = BubbleCornerRounding;
+
+// 按每个角的实际类型取半径，使描边贴合气泡轮廓而非统一大圆角。
+[[nodiscard]] QPainterPath BubbleOutlinePath(
+		const QRectF &rect,
+		const BubbleRounding &rounding) {
+	const auto radiusOf = [](BubbleCornerRounding corner) {
+		return (corner == BubbleCornerRounding::Large)
+			? BubbleRadiusLarge()
+			: (corner == BubbleCornerRounding::Small)
+			? BubbleRadiusSmall()
+			: 0;
+	};
+	const auto tl = radiusOf(rounding.topLeft);
+	const auto tr = radiusOf(rounding.topRight);
+	const auto br = radiusOf(rounding.bottomRight);
+	const auto bl = radiusOf(rounding.bottomLeft);
+
+	auto path = QPainterPath();
+	path.moveTo(rect.left() + tl, rect.top());
+	path.lineTo(rect.right() - tr, rect.top());
+	if (tr) {
+		path.arcTo(
+			QRectF(rect.right() - tr * 2, rect.top(), tr * 2, tr * 2),
+			90.,
+			-90.);
+	}
+	path.lineTo(rect.right(), rect.bottom() - br);
+	if (br) {
+		path.arcTo(
+			QRectF(rect.right() - br * 2, rect.bottom() - br * 2, br * 2, br * 2),
+			0.,
+			-90.);
+	}
+	path.lineTo(rect.left() + bl, rect.bottom());
+	if (bl) {
+		path.arcTo(
+			QRectF(rect.left(), rect.bottom() - bl * 2, bl * 2, bl * 2),
+			270.,
+			-90.);
+	}
+	path.lineTo(rect.left(), rect.top() + tl);
+	if (tl) {
+		path.arcTo(
+			QRectF(rect.left(), rect.top(), tl * 2, tl * 2),
+			180.,
+			-90.);
+	}
+	path.closeSubpath();
+	return path;
+}
 
 [[nodiscard]] bool UsePatternBubble(const SimpleBubble &args) {
 	return !args.selected
@@ -296,18 +347,17 @@ void PaintSolidBubble(QPainter &p, const SimpleBubble &args) {
 		? QPoint(0, tail.height())
 		: QPoint(tail.width(), tail.height());
 
-	// 描边：先画外扩 1px 的底环，本体覆盖中间，留下一圈边界；
-	// 颜色取气泡阴影色，透明度固定到可见但克制。
+	// 描边：沿气泡实际轮廓在外侧画一圈，圆角按各角类型取，
+	// 隐藏聊天壁纸后气泡边界仍保持清晰。
 	if (AyuSettings::getInstance().showBubbleOutline()) {
 		auto color = st.msgShadow->c;
 		color.setAlphaF(0.35);
 		p.setPen(QPen(color, 1.));
 		p.setBrush(Qt::NoBrush);
-		const auto r = args.geometry;
-		p.drawRoundedRect(
-			QRectF(r).adjusted(0.5, 0.5, -0.5, -0.5),
-			BubbleRadiusLarge(),
-			BubbleRadiusLarge());
+		// 外扩半个线宽，使整条线落在气泡外侧，不被本体覆盖。
+		p.drawPath(BubbleOutlinePath(
+			QRectF(args.geometry).adjusted(-0.5, -0.5, 0.5, 0.5),
+			args.rounding));
 	}
 
 	PaintBubbleGeneric(args, [&](const QRect &rect) {
