@@ -10,6 +10,8 @@
 | `app.update-info` | 空 | 报告更新源前缀：`tdata/prefix` 的内容与内存里解析出的地址。 |
 | `app.help` | 空 | 列出服务端已注册的全部指令名。 |
 | `app.quit` | 空 | 让应用走正常退出流程；退出动作排在事件循环尾部，确保 `OK` 写完 socket 再退。 |
+| `debug.window-size` | `[width height]` | 报告窗口尺寸与最大化状态；给出尺寸时按逻辑像素调整窗口。 |
+| `debug.window-maximize` | `true\|false` | 最大化或还原窗口。 |
 
 `app.quit` 一般不直接调，`app.stop` 内部先发它。
 
@@ -20,6 +22,15 @@
 
 `app.update-info` 用来定位更新检查会打到哪个地址：`tdata/prefix` 里写的内容与
 `resolvedPrefix` 不一致时，说明前缀在运行时被固定值覆写过，改文件不会生效。
+
+`debug.window-size` 与 `debug.window-maximize` 用来把窗口摆到指定状态，验证依赖窗口
+宽度的行为（宽屏布局、栏位折叠）。尺寸是 Qt 逻辑像素，与 `control.list` 的几何同一
+坐标系；最大化状态下 `resize` 不生效，指令会先还原窗口再设尺寸。
+
+```bash
+python .claude/skills/app-debug/scripts/cli.py debug.window-size 1300 900 + screenshot.take
+python .claude/skills/app-debug/scripts/cli.py debug.window-maximize true + screenshot.take
+```
 
 ## CLI 本地指令
 

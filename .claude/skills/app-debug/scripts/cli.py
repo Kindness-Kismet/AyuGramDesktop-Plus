@@ -140,6 +140,10 @@ def register_commands(sub) -> None:
     command.add_argument("extraText", nargs="*", help=argparse.SUPPRESS)
     command = sub.add_parser("debug.history-stats", help="报告 Saved Messages 里指定 id 消息的存在/隐藏/视图状态，诊断断点")
     command.add_argument("msgIds", nargs="+", metavar="MSG_ID")
+    command = sub.add_parser("debug.window-size", help="读或设窗口尺寸（Qt 逻辑像素）；最大化的窗口先还原再设尺寸")
+    command.add_argument("size", nargs="*", type=int, metavar="WIDTH HEIGHT", help="省略则只报告当前尺寸，给出时须成对")
+    command = sub.add_parser("debug.window-maximize", help="最大化或还原窗口")
+    command.add_argument("maximized", choices=["true", "false"], help="true 最大化，false 还原")
 
     sub.add_parser("ghost.status", help="读全局与当前账号的幽灵模式状态")
 
@@ -272,6 +276,14 @@ def build_server_command(args: argparse.Namespace) -> str:
         return f"debug.send-message {args.peerId} {quote_arg(text)}"
     if command == "debug.history-stats":
         return "debug.history-stats " + " ".join(args.msgIds)
+    if command == "debug.window-size":
+        if not args.size:
+            return "debug.window-size"
+        if len(args.size) != 2:
+            raise ValueError("debug.window-size 的 width 与 height 必须成对给出")
+        return f"debug.window-size {args.size[0]} {args.size[1]}"
+    if command == "debug.window-maximize":
+        return f"debug.window-maximize {args.maximized}"
     # 其余都是无参指令，名字与服务端一一对应。
     return command
 

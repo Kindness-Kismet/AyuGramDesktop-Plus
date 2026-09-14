@@ -15,7 +15,7 @@ Main::Session *ActiveSession() {
 namespace AyuDebug {
 namespace {
 
-// 合并七个域的注册表；各域内部 static，这里只做拼接。
+// 合并八个域的注册表；各域内部 static，这里只做拼接。
 [[nodiscard]] const Commands::HandlerMap &Handlers() {
 	static const auto result = [] {
 		auto all = Commands::HandlerMap{};
@@ -28,6 +28,7 @@ namespace {
 			&Commands::ScreenshotHandlers(),
 			&Commands::ControlHandlers(),
 			&Commands::MessageHandlers(),
+			&Commands::WindowHandlers(),
 		}) {
 			all.insert(part->begin(), part->end());
 		}

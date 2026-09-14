@@ -27,6 +27,7 @@ using HandlerMap = std::map<QString, Handler>;
 [[nodiscard]] const HandlerMap &ScreenshotHandlers();
 [[nodiscard]] const HandlerMap &ControlHandlers();
 [[nodiscard]] const HandlerMap &MessageHandlers();
+[[nodiscard]] const HandlerMap &WindowHandlers();
 
 // json 序列化为单行字符串，所有 payload 的统一出口。
 [[nodiscard]] inline QString Compact(const nlohmann::json &value) {

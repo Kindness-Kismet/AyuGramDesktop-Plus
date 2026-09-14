@@ -273,6 +273,7 @@ set(ayugram_files
         ayu/debug/commands/screenshot_commands.cpp
         ayu/debug/commands/control_commands.cpp
         ayu/debug/commands/message_commands.cpp
+        ayu/debug/commands/window_commands.cpp
 
         info/profile/info_profile_music_button.cpp
         info/profile/info_profile_music_button.h
