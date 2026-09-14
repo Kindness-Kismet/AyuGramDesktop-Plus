@@ -16,7 +16,6 @@ from build_support.paths import (
     LIBRARIES_ARCH_DIR,
     PRODUCT_BINARIES,
     ROOT,
-    SPECIAL_TARGET_FILE,
     VENV_PYTHON,
     NUGET_EXE,
 )
@@ -27,6 +26,10 @@ from build_support.toolchain import CMAKE_GENERATOR, CMAKE_TOOLSET, msvc_environ
 from build_support.version import parse_version, read_current_version
 
 _CONFIGURATIONS = {"dev": "Debug", "release": "Release"}
+
+# 非空值启用官方发布语义：Updater、Packer 与更新检查，另含过旧版本提示
+# 和闭源 alpha 支持。该标记同时决定 AUTOUPDATE 的默认值。
+_SPECIAL_TARGET = "win64"
 
 # 每个编译进程都要映射一份 PCH，8 路约占 4 GB 提交量，对 32 GB 内存 + 6 GB
 # 页面文件的机器留有余量；调高需同步扩大页面文件。
@@ -150,11 +153,13 @@ def configure(environment: dict[str, str], api_id: str, api_hash: str) -> None:
         f"-DNUGET_EXE={NUGET_EXE.as_posix()}",
     ]
 
-    # 官方发布构建才有该文件，存在时须转成 CMake 选项
-    if SPECIAL_TARGET_FILE.is_file():
-        target = SPECIAL_TARGET_FILE.read_text(encoding="utf-8").strip()
-        if target:
-            command.append(f"-DDESKTOP_APP_SPECIAL_TARGET={target}")
+    # 发布构建必需：官方构建才带 Updater 与更新检查，且该标记受版本控制，
+    # 不依赖本地标记文件。
+    command.append(f"-DDESKTOP_APP_SPECIAL_TARGET={_SPECIAL_TARGET}")
+
+    # 官方发布语义：非空 SPECIAL_TARGET 关闭该选项的默认禁用，但缓存里的旧值
+    # 不会被 option() 覆盖，故显式传 OFF，让 Updater 参与构建。
+    command.append("-DDESKTOP_APP_DISABLE_AUTOUPDATE=OFF")
 
     # Qt5 的官方配置文件含有未初始化变量，开启该诊断会把外部包告警当成配置失败
     command += ["-Werror=dev", "-Werror=deprecated"]

@@ -23,7 +23,6 @@ VENV_PYTHON = THIRD_PARTY_DIR / "python" / "Scripts" / "python.exe"
 NUGET_EXE = THIRD_PARTY_DIR / "NuGet" / "nuget.exe"
 
 VERSION_FILE = ROOT / "Telegram" / "build" / "version"
-SPECIAL_TARGET_FILE = ROOT / "Telegram" / "build" / "target"
 
 # 官方文档公开的测试用凭据，正式分发需自行申请
 DEFAULT_API_ID = "2040"
