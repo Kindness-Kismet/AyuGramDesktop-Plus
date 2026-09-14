@@ -68,6 +68,7 @@ python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true + 
 | `app.ping` / `app.info` / `app.help` | 存活检查、应用信息、指令清单 |
 | `app.quit` | 让应用自行退出，`app.stop` 内部用它，一般不直接调 |
 | `app.check-update` | 触发一次更新检查，异步，结果看工作目录 `tupdates/` 与日志 |
+| `app.update-info` | 读更新源前缀：`tdata/prefix` 文件内容与内存里解析出的地址 |
 | `debug.fake-session [userId]` | 创建本地假会话绕过登录，直接进主界面 |
 | `debug.reset-background` | 重置聊天背景到默认壁纸，验证默认壁纸改动 |
 | `debug.fake-message <text> [--from <userId>] [--blocked] [--shadow-ban]` | 往 Saved Messages 插入本地文本消息，验证渲染与隐藏逻辑 |

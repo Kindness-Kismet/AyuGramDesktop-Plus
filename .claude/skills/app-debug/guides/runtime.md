@@ -7,6 +7,7 @@
 | `app.ping` | 空 | 心跳检测，返回 `pong`，验证服务端连通性。 |
 | `app.info` | 空 | 返回版本、配置、工作目录、会话与窗口状态 JSON。 |
 | `app.check-update` | 空 | 触发一次更新检查，上游链接与包校验按当前构建的发布语义走。 |
+| `app.update-info` | 空 | 报告更新源前缀：`tdata/prefix` 的内容与内存里解析出的地址。 |
 | `app.help` | 空 | 列出服务端已注册的全部指令名。 |
 | `app.quit` | 空 | 让应用走正常退出流程；退出动作排在事件循环尾部，确保 `OK` 写完 socket 再退。 |
 
@@ -16,6 +17,9 @@
 
 `app.check-update` 只触发不等待：下载与验签是异步的，结果看工作目录下 `tupdates/`
 的落地文件和应用日志。更新被禁用时返回 `updater is disabled`。
+
+`app.update-info` 用来定位更新检查会打到哪个地址：`tdata/prefix` 里写的内容与
+`resolvedPrefix` 不一致时，说明前缀在运行时被固定值覆写过，改文件不会生效。
 
 ## CLI 本地指令
 

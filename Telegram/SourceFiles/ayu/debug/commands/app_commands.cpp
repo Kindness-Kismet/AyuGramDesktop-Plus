@@ -6,6 +6,7 @@
 #include "core/version.h"
 #include "logs.h"
 #include "main/main_session.h"
+#include "storage/localstorage.h"
 #include "window/window_controller.h"
 
 namespace AyuDebug::Commands {
@@ -44,6 +45,28 @@ using json = nlohmann::json;
 	return Result::Ok(u"update check started"_q);
 }
 
+// 报告更新源配置：文件内容与内存里解析出的前缀不一致时，说明前缀被固定值
+// 覆写过，更新请求不会走文件里写的地址。
+[[nodiscard]] Result UpdateInfo(const QStringList &args) {
+	if (!args.isEmpty()) {
+		return Result::Err(u"usage: app.update-info"_q);
+	}
+	if (Core::UpdaterDisabled()) {
+		return Result::Err(u"updater is disabled"_q);
+	}
+	const auto file = cWorkingDir() + u"tdata/prefix"_q;
+	auto content = QString();
+	if (QFile f(file); f.open(QIODevice::ReadOnly)) {
+		content = QString::fromUtf8(f.readAll()).trimmed();
+	}
+	return Result::Ok(Compact(json{
+		{ "prefixFile", file.toStdString() },
+		{ "prefixFileContent", content.toStdString() },
+		{ "resolvedPrefix", Local::readAutoupdatePrefix().toStdString() },
+		{ "updatesFolder", (cWorkingDir() + u"tupdates"_q).toStdString() },
+	}));
+}
+
 [[nodiscard]] Result Quit(const QStringList &) {
 	// 立即退出会让 OK 还没写出去就断链，客户端读到的是连接重置。排到事件循环
 	// 尾部，等 Reply 把响应刷进 socket 之后再退。
@@ -69,6 +92,7 @@ const HandlerMap &AppHandlers() {
 		{ u"app.quit"_q, &Quit },
 		{ u"app.info"_q, &AppInfo },
 		{ u"app.check-update"_q, &CheckUpdate },
+		{ u"app.update-info"_q, &UpdateInfo },
 		{ u"app.help"_q, &Help },
 	};
 	return result;
