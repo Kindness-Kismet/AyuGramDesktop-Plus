@@ -732,9 +732,9 @@ private:
 	rpl::variable<bool> _showLReadToggleInDrawer = false;
 	rpl::variable<bool> _showSReadToggleInDrawer = true;
 	rpl::variable<bool> _showNightModeToggleInDrawer = true;
-	rpl::variable<bool> _showGhostToggleInDrawer = true;
+	rpl::variable<bool> _showGhostToggleInDrawer = false;
 	rpl::variable<bool> _showStreamerToggleInDrawer = false;
-	rpl::variable<bool> _showGhostToggleInTray = true;
+	rpl::variable<bool> _showGhostToggleInTray = false;
 	rpl::variable<bool> _showStreamerToggleInTray = false;
 	rpl::variable<bool> _hidePremiumStatuses = false;
 	rpl::variable<QString> _monoFont;
