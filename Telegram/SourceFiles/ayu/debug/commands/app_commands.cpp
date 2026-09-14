@@ -2,6 +2,7 @@
 #include "ayu/debug/commands/commands_internal.h"
 
 #include "core/application.h"
+#include "core/update_checker.h"
 #include "core/version.h"
 #include "logs.h"
 #include "main/main_session.h"
@@ -34,6 +35,15 @@ using json = nlohmann::json;
 	return Result::Ok(u"pong"_q);
 }
 
+[[nodiscard]] Result CheckUpdate(const QStringList &) {
+	if (Core::UpdaterDisabled()) {
+		return Result::Err(u"updater is disabled"_q);
+	}
+	// 检查是异步的，这里只负责触发，结果看 tupdates 目录与日志。
+	Core::UpdateChecker().test();
+	return Result::Ok(u"update check started"_q);
+}
+
 [[nodiscard]] Result Quit(const QStringList &) {
 	// 立即退出会让 OK 还没写出去就断链，客户端读到的是连接重置。排到事件循环
 	// 尾部，等 Reply 把响应刷进 socket 之后再退。
@@ -58,6 +68,7 @@ const HandlerMap &AppHandlers() {
 		{ u"app.ping"_q, &Ping },
 		{ u"app.quit"_q, &Quit },
 		{ u"app.info"_q, &AppInfo },
+		{ u"app.check-update"_q, &CheckUpdate },
 		{ u"app.help"_q, &Help },
 	};
 	return result;

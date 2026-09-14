@@ -6,6 +6,7 @@
 #include "ayu/utils/telegram_helpers.h"
 #include "api/api_common.h"
 #include "core/application.h"
+#include "data/data_folder.h"
 #include "data/data_msg_id.h"
 #include "data/data_peer.h"
 #include "data/data_session.h"
@@ -297,6 +298,25 @@ using json = nlohmann::json;
 	}));
 }
 
+// 直接打开归档文件夹，不走抽屉入口，用于单独验证归档页行为。
+[[nodiscard]] Result OpenArchive(const QStringList &args) {
+	if (!args.isEmpty()) {
+		return Result::Err(u"usage: debug.open-archive"_q);
+	}
+	const auto session = ActiveSession();
+	if (!session) {
+		return Result::Err(u"no active session, run debug.fake-session first"_q);
+	}
+	const auto controller = session->tryResolveWindow();
+	if (!controller) {
+		return Result::Err(u"no window controller"_q);
+	}
+	controller->openFolder(session->data().folder(Data::Folder::kId));
+	return Result::Ok(Compact(json{
+		{ "folderId", Data::Folder::kId },
+	}));
+}
+
 // 逐个报告 Saved Messages 里指定 id 的消息状态，诊断数据层与 view 层
 // 是否一致（exists/regular/hidden/mainView 四元组足以定位断点）。
 [[nodiscard]] Result HistoryStats(const QStringList &args) {
@@ -342,6 +362,7 @@ const HandlerMap &MessageHandlers() {
 		{ u"debug.chats"_q, &Chats },
 		{ u"debug.send-message"_q, &SendTextMessage },
 		{ u"debug.open-chat"_q, &OpenChat },
+		{ u"debug.open-archive"_q, &OpenArchive },
 		{ u"debug.history-stats"_q, &HistoryStats },
 	};
 	return result;

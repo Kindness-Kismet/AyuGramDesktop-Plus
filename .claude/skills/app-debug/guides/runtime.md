@@ -6,12 +6,16 @@
 |---|---|---|
 | `app.ping` | 空 | 心跳检测，返回 `pong`，验证服务端连通性。 |
 | `app.info` | 空 | 返回版本、配置、工作目录、会话与窗口状态 JSON。 |
+| `app.check-update` | 空 | 触发一次更新检查，上游链接与包校验按当前构建的发布语义走。 |
 | `app.help` | 空 | 列出服务端已注册的全部指令名。 |
 | `app.quit` | 空 | 让应用走正常退出流程；退出动作排在事件循环尾部，确保 `OK` 写完 socket 再退。 |
 
 `app.quit` 一般不直接调，`app.stop` 内部先发它。
 
 `app.info` 返回字段：`version` / `versionCode` / `configuration` / `workingDir` / `debugLogs` / `hasSession` / `hasWindow` / `userId`（已登录时）。
+
+`app.check-update` 只触发不等待：下载与验签是异步的，结果看工作目录下 `tupdates/`
+的落地文件和应用日志。更新被禁用时返回 `updater is disabled`。
 
 ## CLI 本地指令
 

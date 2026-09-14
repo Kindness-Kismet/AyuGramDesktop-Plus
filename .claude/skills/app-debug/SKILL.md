@@ -67,12 +67,14 @@ python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true + 
 | `app.ensure` / `app.restart` / `app.stop` | 生命周期，CLI 本地执行，不进服务端 |
 | `app.ping` / `app.info` / `app.help` | 存活检查、应用信息、指令清单 |
 | `app.quit` | 让应用自行退出，`app.stop` 内部用它，一般不直接调 |
+| `app.check-update` | 触发一次更新检查，异步，结果看工作目录 `tupdates/` 与日志 |
 | `debug.fake-session [userId]` | 创建本地假会话绕过登录，直接进主界面 |
 | `debug.reset-background` | 重置聊天背景到默认壁纸，验证默认壁纸改动 |
 | `debug.fake-message <text> [--from <userId>] [--blocked] [--shadow-ban]` | 往 Saved Messages 插入本地文本消息，验证渲染与隐藏逻辑 |
 | `debug.chats [filter]` | 列出已加载对话的 peerId 与名称，供定位目标 |
 | `debug.send-message <peerId> <text>` | 真实发送文本消息到指定对话，需已登录，仅发往自己掌控的测试对话 |
 | `debug.open-chat [peerId\|userId]` | 打开指定对话，缺省 Saved Messages |
+| `debug.open-archive` | 直接打开归档文件夹，不走抽屉入口 |
 | `debug.testmode` | 在生产环境与官方测试数据中心之间切换 |
 | `settings.keys` / `settings.dump` | 96 个设置键的键名与全量导出 |
 | `settings.get <key>` / `settings.set <key> <value>` | 读写单个设置，写入返回实际生效值 |

@@ -103,6 +103,7 @@ def register_commands(sub) -> None:
     sub.add_parser("app.stop", help="停止 Debug 应用，只认端口 PID 或本仓库 dev 产物路径")
     sub.add_parser("app.ping", help="探活，返回 pong")
     sub.add_parser("app.info", help="读版本、配置、工作目录、会话与窗口状态")
+    sub.add_parser("app.check-update", help="触发一次更新检查，结果看 tupdates 目录与日志")
     sub.add_parser("app.help", help="列出服务端已注册的全部指令名")
 
     sub.add_parser("settings.keys", help="列出全部设置键名")
@@ -129,6 +130,7 @@ def register_commands(sub) -> None:
     command.add_argument("--shadow-ban", action="store_true", help="把发送者加入 AyuGram 影子拉黑名单")
     command = sub.add_parser("debug.open-chat", help="打开指定对话并清空导航栈；参数取 debug.chats 的 peerId，正数兼容旧 userId，缺省 Saved Messages")
     command.add_argument("peerId", nargs="?")
+    command = sub.add_parser("debug.open-archive", help="打开归档文件夹，用于验证打开归档时自动收起竖排文件夹栏")
     command = sub.add_parser("debug.chats", help="列出已加载对话的 peerId 与名称，filter 为名称子串")
     command.add_argument("filter", nargs="?")
     command = sub.add_parser("debug.send-message", help="真实发送文本消息到指定对话，需已登录，仅限本人测试群")
@@ -259,6 +261,8 @@ def build_server_command(args: argparse.Namespace) -> str:
     if command == "debug.open-chat":
         return ("debug.open-chat" if args.peerId is None
                 else f"debug.open-chat {quote_arg(args.peerId)}")
+    if command == "debug.open-archive":
+        return "debug.open-archive"
     if command == "debug.chats":
         return ("debug.chats" if args.filter is None
                 else f"debug.chats {quote_arg(args.filter)}")

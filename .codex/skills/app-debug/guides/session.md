@@ -73,6 +73,11 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 userId 写法，缺省 self（Saved Messages）。配合 `screenshot.take` 做 UI 观测，
 免去找列表项点击的不稳定。
 
+## `debug.open-archive`
+
+直接打开归档文件夹，不走抽屉入口。用于单独观测归档页本身（列表渲染、留档消息），
+抽屉入口的行为另有 `menu.archiveChats` 可点。
+
 ## 验证忽略用户（拉黑 / 影子拉黑）
 
 组合用法：`debug.fake-session` 创建会话，`debug.fake-message` 的 `--from <id>` 配合
