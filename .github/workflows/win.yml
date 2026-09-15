@@ -125,6 +125,16 @@ jobs:
             build/tmp/ThirdParty
           key: ${{ steps.cache-libs.outputs.cache-primary-key }}
 
+      # Packer 是 Telegram 的构建依赖，私钥头文件必须在编译前就位
+      - name: Write packer signing key.
+        shell: bash
+        env:
+          PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
+        run: |
+          set -euo pipefail
+          test -n "$PACKER_PRIVATE_H"
+          printf '%s' "$PACKER_PRIVATE_H" > Telegram/SourceFiles/_other/packer_private.h
+
       - name: Build AyuGram Desktop.
         shell: cmd
         run: python scripts/build.py --jobs %BUILD_JOBS% --pack --clean-pack
@@ -138,9 +148,25 @@ jobs:
           size=$(stat -c %s "$artifact")
           echo "File size of ${artifact}: ${size} Bytes."
 
+      - name: Pack update.
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^AppVersion  *//p' Telegram/build/version)
+          test -n "$version"
+          packer=$(pwd)/build/tmp/out/Release/Packer.exe
+          test -f "$packer"
+          cd build/AyuGram-v*-win-x64-release
+          "$packer" -target win64 -version "$version" \
+            -path AyuGram.exe -path Updater.exe
+          mv "tx64upd${version}" ../
+          ls -l "../tx64upd${version}"
+
       - name: Upload artifact.
         uses: actions/upload-artifact@v7
         with:
           name: AyuGram-Windows-x64
-          path: build/AyuGram-v*-win-x64.zip
+          path: |
+            build/AyuGram-v*-win-x64.zip
+            build/tx64upd*
           retention-days: 7

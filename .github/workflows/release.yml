@@ -53,8 +53,11 @@ jobs:
           set -euo pipefail
           version=$(sed -n 's/^AppVersionStrSmall //p' Telegram/build/version)
           test -n "$version"
+          appversion=$(sed -n 's/^AppVersion  *//p' Telegram/build/version)
+          test -n "$appversion"
           echo "version=${version}" >> $GITHUB_OUTPUT
           echo "tag=v${version}" >> $GITHUB_OUTPUT
+          echo "appversion=${appversion}" >> $GITHUB_OUTPUT
 
       - name: Collect run ids.
         if: steps.verify.outputs.ready == 'true'
@@ -96,6 +99,27 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifacts
 
+      # 客户端请求 <prefix>/current6 取版本清单，link 拼在同一前缀后
+      - name: Generate update map.
+        if: steps.verify.outputs.ready == 'true'
+        env:
+          APPVERSION: ${{ steps.version.outputs.appversion }}
+        run: |
+          set -euo pipefail
+          test -f "artifacts/tx64upd${APPVERSION}"
+          cat > artifacts/current6 <<EOF
+          {
+            "win64": {
+              "stable": {
+                "released": ${APPVERSION},
+                "testing": ${APPVERSION},
+                "link": "/tx64upd{version}"
+              }
+            }
+          }
+          EOF
+          python3 -c "import json,sys; json.load(open('artifacts/current6'))"
+
       - name: List release files.
         if: steps.verify.outputs.ready == 'true'
         run: |
@@ -110,7 +134,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: AyuGram Desktop Plus ${{ steps.version.outputs.version }}
           body_path: .github/CHANGELOG.md
-          files: artifacts/*.zip
+          files: artifacts/*
           draft: false
           prerelease: false
           overwrite_files: true
