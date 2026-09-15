@@ -1,3 +1,9 @@
+7.2.9 (15.09.26)
+- Automatic updates from this repository's releases
+- Adaptive wide layout off by default, switch always visible
+- Ghost mode switches hidden by default
+- Message bubble outline follows real corners
+
 7.2.8 (13.09.26)
 - Sync with upstream Telegram Desktop 7.2.8
 - Automatic spacing between CJK and Latin text

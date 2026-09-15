@@ -1,5 +1,25 @@
 # Changelog
 
+## 7.2.9
+
+Project-specific changes:
+
+- Automatic updates now work: new versions are downloaded and installed from this repository's releases.
+- Adaptive layout for wide screens is off by default, and its switch is always visible in Settings.
+- Ghost mode switches are hidden by default.
+- Message bubble outlines follow the real corner shape.
+- The chat list drawer closes when the archive is opened from it.
+
+---
+
+本项目自身的改动：
+
+- 自动更新可用：新版本会从本仓库的发布页下载并安装。
+- 宽屏自适应布局默认关闭，开关在设置里常驻显示。
+- 幽灵模式的开关默认隐藏。
+- 消息气泡的描边沿真实圆角绘制。
+- 从聊天列表抽屉打开归档时会自动收起抽屉。
+
 ## 7.2.8
 
 Includes all upstream Telegram Desktop 7.2.8 changes, most notably from the 7.2 series:
