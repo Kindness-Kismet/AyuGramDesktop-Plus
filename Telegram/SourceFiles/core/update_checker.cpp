@@ -1989,16 +1989,19 @@ void Updater::start(bool forceWait) {
 			// Canary builds discover updates only through their own MTP
 			// channels, the v1 HTTP feed serves other channels.
 			startImplementation(&_httpImplementation, nullptr);
+			startImplementation(
+				&_mtpImplementation,
+				std::make_unique<MtpChecker>(
+					LookupCanaryPrivateSession(_session),
+					_testing));
 		} else {
 			startImplementation(
 				&_httpImplementation,
 				std::make_unique<HttpChecker>(_testing));
+
+			// 官方 MTP 包用上游 v2 根密钥能验签通过，装上会覆盖成原版。
+			startImplementation(&_mtpImplementation, nullptr);
 		}
-		startImplementation(
-			&_mtpImplementation,
-			std::make_unique<MtpChecker>(
-				LookupCanaryPrivateSession(_session),
-				_testing));
 
 		_checking.fire({});
 	} else {
