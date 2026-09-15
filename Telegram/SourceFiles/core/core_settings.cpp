@@ -1676,7 +1676,7 @@ void Settings::setLegacyEmojiVariants(QMap<QString, int> data) {
 }
 
 void Settings::resetOnLastLogout() {
-	_adaptiveForWide = true;
+	_adaptiveForWide = false;
 	_moderateModeEnabled = false;
 
 	_songVolume = kDefaultVolume;

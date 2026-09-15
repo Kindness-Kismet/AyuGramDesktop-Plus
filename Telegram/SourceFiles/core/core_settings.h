@@ -1090,7 +1090,8 @@ private:
 
 	SettingsProxy _proxy;
 
-	rpl::variable<bool> _adaptiveForWide = true;
+	// 默认关闭：宽屏模式会跳过消息气泡的右对齐，观感上像布局出错。
+	rpl::variable<bool> _adaptiveForWide = false;
 	bool _moderateModeEnabled = false;
 	rpl::variable<float64> _songVolume = kDefaultVolume;
 	rpl::variable<float64> _videoVolume = kDefaultVolume;

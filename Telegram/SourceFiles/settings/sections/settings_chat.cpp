@@ -2092,6 +2092,7 @@ void SetupChatBackground(
 				background->tile(),
 				st::settingsCheckbox),
 			st::settingsSendTypePadding));
+	// 常驻显示：上游只在宽屏布局已生效时才显示这个开关，找不到入口会让人困惑。
 	const auto adaptive = inner->add(
 		object_ptr<Ui::SlideWrap<Ui::Checkbox>>(
 			inner,
@@ -2122,11 +2123,6 @@ void SetupChatBackground(
 		tile->entity()->setChecked(background->tile());
 		tile->toggle(shown(), anim::type::instant);
 	}, tile->lifetime());
-
-	adaptive->toggleOn(controller->adaptive().chatLayoutValue(
-	) | rpl::map([](Window::Adaptive::ChatLayout layout) {
-		return (layout == Window::Adaptive::ChatLayout::Wide);
-	}));
 
 	adaptive->entity()->checkedChanges(
 	) | rpl::on_next([=](bool checked) {
