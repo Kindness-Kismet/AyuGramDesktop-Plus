@@ -20,6 +20,8 @@
 
 #include "base/unixtime.h"
 
+#include <QFile>
+
 namespace AyuDebug::Commands {
 namespace {
 
@@ -214,18 +216,54 @@ using json = nlohmann::json;
 	return Result::Ok(Compact(std::move(items)));
 }
 
-// 真实发送文本消息，走官方发送链路，auto_space 等钩子均生效。
+// 会话列表里的频道与群只带最小信息，完整数据没加载时 peerLoaded 返回空。
+// 所以再按 peerId 在会话列表里找一遍，保证 debug.chats 输出的 id 一定可用。
+[[nodiscard]] PeerData *ResolvePeer(
+		not_null<Main::Session*> session,
+		int64 idValue) {
+	if (idValue == 0) {
+		return session->user();
+	}
+	const auto id = PeerId(BareId(idValue));
+	if (const auto loaded = session->data().peerLoaded(id)) {
+		return loaded;
+	}
+	for (const auto &row : session->data().chatsList()->indexed()->all()) {
+		const auto history = row->history();
+		if (history && history->peer->id == id) {
+			return history->peer;
+		}
+	}
+	// 正数兼容旧 userId 写法
+	return (idValue > 0)
+		? session->data().peerLoaded(peerFromUser(idValue))
+		: nullptr;
+}
+
+// 真实发送文本，走官方发送链路，auto_space 等钩子均生效。
+// --file 读文件原样发送，命令行参数按空白切分，带不了换行与引号。
 // 仅限本人测试群使用。
 [[nodiscard]] Result SendTextMessage(const QStringList &args) {
 	if (args.size() < 2) {
-		return Result::Err(u"usage: debug.send-message <peerId> <text>"_q);
+		return Result::Err(u"usage: debug.send-message <peerId> <text"
+			u" | --file path>"_q);
 	}
 	auto ok = false;
 	const auto peerIdValue = args.front().toLongLong(&ok);
 	if (!ok || peerIdValue == 0) {
 		return Result::Err(u"expected numeric peerId, run debug.chats"_q);
 	}
-	const auto text = args.mid(1).join(u" "_q);
+	auto text = QString();
+	if (args.size() >= 3 && args[1] == u"--file"_q) {
+		const auto path = args[2];
+		auto file = QFile(path);
+		if (!file.open(QIODevice::ReadOnly)) {
+			return Result::Err(u"cannot read file: "_q + path);
+		}
+		text = QString::fromUtf8(file.readAll());
+	} else {
+		text = args.mid(1).join(u" "_q);
+	}
 	if (text.isEmpty()) {
 		return Result::Err(u"text must not be empty"_q);
 	}
@@ -233,8 +271,7 @@ using json = nlohmann::json;
 	if (!session) {
 		return Result::Err(u"no active session"_q);
 	}
-	const auto peer = session->data().peerLoaded(
-		PeerId(BareId(peerIdValue)));
+	const auto peer = ResolvePeer(session, peerIdValue);
 	if (!peer) {
 		return Result::Err(u"peer not found, run debug.chats first"_q);
 	}
@@ -243,11 +280,16 @@ using json = nlohmann::json;
 	auto message = Api::MessageToSend(action);
 	message.textWithTags = { text, TextWithTags::Tags{} };
 	session->api().sendMessage(std::move(message));
-	return Result::Ok(Compact(json{
+	// 长文本不回显正文，避免响应被撑爆
+	auto result = json{
 		{ "peerId", peer->id.value },
 		{ "name", peer->name().toStdString() },
-		{ "text", text.toStdString() },
-	}));
+		{ "textLength", text.size() },
+	};
+	if (text.size() <= 512) {
+		result["text"] = text.toStdString();
+	}
+	return Result::Ok(Compact(result));
 }
 
 // 打开对话并清空导航栈；参数取 debug.chats 输出的 peerId，
@@ -272,18 +314,7 @@ using json = nlohmann::json;
 	if (!controller) {
 		return Result::Err(u"no window controller"_q);
 	}
-	const auto peer = [&]() -> PeerData* {
-		if (idValue == 0) {
-			return session->user();
-		}
-		// 群与频道先按裸 peerId 解析，正数回落到旧 userId 写法
-		auto loaded = session->data().peerLoaded(
-			PeerId(BareId(idValue)));
-		if (!loaded && idValue > 0) {
-			loaded = session->data().peerLoaded(peerFromUser(idValue));
-		}
-		return loaded;
-	}();
+	const auto peer = ResolvePeer(session, idValue);
 	if (!peer) {
 		return Result::Err(u"peer not found, run debug.chats first"_q);
 	}

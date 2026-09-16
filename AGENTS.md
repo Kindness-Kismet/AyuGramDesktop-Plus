@@ -269,6 +269,8 @@ Debug 构建会在 `AyuInfra::init()` 里启动 `QTcpServer`，监听 `127.0.0.1
 | `crash.log` | 读取崩溃日志 |
 | `debug.fake-session [userId]` | 构造本地假会话绕过登录，默认 999999999 |
 | `debug.fake-message <text> [--from <userId>] [--blocked] [--shadow-ban]` | 往 Saved Messages 插入本地文本消息，用于验证渲染与隐藏逻辑 |
+| `debug.chats [filter]` | 列出会话的 peerId 与名称，供 send-message / open-chat 定位目标 |
+| `debug.send-message <peerId> <text\|--file path>` | 真实发送文本到指定对话（`--file` 按 UTF-8 读文件原样发送），走官方发送链路，仅发往自己掌控的测试对话 |
 | `debug.open-chat [userId]` | 打开指定聊天，缺省为 Saved Messages |
 | `debug.testmode` | 切换到官方测试数据中心（+99966 号段，验证码 22222） |
 | `debug.history-stats` | 当前会话的消息计数与可见性统计 |

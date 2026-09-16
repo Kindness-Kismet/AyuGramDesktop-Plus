@@ -73,7 +73,7 @@ python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true + 
 | `debug.reset-background` | 重置聊天背景到默认壁纸，验证默认壁纸改动 |
 | `debug.fake-message <text> [--from <userId>] [--blocked] [--shadow-ban]` | 往 Saved Messages 插入本地文本消息，验证渲染与隐藏逻辑 |
 | `debug.chats [filter]` | 列出已加载对话的 peerId 与名称，供定位目标 |
-| `debug.send-message <peerId> <text>` | 真实发送文本消息到指定对话，需已登录，仅发往自己掌控的测试对话 |
+| `debug.send-message <peerId> <text\|--file path>` | 真实发送文本到指定对话，需已登录，仅发往自己掌控的测试对话；`--file` 按 UTF-8 读文件原样发送，用于带换行、引号的文本 |
 | `debug.open-chat [peerId\|userId]` | 打开指定对话，缺省 Saved Messages |
 | `debug.open-archive` | 直接打开归档文件夹，不走抽屉入口 |
 | `debug.window-size [width height]` | 读或设窗口尺寸，验证依赖窗口宽度的布局 |
