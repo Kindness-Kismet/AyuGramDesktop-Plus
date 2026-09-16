@@ -2775,7 +2775,9 @@ if (NOT DESKTOP_APP_DISABLE_AUTOUPDATE AND NOT build_macstore AND NOT build_wins
         )
     endif()
 
-    if (DESKTOP_APP_SPECIAL_TARGET)
+    # AyuGram：更新包格式带平台差异，必须各平台原生打包，故独立开关。
+    option(AYUGRAM_BUILD_PACKER "Build the update packer on this platform." OFF)
+    if (DESKTOP_APP_SPECIAL_TARGET OR AYUGRAM_BUILD_PACKER)
         add_executable(Packer)
         init_target(Packer)
 
