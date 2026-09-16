@@ -402,14 +402,25 @@ MainMenu::MainMenu(
 			clicks = 0;
 		}
 		last = now;
-		if (++clicks < 20) {
+		const auto count = ++clicks;
+		if (count == 20) {
+			clicks = 0;
+			if (!AyuSettings::getInstance().devFeaturesEnabled()) {
+				AyuSettings::getInstance().setDevFeaturesEnabled(true);
+			}
+			controller->showToast(tr::ayu_DevFeaturesUnlocked(tr::now));
 			return;
 		}
-		clicks = 0;
-		if (!AyuSettings::getInstance().devFeaturesEnabled()) {
-			AyuSettings::getInstance().setDevFeaturesEnabled(true);
+		// 每 5 次逗一句，其余点击不给反馈，第 20 次才真的解锁。
+		if (count % 5 != 0) {
+			return;
 		}
-		controller->showToast(tr::ayu_DevFeaturesUnlocked(tr::now));
+		const auto hint = (count == 5)
+			? tr::ayu_DevFeaturesHint1(tr::now)
+			: (count == 10)
+			? tr::ayu_DevFeaturesHint2(tr::now)
+			: tr::ayu_DevFeaturesHint3(tr::now);
+		controller->showToast(hint);
 	}));
 	// The canary version is too long for the "Version {version}" form.
 	_version->setMarkedText(

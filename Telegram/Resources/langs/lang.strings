@@ -8876,6 +8876,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_RestoreHiddenFeatures" = "Restore Hidden Features";
 "ayu_DevFeaturesUnlocked" = "Developer features enabled. Reopen AyuGram preferences.";
 "ayu_DevFeaturesRestored" = "Developer features hidden. Reopen AyuGram preferences.";
+"ayu_DevFeaturesHint1" = "Stop clicking. There's nothing here.";
+"ayu_DevFeaturesHint2" = "Stop it. There's really nothing.";
+"ayu_DevFeaturesHint3" = "Still clicking?";
 "ayu_ResetSettings" = "Reset Settings";
 "ayu_ResetSettingsConfirmation" = "Are you sure you want to reset **all** AyuGram preferences to their defaults?";
 "ayu_DisableColorfulCover" = "Disable adaptive color";
