@@ -99,26 +99,44 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifacts
 
-      # 客户端请求 <prefix>/current6 取版本清单，link 拼在同一前缀后
+      # 客户端请求 <prefix>/current6 取版本清单，link 拼在同一前缀后。
+      # 只登记本次真的产出了更新包的平台，缺包的平台客户端会跳过检查。
       - name: Generate update map.
         if: steps.verify.outputs.ready == 'true'
         env:
           APPVERSION: ${{ steps.version.outputs.appversion }}
         run: |
           set -euo pipefail
-          test -f "artifacts/tx64upd${APPVERSION}"
-          cat > artifacts/current6 <<EOF
-          {
-            "win64": {
-              "stable": {
-                "released": ${APPVERSION},
-                "testing": ${APPVERSION},
-                "link": "/tx64upd{version}"
-              }
-            }
+          cd artifacts
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+
+          version = os.environ["APPVERSION"]
+          packages = {
+              "tx64upd": "win64",
+              "tarm64upd": "winarm",
+              "tlinuxupd": "linux",
+              "tarmacupd": "armac",
+              "tmacupd": "mac",
           }
-          EOF
-          python3 -c "import json,sys; json.load(open('artifacts/current6'))"
+          entry = {}
+          for prefix, platform in packages.items():
+              if not pathlib.Path(f"{prefix}{version}").is_file():
+                  continue
+              entry[platform] = {
+                  "stable": {
+                      "released": int(version),
+                      "testing": int(version),
+                      "link": f"/{prefix}{{version}}",
+                  }
+              }
+          if "win64" not in entry:
+              raise SystemExit(f"no win64 update package for {version}")
+          pathlib.Path("current6").write_text(json.dumps(entry, indent=2) + "\n")
+          print(json.dumps(entry))
+          PY
 
       - name: List release files.
         if: steps.verify.outputs.ready == 'true'

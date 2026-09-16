@@ -109,6 +109,15 @@ jobs:
             ThirdParty
           key: ${{ steps.cache-libs.outputs.cache-primary-key }}
 
+      # Packer 是 Telegram 的构建依赖，私钥头文件必须在编译前就位
+      - name: Write packer signing key.
+        env:
+          PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
+        run: |
+          set -euo pipefail
+          test -n "$PACKER_PRIVATE_H"
+          printf '%s' "$PACKER_PRIVATE_H" > $REPO_NAME/Telegram/SourceFiles/_other/packer_private.h
+
       - name: Build AyuGram Desktop.
         run: |
           set -euo pipefail
@@ -120,7 +129,8 @@ jobs:
           -D TDESKTOP_API_ID=2040 \
           -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
           -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF \
-          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF
+          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF \
+          -D AYUGRAM_BUILD_PACKER=ON
 
           cmake --build ../out --config Release --parallel
 
@@ -145,9 +155,26 @@ jobs:
           zip -r "AyuGram-v${version}-macos.zip" AyuGram.app
           test ! -f Updater || zip "AyuGram-v${version}-macos.zip" Updater
 
+      # 包内固定放 AyuGram.app，客户端也按这个名字找，用户重命名 bundle 仍可更新
+      - name: Pack update.
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^AppVersion  *//p' $REPO_NAME/Telegram/build/version)
+          test -n "$version"
+          case "$(uname -m)" in
+            arm64) archFlag="-arch arm64" ;;
+            *) archFlag="-arch x86_64" ;;
+          esac
+          cd $REPO_NAME/out/Release
+          ./Packer -version "$version" $archFlag -path AyuGram.app
+          ls -l t*upd${version}
+
       - name: Upload artifact.
         uses: actions/upload-artifact@v7
         with:
           name: AyuGram-macOS
-          path: ${{ env.REPO_NAME }}/out/Release/AyuGram-v*-macos.zip
+          path: |
+            ${{ env.REPO_NAME }}/out/Release/AyuGram-v*-macos.zip
+            ${{ env.REPO_NAME }}/out/Release/tmacupd*
+            ${{ env.REPO_NAME }}/out/Release/tarmacupd*
           retention-days: 7

@@ -137,6 +137,15 @@ jobs:
           key: ${{ runner.OS }}-ayugram-${{ github.run_id }}
           restore-keys: ${{ runner.OS }}-ayugram-
 
+      # Packer 是 Telegram 的构建依赖，私钥头文件必须在编译前就位
+      - name: Write packer signing key.
+        env:
+          PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
+        run: |
+          set -euo pipefail
+          test -n "$PACKER_PRIVATE_H"
+          printf '%s' "$PACKER_PRIVATE_H" > Telegram/SourceFiles/_other/packer_private.h
+
       - name: Build AyuGram Desktop.
         run: |
           set -euo pipefail
@@ -154,7 +163,8 @@ jobs:
           -D TDESKTOP_API_ID=2040 \
           -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
           -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF \
-          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF
+          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF \
+          -D AYUGRAM_BUILD_PACKER=ON
 
       - name: Count ccache misses.
         id: ccache-stats
@@ -197,9 +207,24 @@ jobs:
           zip "AyuGram-v${version}-linux-x64.zip" AyuGram
           test ! -f Updater || zip "AyuGram-v${version}-linux-x64.zip" Updater
 
+      # 更新包名由 Packer 按平台写死；Packer 链的是容器内的库，必须在容器里跑
+      - name: Pack update.
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^AppVersion  *//p' Telegram/build/version)
+          test -n "$version"
+          docker run --rm \
+          -u $(id -u) \
+          -v $PWD:/usr/src/tdesktop \
+          $IMAGE_TAG \
+          bash -c "cd /usr/src/tdesktop/out/Release && ./Packer -version $version -path AyuGram -path Updater"
+          ls -l "out/Release/tlinuxupd${version}"
+
       - name: Upload artifact.
         uses: actions/upload-artifact@v7
         with:
           name: AyuGram-Linux
-          path: out/Release/AyuGram-v*-linux-x64.zip
+          path: |
+            out/Release/AyuGram-v*-linux-x64.zip
+            out/Release/tlinuxupd*
           retention-days: 7
