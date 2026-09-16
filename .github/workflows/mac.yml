@@ -161,11 +161,24 @@ jobs:
           set -euo pipefail
           version=$(sed -n 's/^AppVersion  *//p' $REPO_NAME/Telegram/build/version)
           test -n "$version"
+          cd $REPO_NAME/out/Release
+
+          # 客户端按运行机器选 mac 或 armac 键，只有通用二进制才能同时登记两个
+          archs=$(lipo -archs AyuGram.app/Contents/MacOS/AyuGram)
+          echo "bundle arches: $archs"
+          case "$archs" in
+            *arm64*) ;;
+            *) echo "bundle has no arm64 slice, refusing to publish an update"; exit 1 ;;
+          esac
+          case "$archs" in
+            *x86_64*) ;;
+            *) echo "bundle has no x86_64 slice, refusing to publish an update"; exit 1 ;;
+          esac
+
           case "$(uname -m)" in
             arm64) archFlag="-arch arm64" ;;
             *) archFlag="-arch x86_64" ;;
           esac
-          cd $REPO_NAME/out/Release
           ./Packer -version "$version" $archFlag -path AyuGram.app
           ls -l t*upd${version}
 

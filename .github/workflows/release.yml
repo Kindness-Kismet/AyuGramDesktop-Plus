@@ -114,24 +114,32 @@ jobs:
           import pathlib
 
           version = os.environ["APPVERSION"]
-          packages = {
-              "tx64upd": "win64",
-              "tarm64upd": "winarm",
-              "tlinuxupd": "linux",
-              "tarmacupd": "armac",
-              "tmacupd": "mac",
-          }
-          entry = {}
-          for prefix, platform in packages.items():
-              if not pathlib.Path(f"{prefix}{version}").is_file():
-                  continue
-              entry[platform] = {
+
+          def entry_for(prefix):
+              return {
                   "stable": {
                       "released": int(version),
                       "testing": int(version),
                       "link": f"/{prefix}{{version}}",
                   }
               }
+
+          entry = {}
+          for prefix, platform in {
+              "tx64upd": "win64",
+              "tarm64upd": "winarm",
+              "tlinuxupd": "linux",
+          }.items():
+              if pathlib.Path(f"{prefix}{version}").is_file():
+                  entry[platform] = entry_for(prefix)
+
+          # mac 是通用二进制，一份包同时服务 Intel 与 ARM，客户端按运行机器选键
+          for prefix in ("tmacupd", "tarmacupd"):
+              if pathlib.Path(f"{prefix}{version}").is_file():
+                  entry["mac"] = entry_for(prefix)
+                  entry["armac"] = entry_for(prefix)
+                  break
+
           if "win64" not in entry:
               raise SystemExit(f"no win64 update package for {version}")
           pathlib.Path("current6").write_text(json.dumps(entry, indent=2) + "\n")
