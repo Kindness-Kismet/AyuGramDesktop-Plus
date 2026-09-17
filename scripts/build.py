@@ -22,6 +22,7 @@ from build_support.paths import (
     DEFAULT_API_ID,
     LIBRARIES_ARCH_DIR,
     ROOT,
+    TARGET_SUFFIX,
     TMP_DIR,
 )
 from build_support.toolchain import describe_toolset, msvc_environment
