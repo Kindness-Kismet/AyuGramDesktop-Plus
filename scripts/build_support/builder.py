@@ -18,12 +18,13 @@ from build_support.paths import (
     ROOT,
     TARGET,
     TARGET_CMAKE_ARCH,
+    TARGET_SPECIAL_TARGET,
     TARGET_SUFFIX,
     VENV_PYTHON,
     NUGET_EXE,
 )
 from build_support.processes import run
-from build_support.recipes import QT_VERSION
+from build_support.recipes import qt_version
 from build_support.timer import timed_step
 from build_support.toolchain import CMAKE_GENERATOR, CMAKE_TOOLSET, msvc_environment
 from build_support.version import parse_version, read_current_version
@@ -32,7 +33,7 @@ _CONFIGURATIONS = {"dev": "Debug", "release": "Release"}
 
 # 非空值启用官方发布语义：Updater、Packer 与更新检查，另含过旧版本提示
 # 和闭源 alpha 支持。该标记同时决定 AUTOUPDATE 的默认值。
-_SPECIAL_TARGET = TARGET
+_SPECIAL_TARGET = TARGET_SPECIAL_TARGET
 
 # 每个编译进程都要映射一份 PCH，8 路约占 4 GB 提交量，对 32 GB 内存 + 6 GB
 # 页面文件的机器留有余量；调高需同步扩大页面文件。
@@ -42,7 +43,7 @@ _DEFAULT_CL_JOBS = 8
 def output_dir(profile: str) -> Path:
     # 版本号取自 Telegram/build/version，与 cli.py 的产物解析保持一致
     version = parse_version(read_current_version()).original
-    return BUILD_DIR / f"{APP_NAME}-v{version}-win-x64-{profile}"
+    return BUILD_DIR / f"{APP_NAME}-v{version}-win-{TARGET_SUFFIX}-{profile}"
 
 
 def clean_output_dir(profile: str) -> int:
@@ -81,7 +82,7 @@ def zip_output(profile: str) -> Path:
 def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bool, jobs: int | None, pack: bool = False, clean_pack: bool = False) -> None:
     environment = msvc_environment()
     # cmake/external/qt 靠 %QT% 定位 Qt-<版本> 目录，缺失会直接 FATAL_ERROR
-    environment["QT"] = QT_VERSION
+    environment["QT"] = qt_version(TARGET)
 
     if not LIBRARIES_ARCH_DIR.is_dir():
         raise SystemExit(f"Dependencies missing at {LIBRARIES_ARCH_DIR}. Run scripts/prebuild.py first.")

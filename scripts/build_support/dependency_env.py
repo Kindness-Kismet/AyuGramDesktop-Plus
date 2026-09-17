@@ -5,11 +5,14 @@ from pathlib import Path
 
 from build_support.paths import (
     LIBRARIES_ARCH_DIR,
+    TARGET,
+    TARGET_MSVC_PLATFORM,
+    TARGET_SPECIAL_TARGET,
     THIRD_PARTY_DIR,
     TMP_DIR,
     USED_PREFIX_DIR,
 )
-from build_support.recipes import QT_VERSION
+from build_support.recipes import qt_version
 from build_support.toolchain import CMAKE_TOOLSET
 
 _FETCH_SCRIPT = Path(__file__).resolve().parent / "fetch.py"
@@ -39,8 +42,8 @@ def stage_variables() -> dict[str, str]:
         "THIRDPARTY_DIR": str(THIRD_PARTY_DIR),
         "PATH_PREFIX": "".join(f"{path}{os.pathsep}" for path in _PATH_PREFIXES),
         "CMAKE_GENERATOR": "Ninja Multi-Config",
-        "SPECIAL_TARGET": "win64",
-        "X8664": "x64",
+        "SPECIAL_TARGET": TARGET_SPECIAL_TARGET,
+        "X8664": TARGET_MSVC_PLATFORM,
         # 覆盖上游工程里写死的 v143，命令行属性优先于工程文件
         "MSBUILD_TOOLSET": CMAKE_TOOLSET,
         # 配方用它下载与解压，避开 PowerShell 执行策略限制
@@ -54,7 +57,7 @@ def build_environment(base: dict[str, str]) -> dict[str, str]:
     environment = dict(base)
     environment.update(variables)
     # qt 配方用 %QT% 拼产物目录，上游同样只放进环境而不计入缓存键
-    environment["QT"] = QT_VERSION
+    environment["QT"] = qt_version(TARGET)
     # 该变量会让 bat 里的相对路径调用失效
     environment.pop("NoDefaultCurrentDirectoryInExePath", None)
     # 系统目录只压在继承的 PATH 之上，同样不参与缓存键

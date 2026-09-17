@@ -16,7 +16,7 @@ THIRD_PARTY_DIR = TMP_DIR / "ThirdParty"
 CMAKE_OUT_DIR = TMP_DIR / "out"
 
 # 目标平台由 AYUGRAM_TARGET 选择，取值与上游一致：win64 或 winarm64。
-# winarm64 需要原生 arm64 主机，依赖目录与产物都不与 x64 混用。
+# arm64 在 arm64 runner 上构建，依赖与产物都不与 x64 混用。
 _TARGETS = {
     "win64": ("x64", "x64", "x64"),      # CMake -A、vcvarsall 架构、产物后缀
     "winarm64": ("ARM64", "arm64", "arm64"),
@@ -25,6 +25,10 @@ TARGET = os.environ.get("AYUGRAM_TARGET", "win64")
 if TARGET not in _TARGETS:
     raise SystemExit(f"unknown AYUGRAM_TARGET: {TARGET}, expect win64 or winarm64")
 TARGET_CMAKE_ARCH, TARGET_VCVARS_ARCH, TARGET_SUFFIX = _TARGETS[TARGET]
+
+# CMake 的 special target 与 MSVC 平台名，取值与上游构建脚本一致
+TARGET_SPECIAL_TARGET = {"win64": "win64", "winarm64": "winarm"}[TARGET]
+TARGET_MSVC_PLATFORM = {"win64": "x64", "winarm64": "ARM64"}[TARGET]
 
 # 依赖按目标平台分目录，与固化配方中的目录约定一致
 LIBRARIES_ARCH_DIR = LIBRARIES_DIR / TARGET

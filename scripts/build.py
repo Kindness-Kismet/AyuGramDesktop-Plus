@@ -48,7 +48,7 @@ def print_environment(args: argparse.Namespace, environment: dict[str, str]) -> 
     outputs = ", ".join(str(output_dir(p).relative_to(ROOT)) for p in sorted(args.configurations))
 
     print(header("Current build environment"))
-    print(f"  Platform       Windows x64")
+    print(f"  Platform       Windows {TARGET_SUFFIX}")
     print(f"  Toolset        {describe_toolset(environment)}")
     print(f"  Configuration  {configurations}")
     print(f"  CMake          {get_tool_version([cmake_executable(environment), '--version'])}")

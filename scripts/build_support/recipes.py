@@ -4,6 +4,7 @@
 其中 $VAR 由 dependency_env 提供，^ 为 cmd 续行符，均须原样保留。
 """
 
+from build_support import recipes_arm64
 from build_support.recipe import Stage
 
 # Qt 版本决定补丁目录与产物前缀，随上游 qt_version 同步
@@ -671,7 +672,34 @@ cmake --build . --config Release
 STAGE_NAMES = [stage.name for stage in STAGES]
 
 
-def resolved_stages() -> list[Stage]:
+def qt_version(target: str) -> str:
+    """arm64 换 Qt 6：Qt 5.15 没有 Windows arm64 支持，上游同样这么选。"""
+    return recipes_arm64.QT_VERSION if target == "winarm64" else QT_VERSION
+
+
+def stages_for(target: str) -> list[Stage]:
+    """按目标平台取阶段清单，arm64 的差异见 recipes_arm64。"""
+    from dataclasses import replace
+
+    if target == "win64":
+        return list(STAGES)
+    if target != "winarm64":
+        raise SystemExit(f"unknown target: {target}")
+    qt_stage = f"qt_{QT_VERSION}"
+    result: list[Stage] = []
+    for stage in STAGES:
+        if stage.name == qt_stage:
+            result.append(recipes_arm64.QT_STAGE)
+        elif stage.name in recipes_arm64.SKIP:
+            continue
+        elif stage.name in recipes_arm64.OVERRIDES:
+            result.append(replace(stage, commands=recipes_arm64.OVERRIDES[stage.name]))
+        else:
+            result.append(stage)
+    return result
+
+
+def resolved_stages(target: str) -> list[Stage]:
     """填入运行时版本后的阶段清单。"""
     import sys
     from dataclasses import replace
@@ -679,5 +707,5 @@ def resolved_stages() -> list[Stage]:
     version = "0." + ".".join(str(part) for part in sys.version_info[:3])
     return [
         replace(stage, version=version) if stage.version == PYTHON_VERSION_PLACEHOLDER else stage
-        for stage in STAGES
+        for stage in stages_for(target)
     ]

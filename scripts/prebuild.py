@@ -17,8 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_support.console import format_bytes, header, print_summary, utf8_output
 from build_support.dependency_runner import run_stages
 from build_support.help import MultilineHelpFormatter, format_choice_help
-from build_support.paths import LIBRARIES_DIR, THIRD_PARTY_DIR, TMP_DIR
-from build_support.recipes import QT_VERSION, STAGE_NAMES, resolved_stages
+from build_support.paths import LIBRARIES_DIR, TARGET, TARGET_SUFFIX, THIRD_PARTY_DIR, TMP_DIR
+from build_support.recipes import STAGE_NAMES, qt_version, resolved_stages
 from build_support.timer import timed_step
 from build_support.toolchain import describe_toolset, msvc_environment
 
@@ -33,7 +33,7 @@ def main() -> None:
 
     if args.list:
         print(header("Available stages"))
-        for stage in resolved_stages():
+        for stage in resolved_stages(TARGET):
             version = f"#{stage.version}" if stage.version != "0" else ""
             print(f"  {stage.name:<18} {stage.location}{version}")
         return
@@ -41,10 +41,10 @@ def main() -> None:
     environment = msvc_environment()
 
     print(header("Current environment"))
-    print(f"  Platform       Windows x64")
+    print(f"  Platform       Windows {TARGET_SUFFIX}")
     print(f"  Toolset        {describe_toolset(environment)}")
     print(f"  Python         {sys.version.split()[0]}")
-    print(f"  Qt             {QT_VERSION}")
+    print(f"  Qt             {qt_version(TARGET)}")
     print(f"  Dependencies   {TMP_DIR}")
     print(f"  Proxy          {describe_proxy()}")
     print()
@@ -55,7 +55,7 @@ def main() -> None:
 
     with timed_step("Prepare third party libraries"):
         with utf8_output():
-            built = run_stages(resolved_stages(), environment, args.stages, args.verbose)
+            built = run_stages(resolved_stages(TARGET), environment, args.stages, args.verbose)
         print(f"  {built} stage(s) built", flush=True)
 
     report()
