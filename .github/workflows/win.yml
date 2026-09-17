@@ -115,6 +115,7 @@ jobs:
           rm -rf "/c/Program Files/Microsoft SDKs/Azure" || true
           df -h /c
 
+      # arm64 旧一代缓存里的 Qt 安装被裁过，用代次后缀让它整批换代
       - name: Restore libraries cache.
         id: cache-libs
         uses: actions/cache/restore@v6
@@ -122,7 +123,7 @@ jobs:
           path: |
             build/tmp/Libraries
             build/tmp/ThirdParty
-          key: win-libs-${{ matrix.arch }}-${{ hashFiles('scripts/prebuild.py', 'scripts/build_support/recipes.py', 'scripts/build_support/recipes_arm64.py', 'scripts/build_support/dependency_cache.py') }}
+          key: win-libs-${{ matrix.arch }}-${{ hashFiles('scripts/prebuild.py', 'scripts/build_support/recipes.py', 'scripts/build_support/recipes_arm64.py', 'scripts/build_support/dependency_cache.py') }}${{ matrix.arch == 'arm64' && '-qtobj' || '' }}
           restore-keys: win-libs-${{ matrix.arch }}-
 
       # 缓存归档保不住符号链接，msys2 的 mtab 与 dev 由运行时重建
@@ -134,17 +135,30 @@ jobs:
           rm -f build/tmp/ThirdParty/msys64/etc/mtab
           rm -rf build/tmp/ThirdParty/msys64/dev || true
 
+      # 缓存的 Qt 安装要是已经丢了 objects-*，只让这一格重建，其余依赖照旧命中
+      - name: Drop stale Qt cache key.
+        if: steps.cache-libs.outputs.cache-hit == 'true' && matrix.arch == 'arm64'
+        shell: bash
+        run: |
+          set -euo pipefail
+          objects=$(find build/tmp/Libraries/winarm64/Qt-*/lib/objects-Debug -name '*.obj' 2>/dev/null | head -1 || true)
+          if [ -z "$objects" ]; then
+            rm -f build/tmp/Libraries/winarm64/cache_keys/qt_6.11.2
+          fi
+
       - name: Build dependencies.
         shell: cmd
         run: python scripts/prebuild.py
 
       # 中间产物不入库可把缓存压到 10 GB 限制内，恢复后阶段标记仍完整
+      # Qt 6 的 cmake 配置引用安装目录里的 objects-*，裁掉会让 arm64 配置阶段直接失败
       - name: Trim intermediate build files.
         shell: bash
         run: |
           set -euo pipefail
           find build/tmp/Libraries build/tmp/ThirdParty \
-            \( -name '*.obj' -o -name '*.pdb' -o -name '*.pch' \) -type f -delete
+            \( -name '*.obj' -o -name '*.pdb' -o -name '*.pch' \) -type f \
+            -not -path '*/Qt-*/lib/objects-*' -delete
 
       # 依赖建好立即入库，后续构建失败不再连带丢失 prebuild 缓存
       - name: Save libraries cache.
