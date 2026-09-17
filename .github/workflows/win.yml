@@ -52,7 +52,7 @@ jobs:
     name: Windows ${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 359
-    # arm64 的依赖配方尚未就绪，先并行跑起来看结果，通过前不阻塞发布
+    # arm64 配方已就位但未在 CI 跑通，通过前不阻塞发布
     continue-on-error: ${{ matrix.arch != 'x64' }}
 
     strategy:
@@ -62,15 +62,17 @@ jobs:
           - arch: x64
             runner: windows-latest
             target: win64
+            special: win64
             updater: tx64upd
             vcvars: x64
             toolset: '14.51'
             cmake_toolset: v145
             generator: 'Visual Studio 18 2026'
-          # 依赖配方只有 win64 一份，arm64 先用 runner 上现成的 VS 2022
+          # arm64 runner 上只有 VS 2022，工具链按行指定
           - arch: arm64
             runner: windows-11-arm
             target: winarm64
+            special: winarm
             updater: tarm64upd
             vcvars: arm64
             toolset: '14.44'
@@ -120,7 +122,7 @@ jobs:
           path: |
             build/tmp/Libraries
             build/tmp/ThirdParty
-          key: win-libs-${{ matrix.arch }}-${{ hashFiles('scripts/prebuild.py', 'scripts/build_support/recipes.py', 'scripts/build_support/dependency_cache.py') }}
+          key: win-libs-${{ matrix.arch }}-${{ hashFiles('scripts/prebuild.py', 'scripts/build_support/recipes.py', 'scripts/build_support/recipes_arm64.py', 'scripts/build_support/dependency_cache.py') }}
           restore-keys: win-libs-${{ matrix.arch }}-
 
       # 缓存归档保不住符号链接，msys2 的 mtab 与 dev 由运行时重建
@@ -172,7 +174,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          artifact=$(ls build/AyuGram-v*-win-x64.zip | head -1)
+          artifact=$(ls build/AyuGram-v*-win-${{ matrix.arch }}.zip | head -1)
           test -n "$artifact"
           size=$(stat -c %s "$artifact")
           echo "File size of ${artifact}: ${size} Bytes."
@@ -186,7 +188,7 @@ jobs:
           packer=$(pwd)/build/tmp/out/Release/Packer.exe
           test -f "$packer"
           cd build/AyuGram-v*-win-${{ matrix.arch }}-release
-          "$packer" -target ${{ matrix.target }} -version "$version" \
+          "$packer" -target ${{ matrix.special }} -version "$version" \
             -path AyuGram.exe -path Updater.exe
           mv "${{ matrix.updater }}${version}" ../
           ls -l "../${{ matrix.updater }}${version}"
