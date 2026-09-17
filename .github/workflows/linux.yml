@@ -78,8 +78,9 @@ jobs:
           set -euo pipefail
           sudo apt update
           curl -sSL https://install.python-poetry.org | python3 -
-          curl -sSL https://github.com/ccache/ccache/releases/download/v4.13.6/ccache-4.13.6-linux-x86_64-glibc.tar.xz \
-          | sudo tar xJ -C /usr/local/bin --strip-components=1 ccache-4.13.6-linux-x86_64-glibc/ccache
+          ccache_arch=$(uname -m)
+          curl -sSL "https://github.com/ccache/ccache/releases/download/v4.13.6/ccache-4.13.6-linux-${ccache_arch}-glibc.tar.xz" \
+          | sudo tar xJ -C /usr/local/bin --strip-components=1 "ccache-4.13.6-linux-${ccache_arch}-glibc/ccache"
           echo "CCACHE_DIR=$RUNNER_TEMP/.ayugram-cache" >> $GITHUB_ENV
           cd Telegram/build/docker/centos_env
           poetry install
