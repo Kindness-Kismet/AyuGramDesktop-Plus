@@ -49,15 +49,34 @@ concurrency:
 
 jobs:
   windows:
-    name: Windows x64
-    runs-on: windows-latest
+    name: Windows ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 359
+    # arm64 的依赖配方尚未就绪，先并行跑起来看结果，通过前不阻塞发布
+    continue-on-error: ${{ matrix.arch != 'x64' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+            target: win64
+            updater: tx64upd
+          # recipes.py 只固化了 win64 配方（写死 _x64 与 x86_64 工具链），
+          # arm64 要另求值一份配方，补齐前这一格预期是红的
+          - arch: arm64
+            runner: windows-11-arm
+            target: winarm64
+            updater: tarm64upd
 
     env:
       # /m 与 /MP 相乘耗尽内存会僵死 runner，锁定单项目串行
       AYUGRAM_SINGLE_PROJECT_BUILD: '1'
       # tg_owt 模板单元单个 2 GB 以上，并发顶格 2
       BUILD_JOBS: '2'
+      # build_support/paths.py 按它选目标平台、依赖目录与产物名
+      AYUGRAM_TARGET: ${{ matrix.target }}
 
     steps:
       - name: Check out repository.
@@ -91,8 +110,8 @@ jobs:
           path: |
             build/tmp/Libraries
             build/tmp/ThirdParty
-          key: win-libs-${{ hashFiles('scripts/prebuild.py', 'scripts/build_support/recipes.py', 'scripts/build_support/dependency_cache.py') }}
-          restore-keys: win-libs-
+          key: win-libs-${{ matrix.arch }}-${{ hashFiles('scripts/prebuild.py', 'scripts/build_support/recipes.py', 'scripts/build_support/dependency_cache.py') }}
+          restore-keys: win-libs-${{ matrix.arch }}-
 
       # 缓存归档保不住符号链接，msys2 的 mtab 与 dev 由运行时重建
       - name: Clean broken msys2 links.
@@ -156,17 +175,17 @@ jobs:
           test -n "$version"
           packer=$(pwd)/build/tmp/out/Release/Packer.exe
           test -f "$packer"
-          cd build/AyuGram-v*-win-x64-release
-          "$packer" -target win64 -version "$version" \
+          cd build/AyuGram-v*-win-${{ matrix.arch }}-release
+          "$packer" -target ${{ matrix.target }} -version "$version" \
             -path AyuGram.exe -path Updater.exe
-          mv "tx64upd${version}" ../
-          ls -l "../tx64upd${version}"
+          mv "${{ matrix.updater }}${version}" ../
+          ls -l "../${{ matrix.updater }}${version}"
 
       - name: Upload artifact.
         uses: actions/upload-artifact@v7
         with:
-          name: AyuGram-Windows-x64
+          name: AyuGram-Windows-${{ matrix.arch }}
           path: |
-            build/AyuGram-v*-win-x64.zip
-            build/tx64upd*
+            build/AyuGram-v*-win-${{ matrix.arch }}.zip
+            build/${{ matrix.updater }}*
           retention-days: 7
