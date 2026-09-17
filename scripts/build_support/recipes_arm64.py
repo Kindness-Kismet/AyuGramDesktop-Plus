@@ -13,6 +13,12 @@ QT_VERSION = "6.11.2"
 SKIP = frozenset({"qt_5.15.19", "tg_angle"})
 
 OVERRIDES: dict[str, str] = {
+	# 上游钉的补丁提交只有 qtbase_6.11.1，arm64 要的那份只存在于新提交里
+	"patches": r"""git clone https://github.com/desktop-app/patches.git
+cd patches
+git checkout f169e01a79a03178c53a852f833441d78ab445bf
+git checkout 519aaa084608fa6f9a2bfbd1959d133c44d94227 -- qtbase_6.11.2
+""",
 	"breakpad": r"""git clone https://chromium.googlesource.com/breakpad/breakpad
 cd breakpad
 git checkout dfcb7b6799
