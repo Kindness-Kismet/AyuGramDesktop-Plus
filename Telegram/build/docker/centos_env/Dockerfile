@@ -416,10 +416,22 @@ FROM builder AS rnnoise
 RUN --mount=type=cache,target=/var/cache/ccache <<EOF
 git clone -b v0.2 --depth=1 https://github.com/xiph/rnnoise.git
 cd rnnoise
-# v0.2 的 vec_neon.h 引用了树里没有的头文件
-sed -i 's|#include "os_support.h"|#include "arch.h"|' src/vec_neon.h
+# v0.2 漏发了 os_support.h，OPUS_CLEAR/COPY/MOVE 都在里面，照 opus 同名文件补齐
+cat > src/os_support.h <<'OSEOF'
+#ifndef OS_SUPPORT_H
+#define OS_SUPPORT_H
+
+#include <string.h>
+
+#define OPUS_COPY(dst, src, n) (memcpy((dst), (src), (n)*sizeof(*(dst))))
+#define OPUS_MOVE(dst, src, n) (memmove((dst), (src), (n)*sizeof(*(dst))))
+#define OPUS_CLEAR(dst, n) (memset((dst), 0, (n)*sizeof(*(dst))))
+
+#endif
+OSEOF
+# NEON 那段 SIMD 从未编译过，上游 master 已删除，改走自动向量化的通用实现
 ./autogen.sh
-./configure --enable-static --disable-shared
+CPPFLAGS=-DDISABLE_NEON ./configure --enable-static --disable-shared
 make -j$(nproc)
 make DESTDIR=/usr/src/rnnoise-cache install
 cd ..
