@@ -416,6 +416,8 @@ FROM builder AS rnnoise
 RUN --mount=type=cache,target=/var/cache/ccache <<EOF
 git clone -b v0.2 --depth=1 https://github.com/xiph/rnnoise.git
 cd rnnoise
+# v0.2 的 vec_neon.h 引用了树里没有的头文件
+sed -i 's|#include "os_support.h"|#include "arch.h"|' src/vec_neon.h
 ./autogen.sh
 ./configure --enable-static --disable-shared
 make -j$(nproc)
