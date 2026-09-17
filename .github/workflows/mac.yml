@@ -145,6 +145,23 @@ jobs:
             exit 1
           fi
 
+      # 更新格式拒收解压后超过 1 GiB 的内容，带符号的通用二进制有 1.6 GiB
+      - name: Strip debug symbols.
+        run: |
+          set -euo pipefail
+          cd $REPO_NAME/out/Release
+          bin=AyuGram.app/Contents/MacOS/AyuGram
+          before=$(stat -f %z "$bin")
+          strip -x -S "$bin"
+          after=$(stat -f %z "$bin")
+          echo "binary: $before -> $after bytes"
+          size=$(du -sk AyuGram.app | cut -f1)
+          echo "bundle: $((size * 1024)) bytes"
+          if test "$((size * 1024))" -ge 1073741824; then
+            echo "bundle still above the 1 GiB limit of the update format"
+            exit 1
+          fi
+
       - name: Package release output.
         run: |
           set -euo pipefail
