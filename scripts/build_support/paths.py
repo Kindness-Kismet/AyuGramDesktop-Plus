@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -6,7 +7,7 @@ BUILD_DIR = ROOT / "build"
 TMP_DIR = BUILD_DIR / "tmp"
 LOGS_DIR = BUILD_DIR / "logs"
 
-# 产物目录带版本号：build/<APP_NAME>-v<版本>-win-x64-<profile>
+# 产物目录带版本号：build/<APP_NAME>-v<版本>-win-<架构>-<profile>
 APP_NAME = "AyuGram"
 
 # 依赖与中间产物一律收在 build/tmp，不外溢到仓库同级目录
@@ -14,8 +15,19 @@ LIBRARIES_DIR = TMP_DIR / "Libraries"
 THIRD_PARTY_DIR = TMP_DIR / "ThirdParty"
 CMAKE_OUT_DIR = TMP_DIR / "out"
 
-# win64 目标的库前缀，与固化配方中的目录约定一致
-LIBRARIES_ARCH_DIR = LIBRARIES_DIR / "win64"
+# 目标平台由 AYUGRAM_TARGET 选择，取值与上游一致：win64 或 winarm64。
+# winarm64 需要原生 arm64 主机，依赖目录与产物都不与 x64 混用。
+_TARGETS = {
+    "win64": ("x64", "x64", "x64"),      # CMake -A、vcvarsall 架构、产物后缀
+    "winarm64": ("ARM64", "arm64", "arm64"),
+}
+TARGET = os.environ.get("AYUGRAM_TARGET", "win64")
+if TARGET not in _TARGETS:
+    raise SystemExit(f"unknown AYUGRAM_TARGET: {TARGET}, expect win64 or winarm64")
+TARGET_CMAKE_ARCH, TARGET_VCVARS_ARCH, TARGET_SUFFIX = _TARGETS[TARGET]
+
+# 依赖按目标平台分目录，与固化配方中的目录约定一致
+LIBRARIES_ARCH_DIR = LIBRARIES_DIR / TARGET
 USED_PREFIX_DIR = LIBRARIES_ARCH_DIR / "local"
 
 # prebuild 建出的工具，codegen、d3d 校验和 NuGet 都从这里取

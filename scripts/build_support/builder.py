@@ -16,6 +16,9 @@ from build_support.paths import (
     LIBRARIES_ARCH_DIR,
     PRODUCT_BINARIES,
     ROOT,
+    TARGET,
+    TARGET_CMAKE_ARCH,
+    TARGET_SUFFIX,
     VENV_PYTHON,
     NUGET_EXE,
 )
@@ -29,7 +32,7 @@ _CONFIGURATIONS = {"dev": "Debug", "release": "Release"}
 
 # 非空值启用官方发布语义：Updater、Packer 与更新检查，另含过旧版本提示
 # 和闭源 alpha 支持。该标记同时决定 AUTOUPDATE 的默认值。
-_SPECIAL_TARGET = "win64"
+_SPECIAL_TARGET = TARGET
 
 # 每个编译进程都要映射一份 PCH，8 路约占 4 GB 提交量，对 32 GB 内存 + 6 GB
 # 页面文件的机器留有余量；调高需同步扩大页面文件。
@@ -62,7 +65,7 @@ def zip_output(profile: str) -> Path:
     # release 是发布产物不带后缀，dev 本地调试用带 -dev 区分
     version = parse_version(read_current_version()).original
     suffix = "" if profile == "release" else f"-{profile}"
-    archive = BUILD_DIR / f"{APP_NAME}-v{version}-win-x64{suffix}.zip"
+    archive = BUILD_DIR / f"{APP_NAME}-v{version}-win-{TARGET_SUFFIX}{suffix}.zip"
     if archive.exists():
         archive.unlink()
     # 目录里可能残留运行期数据（tdata、日志），只打包构建产物本身
@@ -143,7 +146,7 @@ def configure(environment: dict[str, str], api_id: str, api_hash: str) -> None:
         "-G",
         CMAKE_GENERATOR,
         "-A",
-        "x64",
+        TARGET_CMAKE_ARCH,
         "-T",
         CMAKE_TOOLSET,
         f"-DTDESKTOP_API_ID={api_id}",
