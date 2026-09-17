@@ -58,6 +58,13 @@ def build_environment(base: dict[str, str]) -> dict[str, str]:
     environment.update(variables)
     # qt 配方用 %QT% 拼产物目录，上游同样只放进环境而不计入缓存键
     environment["QT"] = qt_version(TARGET)
+    # dav1d 的 arm64 补丁靠 git revert 落提交，没有身份会直接失败
+    environment.update({
+        "GIT_AUTHOR_NAME": "AyuGram Build",
+        "GIT_AUTHOR_EMAIL": "build@ayugram.invalid",
+        "GIT_COMMITTER_NAME": "AyuGram Build",
+        "GIT_COMMITTER_EMAIL": "build@ayugram.invalid",
+    })
     # 该变量会让 bat 里的相对路径调用失效
     environment.pop("NoDefaultCurrentDirectoryInExePath", None)
     # 系统目录只压在继承的 PATH 之上，同样不参与缓存键
