@@ -85,7 +85,7 @@ jobs:
         if: steps.verify.outputs.ready == 'true'
         uses: actions/download-artifact@v8
         with:
-          name: AyuGram-Linux
+          name: AyuGram-Linux-x64
           run-id: ${{ steps.runs.outputs.linux }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifacts

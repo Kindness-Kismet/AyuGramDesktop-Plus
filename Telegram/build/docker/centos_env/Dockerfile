@@ -1019,10 +1019,10 @@ git fetch --depth=1 origin 4b940c7942fbde8ee56f10f39a5224a4153bd91e
 git reset --hard FETCH_HEAD
 cargo rustc --lib --release --locked \
 	--features c-api --crate-type staticlib \
-	--target x86_64-unknown-linux-gnu \
+	--target $(uname -m)-unknown-linux-gnu \
 	-- --print native-static-libs
 mkdir -p $DESTDIR/usr/local/lib $DESTDIR/usr/local/include/tlottie
-objcopy --strip-debug target/x86_64-unknown-linux-gnu/release/libtlottie.a $DESTDIR/usr/local/lib/libtlottie.a
+objcopy --strip-debug target/$(uname -m)-unknown-linux-gnu/release/libtlottie.a $DESTDIR/usr/local/lib/libtlottie.a
 cp include/tlottie.h $DESTDIR/usr/local/include/tlottie/tlottie.h
 cd ..
 rm -rf tlottie rustup cargo

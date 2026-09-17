@@ -49,8 +49,19 @@ concurrency:
 
 jobs:
   linux:
-    name: Rocky Linux 8
-    runs-on: ubuntu-latest
+    name: Linux ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    # arm64 的镜像尚未适配，先并行跑起来看结果，通过前不阻塞发布
+    continue-on-error: ${{ matrix.arch != 'x64' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     timeout-minutes: 359
 
     env:
@@ -93,8 +104,8 @@ jobs:
           path: |
             ${{ runner.temp }}/.buildx-cache
             ${{ runner.temp }}/.mount-cache
-          key: ${{ runner.OS }}-libs-${{ hashFiles('Telegram/build/docker/centos_env/**') }}
-          restore-keys: ${{ runner.OS }}-libs-
+          key: ${{ runner.OS }}-libs-${{ matrix.arch }}-${{ hashFiles('Telegram/build/docker/centos_env/**') }}
+          restore-keys: ${{ runner.OS }}-libs-${{ matrix.arch }}-
 
       - name: Restore Docker cache mounts.
         uses: reproducible-containers/buildkit-cache-dance@v3.4.0
@@ -134,8 +145,8 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.OS }}-ayugram-${{ github.run_id }}
-          restore-keys: ${{ runner.OS }}-ayugram-
+          key: ${{ runner.OS }}-ayugram-${{ matrix.arch }}-${{ github.run_id }}
+          restore-keys: ${{ runner.OS }}-ayugram-${{ matrix.arch }}-
 
       # Packer 是 Telegram 的构建依赖，私钥头文件必须在编译前就位
       - name: Write packer signing key.
@@ -203,12 +214,14 @@ jobs:
           version=$(sed -n 's/^AppVersionStrSmall //p' Telegram/build/version)
           test -n "$version"
           cd out/Release
-          rm -f "AyuGram-v${version}-linux-x64.zip"
-          zip "AyuGram-v${version}-linux-x64.zip" AyuGram
-          test ! -f Updater || zip "AyuGram-v${version}-linux-x64.zip" Updater
+          rm -f "AyuGram-v${version}-linux-${{ matrix.arch }}.zip"
+          zip "AyuGram-v${version}-linux-${{ matrix.arch }}.zip" AyuGram
+          test ! -f Updater || zip "AyuGram-v${version}-linux-${{ matrix.arch }}.zip" Updater
 
       # 更新包名由 Packer 按平台写死；Packer 链的是容器内的库，必须在容器里跑
+      # 客户端的 linux 键没有架构维度，只有 x64 产出更新包
       - name: Pack update.
+        if: matrix.arch == 'x64'
         run: |
           set -euo pipefail
           version=$(sed -n 's/^AppVersion  *//p' Telegram/build/version)
@@ -223,8 +236,8 @@ jobs:
       - name: Upload artifact.
         uses: actions/upload-artifact@v7
         with:
-          name: AyuGram-Linux
+          name: AyuGram-Linux-${{ matrix.arch }}
           path: |
-            out/Release/AyuGram-v*-linux-x64.zip
+            out/Release/AyuGram-v*-linux-${{ matrix.arch }}.zip
             out/Release/tlinuxupd*
           retention-days: 7
