@@ -552,9 +552,9 @@ int BackgroundRow::resizeGetHeight(int newWidth) {
 	auto linkLeft = st::settingsBackgroundThumb + st::settingsThumbSkip;
 	auto linkWidth = newWidth - linkLeft;
 	_chooseFromGallery->resizeToWidth(
-		qMin(linkWidth, _chooseFromGallery->naturalWidth()));
+		std::min(linkWidth, _chooseFromGallery->naturalWidth()));
 	_chooseFromFile->resizeToWidth(
-		qMin(linkWidth, _chooseFromFile->naturalWidth()));
+		std::min(linkWidth, _chooseFromFile->naturalWidth()));
 	_chooseFromGallery->moveToLeft(linkLeft, linkTop, newWidth);
 	linkTop += _chooseFromGallery->height() + st::settingsFromFileTop;
 	_chooseFromFile->moveToLeft(linkLeft, linkTop, newWidth);
@@ -2543,11 +2543,11 @@ void SetupDefaultThemes(
 			IsSystemAccentColorSupported() && (type != Type(-1)),
 			anim::type::instant);
 	};
-	group->setChangedCallback([=](Type type) {
+	group->setChangedCallback([=, raw = group.get()](Type type) {
 		if (AyuFeatures::MessageShot::isChoosingTheme()) {
 			palette->show(type);
 			refreshColorizer(type);
-			group->setValue(type);
+			raw->setValue(type);
 			AyuFeatures::MessageShot::setDefaultSelected(type);
 
 			const auto scheme = ranges::find(kSchemesList, type, &Scheme::type);
@@ -2566,7 +2566,7 @@ void SetupDefaultThemes(
 		if (scheme != end(kSchemesList)) {
 			apply(*scheme);
 		} else {
-			group->setValue(chosen());
+			raw->setValue(chosen());
 		}
 	});
 	for (const auto &scheme : kSchemesList) {

@@ -1153,10 +1153,14 @@ void HistoryInner::enumerateUserpics(Method method) {
 			}
 			// Attach userpic to the bottom of the visible area with the same margin as the last message.
 			auto userpicMinBottomSkip = _historyMarginBottom + st::msgMargin.bottom();
-			auto userpicBottom = qMin(itembottom - view->marginBottom(), _visibleAreaBottom - userpicMinBottomSkip);
+			auto userpicBottom = std::min(
+				itembottom - view->marginBottom(),
+				_visibleAreaBottom - userpicMinBottomSkip);
 
 			// Do not let the userpic go above the attached messages pack top line.
-			userpicBottom = qMax(userpicBottom, lowestAttachedItemTop + st::msgPhotoSize);
+			userpicBottom = std::max(
+				userpicBottom,
+				lowestAttachedItemTop + st::msgPhotoSize);
 
 			// Call the template callback function that was passed
 			// and return if it finished everything it needed.
@@ -1209,11 +1213,14 @@ void HistoryInner::enumerateDates(Method method) {
 				itemtop);
 
 			// Attach date to the top of the visible area with the same margin as it has in service message.
-			int dateTop = qMax(itemtop - collapsed, _visibleAreaTop) + st::msgServiceMargin.top();
+			int dateTop = std::max(itemtop - collapsed, _visibleAreaTop)
+				+ st::msgServiceMargin.top();
 
 			// Do not let the date go below the single-day messages pack bottom line.
 			int dateHeight = st::msgServicePadding.bottom() + st::msgServiceFont->height + st::msgServicePadding.top();
-			dateTop = qMin(dateTop, lowestInOneDayItemBottom - dateHeight);
+			dateTop = std::min(
+				dateTop,
+				lowestInOneDayItemBottom - dateHeight);
 
 			// Call the template callback function that was passed
 			// and return if it finished everything it needed.
@@ -1265,11 +1272,14 @@ void HistoryInner::enumerateForumThreadBars(Method method) {
 				lowestInOneBunchItemBottom = itembottom - view->marginBottom();
 			}
 			// Attach bar to the top of the visible area with the same margin as it has in service message.
-			int barTop = qMax(itemtop + view->displayedDateHeight(), _visibleAreaTop + skip) + st::msgServiceMargin.top();
+			int barTop = std::max(
+				itemtop + view->displayedDateHeight(),
+				_visibleAreaTop + skip)
+				+ st::msgServiceMargin.top();
 
 			// Do not let the bar go below the single-bar messages pack bottom line.
 			int barHeight = st::msgServicePadding.bottom() + st::msgServiceFont->height + st::msgServicePadding.top();
-			barTop = qMin(barTop, lowestInOneBunchItemBottom - barHeight);
+			barTop = std::min(barTop, lowestInOneBunchItemBottom - barHeight);
 
 			// Call the template callback function that was passed
 			// and return if it finished everything it needed.
@@ -2024,8 +2034,14 @@ void HistoryInner::touchUpdateSpeed() {
 
 			// fingers are inacurates, we ignore small changes to avoid stopping the autoscroll because
 			// of a small horizontal offset when scrolling vertically
-			const int newSpeedY = (qAbs(pixelsPerSecond.y()) > Ui::kFingerAccuracyThreshold) ? pixelsPerSecond.y() : 0;
-			const int newSpeedX = (qAbs(pixelsPerSecond.x()) > Ui::kFingerAccuracyThreshold) ? pixelsPerSecond.x() : 0;
+			const int newSpeedY = (std::abs(pixelsPerSecond.y())
+				> Ui::kFingerAccuracyThreshold)
+				? pixelsPerSecond.y()
+				: 0;
+			const int newSpeedX = (std::abs(pixelsPerSecond.x())
+				> Ui::kFingerAccuracyThreshold)
+				? pixelsPerSecond.x()
+				: 0;
 			if (_touchScrollState == Ui::TouchScrollState::Auto) {
 				const int oldSpeedY = _touchSpeed.y();
 				const int oldSpeedX = _touchSpeed.x();
@@ -2073,8 +2089,16 @@ void HistoryInner::touchResetSpeed() {
 void HistoryInner::touchDeaccelerate(int32 elapsed) {
 	int32 x = _touchSpeed.x();
 	int32 y = _touchSpeed.y();
-	_touchSpeed.setX((x == 0) ? x : (x > 0) ? qMax(0, x - elapsed) : qMin(0, x + elapsed));
-	_touchSpeed.setY((y == 0) ? y : (y > 0) ? qMax(0, y - elapsed) : qMin(0, y + elapsed));
+	_touchSpeed.setX((x == 0)
+		? x
+		: (x > 0)
+		? std::max(0, x - elapsed)
+		: std::min(0, x + elapsed));
+	_touchSpeed.setY((y == 0)
+		? y
+		: (y > 0)
+		? std::max(0, y - elapsed)
+		: std::min(0, y + elapsed));
 }
 
 void HistoryInner::touchEvent(QTouchEvent *e) {
@@ -4762,7 +4786,7 @@ void HistoryInner::recountHistoryGeometry(bool initial) {
 	}
 	const auto aboutAboveHistory = _aboutView && _aboutView->aboveHistory();
 	const auto visibleHeight = _scroll->height();
-	auto oldHistoryMarginTop = qMax(
+	auto oldHistoryMarginTop = std::max(
 		visibleHeight - historyHeight() - _historyMarginBottom,
 		0);
 	if (aboutAboveHistory) {
@@ -4816,19 +4840,19 @@ void HistoryInner::recountHistoryGeometry(bool initial) {
 	if (const auto view = _aboutView ? _aboutView->view() : nullptr) {
 		_aboutView->height = view->resizeGetHeight(_contentWidth);
 		if (aboutAboveHistory) {
-			_aboutView->top = qMin(
+			_aboutView->top = std::min(
 				_historyMarginTop - _aboutView->height,
-				qMax(0, (_scroll->height() - _aboutView->height) / 2));
+				std::max(0, (_scroll->height() - _aboutView->height) / 2));
 		} else {
-			_aboutView->top = qMax(
-				qMax(0, (_scroll->height() - _aboutView->height) / 2),
+			_aboutView->top = std::max(
+				std::max(0, (_scroll->height() - _aboutView->height) / 2),
 				_historyMarginTop + historyHeight() - _historyMarginBottom);
 		}
 	} else if (_aboutView) {
 		_aboutView->top = _aboutView->height = 0;
 	}
 
-	auto newHistoryMarginTop = qMax(
+	auto newHistoryMarginTop = std::max(
 		visibleHeight - historyHeight() - _historyMarginBottom,
 		0);
 	if (aboutAboveHistory) {
@@ -5066,7 +5090,7 @@ void HistoryInner::updateSize() {
 	if (aboutBelowHistory) {
 		accumulate_max(newHistoryMarginBottom, _aboutView->height);
 	}
-	auto newHistoryMarginTop = qMax(
+	auto newHistoryMarginTop = std::max(
 		visibleHeight - itemsHeight - newHistoryMarginBottom,
 		0);
 	if (aboutAboveHistory) {
@@ -5075,12 +5099,12 @@ void HistoryInner::updateSize() {
 
 	if (_aboutView && _aboutView->height > 0) {
 		if (aboutAboveHistory) {
-			_aboutView->top = qMin(
+			_aboutView->top = std::min(
 				newHistoryMarginTop - _aboutView->height,
-				qMax(0, (_scroll->height() - _aboutView->height) / 2));
+				std::max(0, (_scroll->height() - _aboutView->height) / 2));
 		} else {
-			_aboutView->top = qMax(
-				qMax(0, (_scroll->height() - _aboutView->height) / 2),
+			_aboutView->top = std::max(
+				std::max(0, (_scroll->height() - _aboutView->height) / 2),
 				(newHistoryMarginTop
 					+ itemsHeight
 					+ newHistoryMarginBottom
@@ -5819,7 +5843,11 @@ void HistoryInner::mouseActionUpdate() {
 					auto dateLeft = st::msgServiceMargin.left();
 					auto maxwidth = _contentWidth;
 					if (_isChatWide) {
-						maxwidth = qMin(maxwidth, int32(st::msgMaxWidth + 2 * st::msgPhotoSkip + 2 * st::msgMargin.left()));
+						maxwidth = std::min(
+							maxwidth,
+							int32(st::msgMaxWidth
+								+ 2 * st::msgPhotoSkip
+								+ 2 * st::msgMargin.left()));
 					}
 					auto widthForDate = maxwidth - st::msgServiceMargin.left() - st::msgServiceMargin.left();
 
@@ -5868,7 +5896,11 @@ void HistoryInner::mouseActionUpdate() {
 					auto barLeft = st::msgServiceMargin.left();
 					auto maxwidth = _contentWidth;
 					if (_isChatWide) {
-						maxwidth = qMin(maxwidth, int32(st::msgMaxWidth + 2 * st::msgPhotoSkip + 2 * st::msgMargin.left()));
+						maxwidth = std::min(
+							maxwidth,
+							int32(st::msgMaxWidth
+								+ 2 * st::msgPhotoSkip
+								+ 2 * st::msgMargin.left()));
 					}
 					auto widthForBar = maxwidth - st::msgServiceMargin.left() - st::msgServiceMargin.left();
 

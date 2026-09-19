@@ -22,7 +22,7 @@ STAGES: list[Stage] = [
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/patches.git
 cd patches
-git checkout f169e01a79a03178c53a852f833441d78ab445bf
+git checkout 519aaa084608fa6f9a2bfbd1959d133c44d94227
 """,
     ),
     Stage(
@@ -84,6 +84,19 @@ del jom.zip
         commands=r"""git clone https://github.com/desktop-app/gyp.git
 cd gyp
 git checkout 5e2425c47b
+""",
+    ),
+    Stage(
+        name="rust",
+        location="ThirdParty",
+        commands=r"""$FETCH download https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe rustup-init.exe
+SET "RUSTUP_HOME=%THIRDPARTY_DIR%\rust\rustup"
+SET "CARGO_HOME=%THIRDPARTY_DIR%\rust\cargo"
+rustup-init.exe -y --no-modify-path --profile minimal ^
+--default-toolchain 1.96.1 ^
+--component rust-src ^
+--target aarch64-pc-windows-msvc
+del rustup-init.exe
 """,
     ),
     Stage(
@@ -664,6 +677,34 @@ cmake ^
 -DTD_E2E_ONLY=ON ^
 ../..
 cmake --build . --config Release
+""",
+    ),
+    Stage(
+        name="tlottie",
+        location="Libraries",
+        dependencies=["patches/tlottie.patch"],
+        commands=r"""git clone https://github.com/dkaraush/tlottie.git
+cd tlottie
+git checkout 31f1b542f8
+git apply ../patches/tlottie.patch
+SET "RUSTUP_HOME=%THIRDPARTY_DIR%\rust\rustup"
+SET "CARGO_HOME=%THIRDPARTY_DIR%\rust\cargo"
+SET RUSTUP_TOOLCHAIN=1.96.1
+SET "PATH=%CARGO_HOME%\bin;%PATH%"
+SET "RUST_TARGET=x86_64-win7-windows-msvc"
+SET "RUST_BUILD_STD=-Z build-std=std,panic_abort"
+SET "RUSTC_BOOTSTRAP=1"
+if "%SPECIAL_TARGET%"=="winarm" SET "RUST_TARGET=aarch64-pc-windows-msvc"
+if "%SPECIAL_TARGET%"=="winarm" SET "RUST_BUILD_STD="
+cargo rustc --lib --release --locked ^
+--features c-api --crate-type staticlib ^
+%RUST_BUILD_STD% ^
+--target %RUST_TARGET% ^
+--config "target.%RUST_TARGET%.rustflags=['-C','target-feature=+crt-static']" ^
+-- --print native-static-libs
+mkdir out\lib out\include
+copy target\%RUST_TARGET%\release\tlottie.lib out\lib\tlottie.lib
+copy include\tlottie.h out\include\tlottie.h
 """,
     ),
 ]

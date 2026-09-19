@@ -2121,6 +2121,7 @@ void Filler::fillArchiveActions() {
 
 		MarkAsReadMenu::AddChatListAction(
 			controller,
+			MarkAsReadMenu::ChatListKind::Archive,
 			[folder = _folder] { return folder->chatsList(); },
 			_addAction);
 	}
@@ -2387,7 +2388,12 @@ void PeerMenuShareContactBox(
 		};
 		const auto state = std::make_shared<State>();
 		state->weak = thread;
-		state->share = [=](Api::SendOptions options) {
+		state->share = [=, weakState = std::weak_ptr(state)](
+				Api::SendOptions options) {
+			const auto state = weakState.lock();
+			if (!state) {
+				return;
+			}
 			const auto strong = state->weak.get();
 			if (!strong) {
 				state->share = nullptr;
@@ -3039,6 +3045,10 @@ object_ptr<Ui::BoxContent> PrepareChooseRecipientBox(
 			}
 			state->starsToSend = perMessage;
 		};
+		box->lifetime().add([=] {
+			state->submit = nullptr;
+			state->refreshStarsToSend = nullptr;
+		});
 		raw->selectionChanges(
 		) | rpl::on_next([=] {
 			box->clearButtons();

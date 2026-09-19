@@ -1699,8 +1699,11 @@ void PeerListContent::paintEvent(QPaintEvent *e) {
 	if (_mode != Mode::Custom) {
 		auto fill = QRegion(clip);
 		if (count > 0 && !sectionsShown()) {
-			const auto from = floorclamp(yFrom, _rowHeight, 0, count);
-			const auto to = ceilclamp(yTo, _rowHeight, 0, count);
+			const auto [from, to] = Ui::RowsInRange(
+				yFrom,
+				yTo,
+				_rowHeight,
+				count);
 			for (auto index = from; index != to; ++index) {
 				if (getRow(RowIndex(index))->opacity() == 1.) {
 					fill -= QRect(
@@ -1748,8 +1751,11 @@ void PeerListContent::paintEvent(QPaintEvent *e) {
 			p.translate(0, -top);
 		}
 	} else if (count > 0) {
-		const auto from = floorclamp(yFrom, _rowHeight, 0, count);
-		const auto to = ceilclamp(yTo, _rowHeight, 0, count);
+		const auto [from, to] = Ui::RowsInRange(
+			yFrom,
+			yTo,
+			_rowHeight,
+			count);
 		p.translate(0, from * _rowHeight);
 		for (auto index = from; index != to; ++index) {
 			handleRepaintAfter(paintRow(p, now, RowIndex(index)));

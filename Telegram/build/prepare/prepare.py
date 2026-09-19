@@ -458,7 +458,7 @@ if customRunCommand:
 stage('patches', """
     git clone https://github.com/desktop-app/patches.git
     cd patches
-    git checkout c2cc44fca4a8d0e20d1ef0f40884d717c750f0a4
+    git checkout 519aaa084608fa6f9a2bfbd1959d133c44d94227
 mac:
     git clone https://github.com/desktop-app/qt6_highsierra_patches.git qt6_highsierra
     cd qt6_highsierra
@@ -1926,9 +1926,11 @@ release:
 """)
 
 stage('tlottie', """
+depends:patches/tlottie.patch
     git clone https://github.com/dkaraush/tlottie.git
     cd tlottie
-    git checkout 4b940c7942
+    git checkout 31f1b542f8
+    git apply ../patches/tlottie.patch
 win:
     SET "RUSTUP_HOME=%THIRDPARTY_DIR%\\rust\\rustup"
     SET "CARGO_HOME=%THIRDPARTY_DIR%\\rust\\cargo"

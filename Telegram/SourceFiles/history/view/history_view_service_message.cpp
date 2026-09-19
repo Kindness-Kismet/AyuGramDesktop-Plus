@@ -439,7 +439,7 @@ std::vector<int> ServiceMessagePainter::CountLineWidths(
 		const Ui::Text::String &text,
 		const QRect &textRect,
 		int lastLineWidthAdd) {
-	const auto linesCount = qMax(
+	const auto linesCount = std::max(
 		textRect.height() / st::msgServiceFont->height,
 		1);
 	auto result = text.countLineWidths(textRect.width(), {
@@ -450,7 +450,7 @@ std::vector<int> ServiceMessagePainter::CountLineWidths(
 		+ Ui::HistoryServiceMsgInvertedRadius()
 		- Ui::HistoryServiceMsgInvertedShrink());
 	for (int i = 0, count = result.size(); i != count; ++i) {
-		auto width = qMax(result[i], 0);
+		auto width = std::max(result[i], 0);
 		if (i > 0) {
 			const auto widthBefore = result[i - 1];
 			if (width < widthBefore && width + minDelta > widthBefore) {
@@ -535,7 +535,11 @@ namespace {
 QRect Service::countGeometry() const {
 	auto result = QRect(0, 0, width(), height());
 	if (delegate()->elementChatMode() == ElementChatMode::Wide) {
-		result.setWidth(qMin(result.width(), st::msgMaxWidth + 2 * st::msgPhotoSkip + 2 * st::msgMargin.left()));
+		result.setWidth(std::min(
+			result.width(),
+			st::msgMaxWidth
+				+ 2 * st::msgPhotoSkip
+				+ 2 * st::msgMargin.left()));
 	}
 	auto margins = st::msgServiceMargin;
 	margins.setTop(marginTop());
@@ -583,7 +587,11 @@ QSize Service::performCountCurrentSize(int newWidth) {
 	if (contentWidth < st::msgServicePadding.left() + st::msgServicePadding.right() + 1) {
 		contentWidth = st::msgServicePadding.left() + st::msgServicePadding.right() + 1;
 	}
-	const auto nwidth = qMax(contentWidth - st::msgServicePadding.left() - st::msgServicePadding.right(), 0);
+	const auto nwidth = std::max(
+		contentWidth
+			- st::msgServicePadding.left()
+			- st::msgServicePadding.right(),
+		0);
 	validateTextSkipBlock(
 		!timeText.isEmpty(),
 		timeMetrics.additionalWidth,

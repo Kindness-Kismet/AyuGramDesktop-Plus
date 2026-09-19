@@ -12,10 +12,9 @@ TOOLSET_VERSION = os.environ.get("AYUGRAM_TOOLSET_VERSION", "14.51")
 CMAKE_TOOLSET = os.environ.get("AYUGRAM_CMAKE_TOOLSET", "v145")
 CMAKE_GENERATOR = os.environ.get("AYUGRAM_CMAKE_GENERATOR", "Visual Studio 18 2026")
 
-# 调用环境带进来的这些变量会改写构建工具的行为，一律剔除以对齐上游的干净 cmd 环境：
-# MSYSTEM 让 msys2 切到 MINGW64 模式，mingw 原生 perl 会抢在 msys2 perl 之前；
-# PYTHONUTF8 让 meson 按 UTF-8 解码 MSVC 的 GBK 输出，解码失败后直接崩溃。
-_ENVIRONMENT_LEAKS = ("MSYSTEM", "MSYS_NO_PATHCONV", "EXEPATH", "PYTHONUTF8")
+# 清除外层终端的路径缓存与 MSYS 模式，避免登录脚本覆盖 MSVC 环境。
+# PYTHONUTF8 会让 meson 用 UTF-8 解码 MSVC 的 GBK 输出。
+_ENVIRONMENT_LEAKS = ("MSYSTEM", "MSYS_NO_PATHCONV", "EXEPATH", "ORIGINAL_PATH", "PYTHONUTF8")
 
 _CMAKE_SUBPATH = Path("Common7") / "IDE" / "CommonExtensions" / "Microsoft" / "CMake" / "CMake" / "bin"
 
