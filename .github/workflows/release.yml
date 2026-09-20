@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate release inputs
+    name: Tests and static checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -40,6 +40,22 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
+
+      - name: Validate workflows.
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          base="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/$archive" "$base/$archive"
+          curl --fail --location --retry 3 \
+            --output "$RUNNER_TEMP/actionlint_checksums.txt" \
+            "$base/actionlint_${ACTIONLINT_VERSION}_checksums.txt"
+          grep "  ${archive}$" "$RUNNER_TEMP/actionlint_checksums.txt" \
+            | (cd "$RUNNER_TEMP" && sha256sum --check -)
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -shellcheck= -pyflakes=
 
       - name: Set up Python.
         uses: actions/setup-python@v7
@@ -71,6 +87,7 @@ jobs:
   windows:
     name: Windows
     needs: validate
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/win.yml
     secrets:
       PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
@@ -78,6 +95,7 @@ jobs:
   linux:
     name: Linux
     needs: validate
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/linux.yml
     secrets:
       PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
@@ -85,6 +103,7 @@ jobs:
   macos:
     name: macOS
     needs: validate
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/mac.yml
     secrets:
       PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}

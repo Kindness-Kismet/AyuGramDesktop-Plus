@@ -222,19 +222,15 @@ dependency rebuilds are only needed when submodule pointers or
 On Windows, `build.py --pack` additionally produces
 `build/AyuGram-v<version>-win-x64.zip` containing just the executables;
 pass `--clean-pack` to first remove any runtime leftovers (tdata, logs)
-from the output directory. The `Release` workflow starts the Windows, Linux,
-and macOS builds in parallel and keeps every artifact in the same workflow
-run. Pull requests and manual runs from non-main branches build without
-publishing; pushes to `main` and manual runs from `main` publish only after
-the required jobs in all three platform workflows succeed.
+from the output directory. Pull requests run the `Release` workflow's unit
+tests, release-note checks, and actionlint validation without starting the
+Windows, Linux, or macOS builds. A push to `main` starts all three platform
+workflows in parallel and publishes their artifacts after the required jobs
+succeed. Manual runs also perform the complete three-platform build; runs from
+`main` publish, while runs from other branches only validate the build.
 Release notes are extracted from the matching version section in
 `.github/CHANGELOG.md`; older version sections stay in the repository history
 but are not copied into a new GitHub Release.
-
-Packaging needs the repository's `PACKER_PRIVATE_H` secret. GitHub does not
-provide repository secrets to pull requests from forks, so those runs cannot
-complete signed packaging; same-repository pull requests retain the existing
-build validation path.
 
 ## Repository layout
 
