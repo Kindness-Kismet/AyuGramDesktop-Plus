@@ -1,3 +1,4 @@
+// ccache:disable - 此文件包含签名密钥，禁止进入共享编译缓存。
 /*
 This file is part of Telegram Desktop,
 the official desktop application for the Telegram messaging service.

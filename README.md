@@ -224,10 +224,15 @@ On Windows, `build.py --pack` additionally produces
 pass `--clean-pack` to first remove any runtime leftovers (tdata, logs)
 from the output directory. Pull requests run the `Release` workflow's unit
 tests, release-note checks, and actionlint validation without starting the
-Windows, Linux, or macOS builds. A push to `main` starts all three platform
-workflows in parallel and publishes their artifacts after the required jobs
-succeed. Manual runs also perform the complete three-platform build; runs from
-`main` publish, while runs from other branches only validate the build.
+Windows, Linux, or macOS builds. A push to `main` dispatches the three platform
+build repositories in parallel and publishes only artifacts tied to the exact
+source commit and workflow runs. Each artifact carries a provenance manifest;
+the release job verifies its source run, builder run, version, file set, size,
+and hash before publishing. Manual runs also perform the complete
+three-platform build; runs from `main` publish, while runs from other branches
+only validate the build. Provenance is bound to the complete Release run
+attempt, so retry with **Re-run all jobs** or start a new Release run; rerunning
+only selected failed jobs cannot reuse artifacts from an earlier attempt.
 Release notes are extracted from the matching version section in
 `.github/CHANGELOG.md`; older version sections stay in the repository history
 but are not copied into a new GitHub Release.
