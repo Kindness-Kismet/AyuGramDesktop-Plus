@@ -30,11 +30,12 @@ find "$libraries_dir" \
   -delete
 
 # Release 构建不会发布依赖调试信息，缓存前移除它以免挤占 Actions 配额。
+# 遇到 strip 不支持的旧架构文件时跳过该文件，继续处理其余文件。
 strip_failures=0
 while IFS= read -r -d '' file; do
   if ! "$strip_tool" -S "$file"; then
     echo "::warning file=${file}::跳过 strip 不支持的依赖文件"
-    ((strip_failures += 1))
+    strip_failures=$((strip_failures + 1))
   fi
 done < <(find "$libraries_dir" -type f \( -name '*.a' -o -name '*.o' \) -print0)
 echo "Skipped strip files: $strip_failures"

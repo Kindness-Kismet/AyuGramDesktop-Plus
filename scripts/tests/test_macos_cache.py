@@ -141,10 +141,11 @@ class MacOSCacheTrimTests(unittest.TestCase):
             archive = stage / "libsample.a"
             subprocess.run(["clang", "-g", "-c", source, "-o", object_file], check=True)
             subprocess.run(["ar", "rcs", archive, object_file], check=True)
-            before = archive.stat().st_size
+            archive_before_size = archive.stat().st_size
+            unsupported_before = archive.read_bytes()
 
             unsupported = stage / "unsupported.a"
-            unsupported.write_bytes(archive.read_bytes())
+            unsupported.write_bytes(unsupported_before)
             fake_strip = root / "strip"
             fake_strip.write_text(
                 "#!/bin/bash\n"
@@ -175,7 +176,8 @@ class MacOSCacheTrimTests(unittest.TestCase):
                 text=True,
             )
 
-            self.assertLess(archive.stat().st_size, before)
+            self.assertLess(archive.stat().st_size, archive_before_size)
+            self.assertEqual(unsupported.read_bytes(), unsupported_before)
             self.assertIn("跳过 strip 不支持的依赖文件", result.stdout)
             self.assertTrue((objects / "library.o").is_file())
             self.assertTrue((include / "sample.h").is_file())
