@@ -80,7 +80,7 @@ jobs:
         with:
           path: |
             Libraries
-          key: ${{ runner.OS }}-libs-${{ env.MAC_LIBRARIES_CACHE_VERSION }}-${{ matrix.arch }}-${{ env.XCODE_CACHE_KEY }}-${{ hashFiles(format('{0}/{1}', env.REPO_NAME, env.PREPARE_PATH), format('{0}/Telegram/build/qt_version.py', env.REPO_NAME), format('{0}/scripts/trim_macos_libraries.sh', env.REPO_NAME)) }}
+          key: ${{ runner.OS }}-libs-${{ env.MAC_LIBRARIES_CACHE_VERSION }}-${{ matrix.arch }}-${{ env.XCODE_CACHE_KEY }}-${{ hashFiles(format('{0}/{1}', env.REPO_NAME, env.PREPARE_PATH), format('{0}/Telegram/build/qt_version.py', env.REPO_NAME), format('{0}/Telegram/build/prepare/patches/libjxl-macos-universal.patch', env.REPO_NAME), format('{0}/scripts/trim_macos_libraries.sh', env.REPO_NAME)) }}
           restore-keys: |
             ${{ runner.OS }}-libs-${{ env.MAC_LIBRARIES_CACHE_VERSION }}-${{ matrix.arch }}-${{ env.XCODE_CACHE_KEY }}-
 

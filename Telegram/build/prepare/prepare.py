@@ -3,6 +3,7 @@ import os, sys, pprint, re, json, pathlib, hashlib, subprocess, glob, tempfile
 executePath = os.getcwd()
 sys.dont_write_bytecode = True
 scriptPath = os.path.dirname(os.path.realpath(__file__))
+libjxlPatch = os.path.join(scriptPath, 'patches', 'libjxl-macos-universal.patch')
 sys.path.append(scriptPath + '/..')
 import qt_version
 
@@ -1088,6 +1089,8 @@ release:
     cmake --build . --config Release
     cmake --install . --config Release
 mac:
+depends:""" + libjxlPatch + """
+    git apply """ + '"' + libjxlPatch + '"' + """
     cmake . \\
         -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \\
         -D CMAKE_INSTALL_PREFIX:STRING=$USED_PREFIX \\

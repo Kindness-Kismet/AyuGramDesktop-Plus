@@ -1,0 +1,26 @@
+diff --git a/third_party/skcms.cmake b/third_party/skcms.cmake
+index 1e70c2a..0c8ceec 100644
+--- a/third_party/skcms.cmake
++++ b/third_party/skcms.cmake
+@@ -52,7 +52,13 @@ function(target_link_skcms TARGET_NAME)
++  set(_avx2_copts "-march=x86-64;-mavx2;-mf16c")
++  set(_avx512_copts "-march=x86-64;-mavx512f;-mavx512dq;-mavx512cd;-mavx512bw;-mavx512vl")
++  if (APPLE AND "${CMAKE_OSX_ARCHITECTURES}" MATCHES ";")
++    set(_avx2_copts "-Xarch_x86_64;-march=x86-64;-Xarch_x86_64;-mavx2;-Xarch_x86_64;-mf16c")
++    set(_avx512_copts "-Xarch_x86_64;-march=x86-64;-Xarch_x86_64;-mavx512f;-Xarch_x86_64;-mavx512dq;-Xarch_x86_64;-mavx512cd;-Xarch_x86_64;-mavx512bw;-Xarch_x86_64;-mavx512vl")
++  endif()
+   if (_use_avx2)
+     list(APPEND _sources "${_sources_dir}/src/skcms_TransformHsw.cc")
+     set_source_files_properties("${_sources_dir}/src/skcms_TransformHsw.cc"
+-      PROPERTIES COMPILE_OPTIONS "${_common_copts};-march=x86-64;-mavx2;-mf16c"
++      PROPERTIES COMPILE_OPTIONS "${_common_copts};${_avx2_copts}"
+       TARGET_DIRECTORY ${TARGET_NAME}
+     )
+   else()
+@@ -62,5 +68,5 @@ function(target_link_skcms TARGET_NAME)
+   if (_use_avx512)
+     list(APPEND _sources "${_sources_dir}/src/skcms_TransformSkx.cc")
+     set_source_files_properties("${_sources_dir}/src/skcms_TransformSkx.cc"
+-      PROPERTIES COMPILE_OPTIONS "${_common_copts};-march=x86-64;-mavx512f;-mavx512dq;-mavx512cd;-mavx512bw;-mavx512vl"
++      PROPERTIES COMPILE_OPTIONS "${_common_copts};${_avx512_copts}"
+       TARGET_DIRECTORY ${TARGET_NAME}
