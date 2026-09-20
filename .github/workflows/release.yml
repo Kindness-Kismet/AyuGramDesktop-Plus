@@ -107,7 +107,7 @@ jobs:
           REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
         run: |
           set -euo pipefail
-          python3 scripts/remote_build.py \
+          exec python3 scripts/remote_build.py \
             --label Windows \
             --repository Kindness-Net/AyuGramDesktop-Plus-Windows-Build \
             --workflow build.yml \
@@ -119,6 +119,25 @@ jobs:
             --version "${{ needs.validate.outputs.version }}" \
             --appupdateversion "${{ needs.validate.outputs.appversion }}" \
             --timeout-seconds 21300
+
+      - name: Cancel Windows remote build.
+        if: ${{ cancelled() && steps.remote.outputs.run_id != '' }}
+        env:
+          REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
+          REMOTE_RUN_ID: ${{ steps.remote.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+
+          from scripts.remote_build import GitHubApi, cancel_remote_run
+
+          cancel_remote_run(
+              GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
+              "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
+              int(os.environ["REMOTE_RUN_ID"]),
+          )
+          PY
 
   linux:
     name: Linux remote build
@@ -143,7 +162,7 @@ jobs:
           REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
         run: |
           set -euo pipefail
-          python3 scripts/remote_build.py \
+          exec python3 scripts/remote_build.py \
             --label Linux \
             --repository Kindness-Net/AyuGramDesktop-Plus-Linux-Build \
             --workflow build.yml \
@@ -155,6 +174,25 @@ jobs:
             --version "${{ needs.validate.outputs.version }}" \
             --appupdateversion "${{ needs.validate.outputs.appversion }}" \
             --timeout-seconds 21300
+
+      - name: Cancel Linux remote build.
+        if: ${{ cancelled() && steps.remote.outputs.run_id != '' }}
+        env:
+          REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
+          REMOTE_RUN_ID: ${{ steps.remote.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+
+          from scripts.remote_build import GitHubApi, cancel_remote_run
+
+          cancel_remote_run(
+              GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
+              "Kindness-Net/AyuGramDesktop-Plus-Linux-Build",
+              int(os.environ["REMOTE_RUN_ID"]),
+          )
+          PY
 
   macos:
     name: macOS remote build
@@ -179,7 +217,7 @@ jobs:
           REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
         run: |
           set -euo pipefail
-          python3 scripts/remote_build.py \
+          exec python3 scripts/remote_build.py \
             --label macOS \
             --repository Kindness-Net/AyuGramDesktop-Plus-macOS-Build \
             --workflow build.yml \
@@ -191,6 +229,25 @@ jobs:
             --version "${{ needs.validate.outputs.version }}" \
             --appupdateversion "${{ needs.validate.outputs.appversion }}" \
             --timeout-seconds 21300
+
+      - name: Cancel macOS remote build.
+        if: ${{ cancelled() && steps.remote.outputs.run_id != '' }}
+        env:
+          REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
+          REMOTE_RUN_ID: ${{ steps.remote.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+
+          from scripts.remote_build import GitHubApi, cancel_remote_run
+
+          cancel_remote_run(
+              GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
+              "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
+              int(os.environ["REMOTE_RUN_ID"]),
+          )
+          PY
 
   publish:
     name: Verify and publish release

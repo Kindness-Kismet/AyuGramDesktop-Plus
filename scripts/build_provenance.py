@@ -8,6 +8,8 @@ import json
 import os
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -29,6 +31,9 @@ from build_support.artifact_provenance import (
 
 TRUSTED_ACTOR = "KiritoXDone"
 ALLOWED_SOURCE_EVENTS = {"push", "workflow_dispatch"}
+SOURCE_RUN_API_ATTEMPTS = 4
+SOURCE_RUN_API_TIMEOUT_SECONDS = 15
+MAX_RETRY_DELAY_SECONDS = 30
 
 
 def _positive_int(value: str) -> int:
@@ -70,8 +75,59 @@ def _git_head(root: Path) -> str:
     return result.stdout.strip()
 
 
-def fetch_workflow_run(repository: str, run_id: int, run_attempt: int) -> dict:
-    """通过 GitHub 公共 API 读取指定 run attempt，认证仅从环境变量取值。"""
+def _http_error_diagnostic(error: urllib.error.HTTPError) -> str:
+    parts = [f"HTTP {error.code}"]
+    headers = (
+        ("X-GitHub-Request-Id", "request_id"),
+        ("X-RateLimit-Remaining", "rate_limit_remaining"),
+        ("X-RateLimit-Reset", "rate_limit_reset"),
+        ("X-RateLimit-Resource", "rate_limit_resource"),
+        ("Retry-After", "retry_after"),
+    )
+    for header, label in headers:
+        value = error.headers.get(header) if error.headers else None
+        if value:
+            parts.append(f"{label}={value[:128]}")
+    return ", ".join(parts)
+
+
+def _network_error_diagnostic(error: OSError) -> str:
+    reason = getattr(error, "reason", error)
+    details = type(reason).__name__
+    error_number = getattr(reason, "errno", None)
+    if error_number is not None:
+        details += f", errno={error_number}"
+    return details
+
+
+def _is_transient_http_error(error: urllib.error.HTTPError) -> bool:
+    if error.code == 429 or 500 <= error.code <= 599:
+        return True
+    if error.code != 403 or not error.headers:
+        return False
+    return bool(error.headers.get("Retry-After")) or error.headers.get("X-RateLimit-Remaining") == "0"
+
+
+def _retry_delay(error: OSError, attempt: int) -> float:
+    delay = float(2 ** (attempt - 1))
+    if isinstance(error, urllib.error.HTTPError) and error.headers:
+        retry_after = error.headers.get("Retry-After")
+        try:
+            delay = max(delay, float(retry_after)) if retry_after is not None else delay
+        except ValueError:
+            pass
+    return min(delay, MAX_RETRY_DELAY_SECONDS)
+
+
+def fetch_workflow_run(
+    repository: str,
+    run_id: int,
+    run_attempt: int,
+    *,
+    opener: Callable[..., object] | None = None,
+    sleep: Callable[[float], None] = time.sleep,
+) -> dict:
+    """读取 source run attempt，并仅对短暂传输故障做有限重试。"""
     repository_path = urllib.parse.quote(repository, safe="/")
     url = (
         f"https://api.github.com/repos/{repository_path}/actions/runs/"
@@ -86,14 +142,37 @@ def fetch_workflow_run(repository: str, run_id: int, run_attempt: int) -> dict:
     if token:
         headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(url, headers=headers)
-    try:
-        with urllib.request.urlopen(request, timeout=15) as response:
-            payload = json.load(response)
-    except (OSError, TimeoutError, UnicodeError, json.JSONDecodeError) as error:
-        raise ProvenanceError("GitHub API 无法确认 source workflow run") from error
-    if not isinstance(payload, dict):
-        raise ProvenanceError("GitHub API 返回的 source workflow run 格式无效")
-    return payload
+    open_request = opener or urllib.request.urlopen
+    for attempt in range(1, SOURCE_RUN_API_ATTEMPTS + 1):
+        try:
+            with open_request(request, timeout=SOURCE_RUN_API_TIMEOUT_SECONDS) as response:
+                payload = json.load(response)
+        except urllib.error.HTTPError as error:
+            diagnostic = _http_error_diagnostic(error)
+            transient = _is_transient_http_error(error)
+            error.close()
+            if transient and attempt < SOURCE_RUN_API_ATTEMPTS:
+                sleep(_retry_delay(error, attempt))
+                continue
+            raise ProvenanceError(
+                f"GitHub API 无法确认 source workflow run"
+                f"（尝试 {attempt}/{SOURCE_RUN_API_ATTEMPTS}，{diagnostic}）"
+            ) from error
+        except OSError as error:
+            diagnostic = _network_error_diagnostic(error)
+            if attempt < SOURCE_RUN_API_ATTEMPTS:
+                sleep(_retry_delay(error, attempt))
+                continue
+            raise ProvenanceError(
+                f"GitHub API 无法确认 source workflow run（尝试 {attempt}/{SOURCE_RUN_API_ATTEMPTS}，"
+                f"网络错误 {diagnostic}）"
+            ) from error
+        except (UnicodeError, json.JSONDecodeError) as error:
+            raise ProvenanceError("GitHub API source workflow run 返回无效 JSON") from error
+        if not isinstance(payload, dict):
+            raise ProvenanceError("GitHub API 返回的 source workflow run 格式无效")
+        return payload
+    raise AssertionError("unreachable")
 
 
 def validate_source(

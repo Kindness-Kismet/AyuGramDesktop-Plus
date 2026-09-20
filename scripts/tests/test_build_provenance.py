@@ -1,7 +1,10 @@
+import io
 import json
 import sys
 import tempfile
 import unittest
+import urllib.error
+from email.message import Message
 from pathlib import Path
 from unittest.mock import patch
 
@@ -12,6 +15,7 @@ from build_provenance import (
     SOURCE_REPOSITORY,
     TARGETS,
     ProvenanceError,
+    fetch_workflow_run,
     validate_source,
     verify_artifacts,
     write_artifact_manifest,
@@ -24,6 +28,119 @@ VERSION = "7.2.9.1"
 APP_UPDATE_VERSION = 70_200_901
 SOURCE_RUN_ID = 1001
 SOURCE_RUN_ATTEMPT = 2
+
+
+class FakeResponse(io.BytesIO):
+    def __init__(self, payload):
+        super().__init__(json.dumps(payload).encode("utf-8"))
+
+
+def http_error(status, **headers):
+    message = Message()
+    for name, value in headers.items():
+        message[name.replace("_", "-")] = str(value)
+    return urllib.error.HTTPError(
+        "https://api.github.com/redacted",
+        status,
+        "request failed",
+        message,
+        io.BytesIO(b'{"message":"response body must stay private"}'),
+    )
+
+
+class SourceApiTests(unittest.TestCase):
+    def opener(self, responses, calls):
+        responses = iter(responses)
+
+        def open_request(_request, *, timeout):
+            calls.append(timeout)
+            response = next(responses)
+            if isinstance(response, BaseException):
+                raise response
+            return response
+
+        return open_request
+
+    def test_transient_http_and_network_failures_retry_then_succeed(self):
+        calls = []
+        sleeps = []
+        payload = {"id": SOURCE_RUN_ID}
+        result = fetch_workflow_run(
+            SOURCE_REPOSITORY,
+            SOURCE_RUN_ID,
+            SOURCE_RUN_ATTEMPT,
+            opener=self.opener([http_error(503), TimeoutError(), FakeResponse(payload)], calls),
+            sleep=sleeps.append,
+        )
+        self.assertEqual(result, payload)
+        self.assertEqual(calls, [15, 15, 15])
+        self.assertEqual(sleeps, [1.0, 2.0])
+
+    def test_anonymous_rate_limit_403_has_bounded_retries_and_diagnostics(self):
+        calls = []
+        sleeps = []
+        errors = [
+            http_error(
+                403,
+                X_GitHub_Request_Id="request-123",
+                X_RateLimit_Remaining="0",
+                X_RateLimit_Reset="1234567890",
+                X_RateLimit_Resource="core",
+            )
+            for _ in range(4)
+        ]
+        with self.assertRaises(ProvenanceError) as raised:
+            fetch_workflow_run(
+                SOURCE_REPOSITORY,
+                SOURCE_RUN_ID,
+                SOURCE_RUN_ATTEMPT,
+                opener=self.opener(errors, calls),
+                sleep=sleeps.append,
+            )
+        message = str(raised.exception)
+        self.assertIn("HTTP 403", message)
+        self.assertIn("request_id=request-123", message)
+        self.assertIn("rate_limit_remaining=0", message)
+        self.assertIn("rate_limit_reset=1234567890", message)
+        self.assertIn("尝试 4/4", message)
+        self.assertEqual(sleeps, [1.0, 2.0, 4.0])
+
+    def test_non_transient_http_error_fails_without_retry_and_redacts_secrets(self):
+        calls = []
+        secret = "never-print-this-token"
+        error = http_error(404, X_GitHub_Request_Id="request-404")
+        with patch.dict("os.environ", {"GH_TOKEN": secret}, clear=False):
+            with self.assertRaises(ProvenanceError) as raised:
+                fetch_workflow_run(
+                    SOURCE_REPOSITORY,
+                    SOURCE_RUN_ID,
+                    SOURCE_RUN_ATTEMPT,
+                    opener=self.opener([error], calls),
+                    sleep=lambda _: self.fail("404 must not retry"),
+                )
+        message = str(raised.exception)
+        self.assertIn("HTTP 404", message)
+        self.assertIn("request_id=request-404", message)
+        self.assertNotIn(secret, message)
+        self.assertNotIn("response body", message)
+        self.assertEqual(calls, [15])
+
+    def test_rate_limit_retry_after_is_capped(self):
+        calls = []
+        sleeps = []
+        payload = {"id": SOURCE_RUN_ID}
+        result = fetch_workflow_run(
+            SOURCE_REPOSITORY,
+            SOURCE_RUN_ID,
+            SOURCE_RUN_ATTEMPT,
+            opener=self.opener(
+                [http_error(429, Retry_After="600"), FakeResponse(payload)],
+                calls,
+            ),
+            sleep=sleeps.append,
+        )
+        self.assertEqual(result, payload)
+        self.assertEqual(sleeps, [30])
 
 
 class SourceValidationTests(unittest.TestCase):
@@ -87,8 +204,15 @@ class SourceValidationTests(unittest.TestCase):
             self.validate(lambda *_: self.run_payload(event="pull_request"))
 
     def test_rejects_wrong_source_run_attempt(self):
+        calls = []
+
+        def loader(*_):
+            calls.append(1)
+            return self.run_payload(run_attempt=1)
+
         with self.assertRaisesRegex(ProvenanceError, "run attempt"):
-            self.validate(lambda *_: self.run_payload(run_attempt=1))
+            self.validate(loader)
+        self.assertEqual(calls, [1])
 
     def test_api_failure_fails_closed(self):
         def loader(*_):
