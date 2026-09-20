@@ -28,9 +28,7 @@ find "$libraries_dir" \
   ')' \
   -delete
 
-# Release 构建不会发布依赖调试信息，缓存前移除它以免挤占 Actions 配额。
-find "$libraries_dir" -type f \( -name '*.a' -o -name '*.o' \) -print0 \
-  | xargs -0 -n 64 strip -S
+# 保留库和对象文件原样，避免 strip 在依赖中的旧架构文件上崩溃。
 
 after=$(du -sk "$libraries_dir" | cut -f1)
 echo "Libraries cache: $((before * 1024)) -> $((after * 1024)) bytes"

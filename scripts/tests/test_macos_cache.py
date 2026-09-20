@@ -119,7 +119,7 @@ class LibjxlUniversalPatchTests(unittest.TestCase):
                 self.assertEqual(set(architectures), {"x86_64", "arm64"})
 
 
-@unittest.skipUnless(platform.system() == "Darwin", "requires the macOS strip tool")
+@unittest.skipUnless(platform.system() == "Darwin", "requires macOS find and compiler tools")
 class MacOSCacheTrimTests(unittest.TestCase):
     def test_trim_preserves_linkable_inputs_and_removes_build_debris(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -140,7 +140,8 @@ class MacOSCacheTrimTests(unittest.TestCase):
             archive = stage / "libsample.a"
             subprocess.run(["clang", "-g", "-c", source, "-o", object_file], check=True)
             subprocess.run(["ar", "rcs", archive, object_file], check=True)
-            before = archive.stat().st_size
+            archive_before = archive.read_bytes()
+            object_before = object_file.read_bytes()
 
             (objects / "library.o").write_bytes(object_file.read_bytes())
             (include / "sample.h").write_text("int cache_answer(void);\n", encoding="utf-8")
@@ -154,8 +155,8 @@ class MacOSCacheTrimTests(unittest.TestCase):
 
             subprocess.run([TRIM_SCRIPT, libraries], check=True)
 
-            self.assertLess(archive.stat().st_size, before)
-            self.assertTrue((objects / "library.o").is_file())
+            self.assertEqual(archive.read_bytes(), archive_before)
+            self.assertEqual((objects / "library.o").read_bytes(), object_before)
             self.assertTrue((include / "sample.h").is_file())
             self.assertTrue((cmake / "SampleTargets.cmake").is_file())
             self.assertTrue((cache_keys / "sample").is_file())
