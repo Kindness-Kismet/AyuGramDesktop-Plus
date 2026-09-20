@@ -1,99 +1,26 @@
-name: Release
+name: Cross-repo smoke
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
-  pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: release-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  validate:
-    name: Tests and static checks
+  smoke:
+    name: ${{ matrix.name }} checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
-      appversion: ${{ steps.version.outputs.appversion }}
-
-    steps:
-      - name: Check out repository.
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Validate workflows.
-        env:
-          ACTIONLINT_VERSION: 1.7.12
-        run: |
-          set -euo pipefail
-          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          base="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
-          curl --fail --location --retry 3 --output "$RUNNER_TEMP/$archive" "$base/$archive"
-          curl --fail --location --retry 3 \
-            --output "$RUNNER_TEMP/actionlint_checksums.txt" \
-            "$base/actionlint_${ACTIONLINT_VERSION}_checksums.txt"
-          grep "  ${archive}$" "$RUNNER_TEMP/actionlint_checksums.txt" \
-            | (cd "$RUNNER_TEMP" && sha256sum --check -)
-          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
-          "$RUNNER_TEMP/actionlint" -shellcheck= -pyflakes=
-
-      - name: Set up Python.
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
-
-      - name: Read version.
-        id: version
-        run: |
-          set -euo pipefail
-          version=$(sed -n 's/^AppVersionStrSmall //p' Telegram/build/version)
-          test -n "$version"
-          appversion=$(sed -n 's/^AppUpdateVersion  *//p' Telegram/build/version)
-          test -n "$appversion"
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
-          echo "appversion=${appversion}" >> "$GITHUB_OUTPUT"
-
-      - name: Validate release inputs.
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          python3 -B -m unittest discover -s scripts/tests -v
-          python3 scripts/release_notes.py \
-            .github/CHANGELOG.md "$VERSION" "$RUNNER_TEMP/release-notes.md"
-          cat "$RUNNER_TEMP/release-notes.md"
-
-  windows:
-    name: Windows remote build
-    needs: validate
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    outputs:
-      run_id: ${{ steps.remote.outputs.run_id }}
-      run_attempt: ${{ steps.remote.outputs.run_attempt }}
-      run_url: ${{ steps.remote.outputs.run_url }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            repository: Kindness-Net/AyuGramDesktop-Plus-Windows-Build
+          - name: Linux
+            repository: Kindness-Net/AyuGramDesktop-Plus-Linux-Build
+          - name: macOS
+            repository: Kindness-Net/AyuGramDesktop-Plus-macOS-Build
 
     steps:
       - name: Check out orchestration code.
@@ -101,285 +28,36 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      - name: Dispatch and wait for Windows.
-        id: remote
+      - name: Dispatch and wait for remote checks.
         env:
           REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
+          BUILD_REPOSITORY: ${{ matrix.repository }}
+          BUILD_NAME: ${{ matrix.name }}
         run: |
           set -euo pipefail
-          python3 scripts/remote_build.py \
-            --label Windows \
-            --repository Kindness-Net/AyuGramDesktop-Plus-Windows-Build \
-            --workflow build.yml \
-            --ref main \
-            --source-sha "$GITHUB_SHA" \
-            --source-ref "$GITHUB_REF" \
-            --source-run-id "$GITHUB_RUN_ID" \
-            --source-run-attempt "$GITHUB_RUN_ATTEMPT" \
-            --version "${{ needs.validate.outputs.version }}" \
-            --appupdateversion "${{ needs.validate.outputs.appversion }}" \
-            --timeout-seconds 21300
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
 
-  linux:
-    name: Linux remote build
-    needs: validate
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    outputs:
-      run_id: ${{ steps.remote.outputs.run_id }}
-      run_attempt: ${{ steps.remote.outputs.run_attempt }}
-      run_url: ${{ steps.remote.outputs.run_url }}
+          from scripts.remote_build import GitHubApi, run_remote_build
 
-    steps:
-      - name: Check out orchestration code.
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
+          summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
 
-      - name: Dispatch and wait for Linux.
-        id: remote
-        env:
-          REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
-        run: |
-          set -euo pipefail
-          python3 scripts/remote_build.py \
-            --label Linux \
-            --repository Kindness-Net/AyuGramDesktop-Plus-Linux-Build \
-            --workflow build.yml \
-            --ref main \
-            --source-sha "$GITHUB_SHA" \
-            --source-ref "$GITHUB_REF" \
-            --source-run-id "$GITHUB_RUN_ID" \
-            --source-run-attempt "$GITHUB_RUN_ATTEMPT" \
-            --version "${{ needs.validate.outputs.version }}" \
-            --appupdateversion "${{ needs.validate.outputs.appversion }}" \
-            --timeout-seconds 21300
+          def record_dispatch(repository: str, run_id: int, url: str) -> None:
+              with summary.open("a", encoding="utf-8") as output:
+                  output.write(f"### {os.environ['BUILD_NAME']} smoke\n\n")
+                  output.write(f"[{repository} run {run_id}]({url})\n")
 
-  macos:
-    name: macOS remote build
-    needs: validate
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    outputs:
-      run_id: ${{ steps.remote.outputs.run_id }}
-      run_attempt: ${{ steps.remote.outputs.run_attempt }}
-      run_url: ${{ steps.remote.outputs.run_url }}
-
-    steps:
-      - name: Check out orchestration code.
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Dispatch and wait for macOS.
-        id: remote
-        env:
-          REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
-        run: |
-          set -euo pipefail
-          python3 scripts/remote_build.py \
-            --label macOS \
-            --repository Kindness-Net/AyuGramDesktop-Plus-macOS-Build \
-            --workflow build.yml \
-            --ref main \
-            --source-sha "$GITHUB_SHA" \
-            --source-ref "$GITHUB_REF" \
-            --source-run-id "$GITHUB_RUN_ID" \
-            --source-run-attempt "$GITHUB_RUN_ATTEMPT" \
-            --version "${{ needs.validate.outputs.version }}" \
-            --appupdateversion "${{ needs.validate.outputs.appversion }}" \
-            --timeout-seconds 21300
-
-  publish:
-    name: Verify and publish release
-    needs: [validate, windows, linux, macos]
-    if: >-
-      github.ref == 'refs/heads/main'
-      && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write
-
-    steps:
-      - name: Check out repository.
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Download Windows artifacts.
-        uses: actions/download-artifact@v8
-        with:
-          repository: Kindness-Net/AyuGramDesktop-Plus-Windows-Build
-          run-id: ${{ needs.windows.outputs.run_id }}
-          github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
-          pattern: AyuGram-*
-          merge-multiple: true
-          path: artifacts/windows
-
-      - name: Download Linux artifacts.
-        uses: actions/download-artifact@v8
-        with:
-          repository: Kindness-Net/AyuGramDesktop-Plus-Linux-Build
-          run-id: ${{ needs.linux.outputs.run_id }}
-          github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
-          pattern: AyuGram-*
-          merge-multiple: true
-          path: artifacts/linux
-
-      - name: Download macOS artifacts.
-        uses: actions/download-artifact@v8
-        with:
-          repository: Kindness-Net/AyuGramDesktop-Plus-macOS-Build
-          run-id: ${{ needs.macos.outputs.run_id }}
-          github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
-          pattern: AyuGram-*
-          merge-multiple: true
-          path: artifacts/macos
-
-      - name: Verify artifact provenance.
-        env:
-          VERSION: ${{ needs.validate.outputs.version }}
-          APPVERSION: ${{ needs.validate.outputs.appversion }}
-          WINDOWS_RUN_ID: ${{ needs.windows.outputs.run_id }}
-          WINDOWS_RUN_ATTEMPT: ${{ needs.windows.outputs.run_attempt }}
-          LINUX_RUN_ID: ${{ needs.linux.outputs.run_id }}
-          LINUX_RUN_ATTEMPT: ${{ needs.linux.outputs.run_attempt }}
-          MACOS_RUN_ID: ${{ needs.macos.outputs.run_id }}
-          MACOS_RUN_ATTEMPT: ${{ needs.macos.outputs.run_attempt }}
-        run: |
-          set -euo pipefail
-          build_runs=$(jq -cn \
-            --argjson windows_run "$WINDOWS_RUN_ID" \
-            --argjson windows_attempt "$WINDOWS_RUN_ATTEMPT" \
-            --argjson linux_run "$LINUX_RUN_ID" \
-            --argjson linux_attempt "$LINUX_RUN_ATTEMPT" \
-            --argjson macos_run "$MACOS_RUN_ID" \
-            --argjson macos_attempt "$MACOS_RUN_ATTEMPT" \
-            '{
-              "windows-x64": {
-                repository: "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
-                run_id: $windows_run,
-                run_attempt: $windows_attempt
-              },
-              "linux-x64": {
-                repository: "Kindness-Net/AyuGramDesktop-Plus-Linux-Build",
-                run_id: $linux_run,
-                run_attempt: $linux_attempt
-              },
-              "macos-x64": {
-                repository: "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
-                run_id: $macos_run,
-                run_attempt: $macos_attempt
-              },
-              "macos-arm64": {
-                repository: "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
-                run_id: $macos_run,
-                run_attempt: $macos_attempt
-              }
-            }')
-
-          if find artifacts/windows -type f -name 'provenance-windows-arm64.json' \
-            -print -quit | grep -q .; then
-            build_runs=$(jq -cn \
-              --argjson current "$build_runs" \
-              --argjson run "$WINDOWS_RUN_ID" \
-              --argjson attempt "$WINDOWS_RUN_ATTEMPT" \
-              '$current + {
-                "windows-arm64": {
-                  repository: "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
-                  run_id: $run,
-                  run_attempt: $attempt
-                }
-              }')
-          fi
-
-          if find artifacts/linux -type f -name 'provenance-linux-arm64.json' \
-            -print -quit | grep -q .; then
-            build_runs=$(jq -cn \
-              --argjson current "$build_runs" \
-              --argjson run "$LINUX_RUN_ID" \
-              --argjson attempt "$LINUX_RUN_ATTEMPT" \
-              '$current + {
-                "linux-arm64": {
-                  repository: "Kindness-Net/AyuGramDesktop-Plus-Linux-Build",
-                  run_id: $run,
-                  run_attempt: $attempt
-                }
-              }')
-          fi
-
-          python3 scripts/build_provenance.py verify-artifacts \
-            --root artifacts \
-            --source-repository "$GITHUB_REPOSITORY" \
-            --source-sha "$GITHUB_SHA" \
-            --source-ref "$GITHUB_REF" \
-            --source-run-id "$GITHUB_RUN_ID" \
-            --source-run-attempt "$GITHUB_RUN_ATTEMPT" \
-            --version "$VERSION" \
-            --appupdateversion "$APPVERSION" \
-            --build-runs "$build_runs"
-
-      - name: Collect verified release files.
-        run: |
-          set -euo pipefail
-          mkdir release-artifacts
-          while IFS= read -r -d '' file; do
-            name=$(basename "$file")
-            case "$name" in
-              provenance-*.json) continue ;;
-            esac
-            test ! -e "release-artifacts/$name"
-            cp -- "$file" "release-artifacts/$name"
-          done < <(find artifacts -type f -print0)
-          test "$(find release-artifacts -maxdepth 1 -type f -name '*.zip' | wc -l)" -ge 4
-
-      - name: Generate update map.
-        env:
-          APPVERSION: ${{ needs.validate.outputs.appversion }}
-        run: |
-          set -euo pipefail
-          python3 scripts/release_update_map.py release-artifacts "$APPVERSION"
-
-      - name: List release files.
-        run: |
-          set -euo pipefail
-          find release-artifacts -maxdepth 1 -type f -printf '%f\n' | sort
-
-      - name: Generate release notes.
-        env:
-          VERSION: ${{ needs.validate.outputs.version }}
-        run: |
-          set -euo pipefail
-          python3 scripts/release_notes.py \
-            .github/CHANGELOG.md "$VERSION" "$RUNNER_TEMP/release-notes.md"
-          cat "$RUNNER_TEMP/release-notes.md"
-
-      - name: Verify release target.
-        env:
-          TAG: ${{ needs.validate.outputs.tag }}
-        run: |
-          set -euo pipefail
-          direct=$(git ls-remote --refs origin "refs/tags/$TAG" | cut -f1)
-          peeled=$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)
-          existing=${peeled:-$direct}
-          if test -n "$existing" && test "$existing" != "$GITHUB_SHA"; then
-            echo "Refusing to overwrite $TAG from $existing with $GITHUB_SHA"
-            exit 1
-          fi
-          echo "$TAG is absent or already points to $GITHUB_SHA"
-
-      - name: Publish release.
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ needs.validate.outputs.tag }}
-          target_commitish: ${{ github.sha }}
-          name: AyuGram Desktop Plus ${{ needs.validate.outputs.version }}
-          body_path: ${{ runner.temp }}/release-notes.md
-          files: release-artifacts/*
-          draft: false
-          prerelease: false
-          overwrite_files: true
-          make_latest: true
+          details = run_remote_build(
+              GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
+              repository=os.environ["BUILD_REPOSITORY"],
+              workflow="checks.yml",
+              ref="main",
+              inputs={},
+              timeout_seconds=300,
+              poll_interval_seconds=5,
+              on_dispatched=record_dispatch,
+          )
+          with summary.open("a", encoding="utf-8") as output:
+              output.write(f"\nResult: success (attempt {details.run_attempt})\n")
+          PY
