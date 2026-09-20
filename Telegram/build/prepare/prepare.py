@@ -46,13 +46,15 @@ if win and not 'COMSPEC' in os.environ:
 if win and not win32 and not win64 and not winarm:
     nativeToolsError()
 
-os.chdir(scriptPath + '/../../../..')
+# Windows 依赖与项目构建脚本共用 build/tmp，避免在仓库外生成缓存。
+rootDir = os.path.realpath(os.path.join(scriptPath, '../../../build/tmp' if win else '../../../..'))
 
 pathSep = ';' if win else ':'
-libsLoc = 'Libraries' if not win64 else (os.path.join('Libraries', 'win64'))
+libsLoc = 'Libraries'
+if win64 or winarm:
+    libsLoc = os.path.join(libsLoc, 'win64' if win64 else 'winarm64')
 keysLoc = 'cache_keys'
 
-rootDir = os.getcwd()
 libsDir = os.path.realpath(os.path.join(rootDir, libsLoc))
 thirdPartyDir = os.path.realpath(os.path.join(rootDir, 'ThirdParty'))
 usedPrefix = os.path.realpath(os.path.join(libsDir, 'local'))
@@ -76,11 +78,6 @@ for arg in sys.argv[1:]:
     elif arg == 'shell':
         customRunCommand = True
         runCommand.append('shell')
-
-if not os.path.isdir(os.path.join(libsDir, keysLoc)):
-    pathlib.Path(os.path.join(libsDir, keysLoc)).mkdir(parents=True, exist_ok=True)
-if not os.path.isdir(os.path.join(thirdPartyDir, keysLoc)):
-    pathlib.Path(os.path.join(thirdPartyDir, keysLoc)).mkdir(parents=True, exist_ok=True)
 
 pathPrefixes = [
     'ThirdParty\\msys64\\mingw64\\bin',
@@ -381,6 +378,9 @@ def runStages():
                 break
         if not found:
             error('Unknown argument: ' + arg)
+    # 仅在实际编译时创建缓存，提取配方不应写入目录。
+    for directory in (libsDir, thirdPartyDir):
+        pathlib.Path(directory, keysLoc).mkdir(parents=True, exist_ok=True)
     count = len(stages)
     index = 0
     for stage in stages:

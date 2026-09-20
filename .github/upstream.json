@@ -414,6 +414,7 @@
       "Telegram/build/changelog2appstream.py",
       "Telegram/build/docker/centos_env/Dockerfile",
       "Telegram/build/docker/centos_env/gen_dockerfile.py",
+      "Telegram/build/prepare/prepare.py",
       "Telegram/build/setup.iss",
       "Telegram/build/version",
       "Telegram/cmake/generate_lang.cmake",
