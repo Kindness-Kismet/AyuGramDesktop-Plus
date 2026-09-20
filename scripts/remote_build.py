@@ -100,9 +100,10 @@ class GitHubApi:
             raise error_type(
                 f"GitHub API {method} {path} 返回 HTTP {error.code}: {message}"
             ) from error
-        except URLError as error:
+        except (URLError, TimeoutError) as error:
+            reason = getattr(error, "reason", str(error))
             raise TransientGitHubApiError(
-                f"GitHub API {method} {path} 连接失败: {error.reason}"
+                f"GitHub API {method} {path} 连接失败: {reason}"
             ) from error
 
         if status not in expected_statuses:
@@ -323,25 +324,45 @@ def run_remote_build(
             sleep(min(poll_interval_seconds, remaining))
     finally:
         if run_id is not None and not terminal:
-            try:
-                api.cancel_run(repository, run_id)
-                print(f"cancel requested for {repository} run {run_id}", flush=True)
-            except Exception as error:  # 取消是尽力清理，不能覆盖原始失败。
-                print(
-                    f"warning: unable to cancel {repository} run {run_id}: {error}",
-                    file=sys.stderr,
-                    flush=True,
-                )
+            cancel_remote_run(api, repository, run_id)
 
 
-def _append_outputs(path: Path | None, details: RunDetails) -> None:
+def cancel_remote_run(api: GitHubApi, repository: str, run_id: int) -> bool:
+    """按已记录的精确 ID 尽力取消远程运行，不用查询结果猜测目标。"""
+    if run_id <= 0:
+        raise ValueError("远程 run ID 必须是正整数")
+    try:
+        api.cancel_run(repository, run_id)
+        print(f"cancel requested for {repository} run {run_id}", flush=True)
+        return True
+    except Exception as error:  # 取消是尽力清理，不能覆盖原始失败。
+        print(
+            f"warning: unable to cancel {repository} run {run_id}: {error}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return False
+
+
+def _append_dispatched_outputs(
+    path: Path | None,
+    repository: str,
+    run_id: int,
+    url: str,
+) -> None:
     if path is None:
         return
     with path.open("a", encoding="utf-8") as output:
-        output.write(f"repository={details.repository}\n")
-        output.write(f"run_id={details.run_id}\n")
+        output.write(f"repository={repository}\n")
+        output.write(f"run_id={run_id}\n")
+        output.write(f"run_url={url}\n")
+
+
+def _append_success_outputs(path: Path | None, details: RunDetails) -> None:
+    if path is None:
+        return
+    with path.open("a", encoding="utf-8") as output:
         output.write(f"run_attempt={details.run_attempt}\n")
-        output.write(f"run_url={details.url}\n")
 
 
 def _append_dispatched_summary(
@@ -430,7 +451,19 @@ def main() -> int:
     try:
         token = os.environ.get("REMOTE_BUILD_TOKEN", "")
         api = GitHubApi(token)
+        output_path = _path_from_argument(args.github_output, "GITHUB_OUTPUT")
         summary_path = _path_from_argument(args.step_summary, "GITHUB_STEP_SUMMARY")
+
+        def record_dispatch(repository: str, run_id: int, url: str) -> None:
+            _append_dispatched_outputs(output_path, repository, run_id, url)
+            _append_dispatched_summary(
+                summary_path,
+                args.label,
+                repository,
+                run_id,
+                url,
+            )
+
         previous_handlers = _install_signal_handlers()
         try:
             details = run_remote_build(
@@ -441,15 +474,7 @@ def main() -> int:
                 inputs=inputs,
                 timeout_seconds=args.timeout_seconds,
                 poll_interval_seconds=args.poll_interval_seconds,
-                on_dispatched=lambda repository, run_id, url: (
-                    _append_dispatched_summary(
-                        summary_path,
-                        args.label,
-                        repository,
-                        run_id,
-                        url,
-                    )
-                ),
+                on_dispatched=record_dispatch,
             )
         finally:
             _restore_signal_handlers(previous_handlers)
@@ -457,10 +482,7 @@ def main() -> int:
         print(f"error: {error}", file=sys.stderr)
         return 1
 
-    _append_outputs(
-        _path_from_argument(args.github_output, "GITHUB_OUTPUT"),
-        details,
-    )
+    _append_success_outputs(output_path, details)
     _append_success_summary(summary_path, details)
     return 0
 

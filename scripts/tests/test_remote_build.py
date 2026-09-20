@@ -14,9 +14,11 @@ from remote_build import (
     RemoteBuildInterrupted,
     TransientGitHubApiError,
     _API_VERSION,
+    _append_dispatched_outputs,
     _append_dispatched_summary,
-    _append_outputs,
+    _append_success_outputs,
     _append_success_summary,
+    cancel_remote_run,
     run_remote_build,
 )
 
@@ -157,6 +159,13 @@ class DispatchTests(unittest.TestCase):
                 api.dispatch_workflow(REPOSITORY, WORKFLOW, REF, {})
         self.assertEqual(request.call_count, 1)
 
+    def test_socket_timeout_is_transient_but_dispatch_is_not_retried(self):
+        api = GitHubApi("token")
+        with patch("remote_build.urlopen", side_effect=TimeoutError("timed out")) as open_url:
+            with self.assertRaisesRegex(TransientGitHubApiError, "timed out"):
+                api.dispatch_workflow(REPOSITORY, WORKFLOW, REF, {})
+        self.assertEqual(open_url.call_count, 1)
+
     def test_get_run_stops_after_three_transient_failures(self):
         delays = []
         api = GitHubApi("token", sleep=delays.append)
@@ -235,6 +244,32 @@ class RemoteBuildTests(unittest.TestCase):
             self.run_build(api, sleep=interrupt)
         self.assertEqual(api.cancellations, [(REPOSITORY, 1234)])
 
+    def test_dispatched_output_exists_before_interrupted_wait(self):
+        api = FakeApi([run_payload(status="queued", conclusion=None)])
+
+        def interrupt(_seconds):
+            raise RemoteBuildInterrupted("cancel")
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "output"
+            with self.assertRaisesRegex(RemoteBuildInterrupted, "cancel"):
+                self.run_build(
+                    api,
+                    sleep=interrupt,
+                    on_dispatched=lambda repository, run_id, url: (
+                        _append_dispatched_outputs(
+                            output,
+                            repository,
+                            run_id,
+                            url,
+                        )
+                    ),
+                )
+            text = output.read_text(encoding="utf-8")
+        self.assertIn("run_id=1234\n", text)
+        self.assertNotIn("run_attempt=", text)
+        self.assertEqual(api.cancellations, [(REPOSITORY, 1234)])
+
     def test_cancel_failure_does_not_replace_timeout(self):
         api = FakeApi([run_payload(status="queued", conclusion=None)])
 
@@ -248,6 +283,11 @@ class RemoteBuildTests(unittest.TestCase):
                 timeout_seconds=1,
                 poll_interval_seconds=1,
             )
+
+    def test_exact_cancel_helper_never_discovers_another_run(self):
+        api = FakeApi([run_payload()])
+        self.assertTrue(cancel_remote_run(api, REPOSITORY, 4321))
+        self.assertEqual(api.cancellations, [(REPOSITORY, 4321)])
 
     def test_mismatched_run_metadata_is_rejected_and_canceled(self):
         api = FakeApi(
@@ -263,7 +303,13 @@ class RemoteBuildTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "output"
             summary = Path(directory) / "summary"
-            _append_outputs(output, details)
+            _append_dispatched_outputs(
+                output,
+                details.repository,
+                details.run_id,
+                details.url,
+            )
+            _append_success_outputs(output, details)
             _append_dispatched_summary(
                 summary,
                 "Windows",
