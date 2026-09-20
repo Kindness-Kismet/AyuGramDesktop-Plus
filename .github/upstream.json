@@ -427,6 +427,7 @@
       "Telegram/build/docker/centos_env/gen_dockerfile.py",
       "Telegram/build/mac_store_upload.sh",
       "Telegram/build/prepare/prepare.py",
+      "Telegram/build/prepare/patches/libjxl-macos-universal.patch",
       "Telegram/build/release.py",
       "Telegram/build/release.sh",
       "Telegram/build/set_version.py",
