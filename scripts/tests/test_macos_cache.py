@@ -1,6 +1,7 @@
 import os
 import platform
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -142,6 +143,17 @@ class MacOSCacheTrimTests(unittest.TestCase):
             subprocess.run(["ar", "rcs", archive, object_file], check=True)
             before = archive.stat().st_size
 
+            unsupported = stage / "unsupported.a"
+            unsupported.write_bytes(archive.read_bytes())
+            fake_strip = root / "strip"
+            fake_strip.write_text(
+                "#!/bin/bash\n"
+                "if [[ $2 == *unsupported.a ]]; then exit 1; fi\n"
+                'exec "$REAL_STRIP" "$@"\n',
+                encoding="utf-8",
+            )
+            fake_strip.chmod(0o755)
+
             (objects / "library.o").write_bytes(object_file.read_bytes())
             (include / "sample.h").write_text("int cache_answer(void);\n", encoding="utf-8")
             (cmake / "SampleTargets.cmake").write_text("# fixture\n", encoding="utf-8")
@@ -152,9 +164,19 @@ class MacOSCacheTrimTests(unittest.TestCase):
             tool.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
             tool.chmod(0o755)
 
-            subprocess.run([TRIM_SCRIPT, libraries], check=True)
+            environment = os.environ.copy()
+            environment["STRIP"] = str(fake_strip)
+            environment["REAL_STRIP"] = shutil.which("strip") or "strip"
+            result = subprocess.run(
+                [TRIM_SCRIPT, libraries],
+                check=True,
+                capture_output=True,
+                env=environment,
+                text=True,
+            )
 
             self.assertLess(archive.stat().st_size, before)
+            self.assertIn("跳过 strip 不支持的依赖文件", result.stdout)
             self.assertTrue((objects / "library.o").is_file())
             self.assertTrue((include / "sample.h").is_file())
             self.assertTrue((cmake / "SampleTargets.cmake").is_file())
