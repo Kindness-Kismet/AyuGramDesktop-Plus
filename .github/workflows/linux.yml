@@ -60,8 +60,10 @@ jobs:
         include:
           - arch: x64
             runner: ubuntu-latest
+            updater: tlinuxupd
           - arch: arm64
             runner: ubuntu-24.04-arm
+            updater: tlinuxarmupd
     timeout-minutes: 359
 
     env:
@@ -219,10 +221,8 @@ jobs:
           zip "AyuGram-v${version}-linux-${{ matrix.arch }}.zip" AyuGram
           test ! -f Updater || zip "AyuGram-v${version}-linux-${{ matrix.arch }}.zip" Updater
 
-      # 更新包名由 Packer 按平台写死；Packer 链的是容器内的库，必须在容器里跑
-      # 客户端的 linux 键没有架构维度，只有 x64 产出更新包
+      # Packer 链接容器内的库，并按编译架构生成独立更新包。
       - name: Pack update.
-        if: matrix.arch == 'x64'
         run: |
           set -euo pipefail
           version=$(sed -n 's/^AppVersion  *//p' Telegram/build/version)
@@ -232,7 +232,7 @@ jobs:
           -v $PWD:/usr/src/tdesktop \
           $IMAGE_TAG \
           bash -c "cd /usr/src/tdesktop/out/Release && ./Packer -version $version -path AyuGram -path Updater"
-          ls -l "out/Release/tlinuxupd${version}"
+          test -s "out/Release/${{ matrix.updater }}${version}"
 
       - name: Upload artifact.
         uses: actions/upload-artifact@v7
@@ -240,5 +240,5 @@ jobs:
           name: AyuGram-Linux-${{ matrix.arch }}
           path: |
             out/Release/AyuGram-v*-linux-${{ matrix.arch }}.zip
-            out/Release/tlinuxupd*
+            out/Release/${{ matrix.updater }}*
           retention-days: 7

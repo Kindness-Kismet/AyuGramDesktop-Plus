@@ -145,8 +145,8 @@ cd ..
 SET CONFIGURATIONS=-debug
 SET ASSERTS=
 SET CONFIGURATIONS=-debug-and-release
-if exist "%LIBS_DIR%\Qt6.11.2" rmdir /Q /S "%LIBS_DIR%\Qt6.11.2"
-if exist "%LIBS_DIR%\Qt6.11.2" exit /b 1
+if exist "%LIBS_DIR%\Qt-%QT%" rmdir /Q /S "%LIBS_DIR%\Qt-%QT%"
+if exist "%LIBS_DIR%\Qt-%QT%" exit /b 1
 SET MOZJPEG_DIR=%LIBS_DIR%\mozjpeg
 SET OPENSSL_DIR=%LIBS_DIR%\openssl3
 SET OPENSSL_LIBS_DIR=%OPENSSL_DIR%\out

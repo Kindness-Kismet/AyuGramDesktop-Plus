@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""按实际产出的更新包生成各架构的更新清单。"""
+
+import argparse
+import json
+from pathlib import Path
+
+
+def generate_update_map(artifacts: Path, version: int) -> dict:
+    prefixes = {
+        "win64": "tx64upd",
+        "winarm": "tarm64upd",
+        "linux": "tlinuxupd",
+        "linuxarm": "tlinuxarmupd",
+        "mac": "tmacupd",
+        "armac": "tarmacupd",
+    }
+    result = {}
+    for platform, prefix in prefixes.items():
+        package = artifacts / f"{prefix}{version}"
+        if not package.is_file():
+            continue
+        if not package.stat().st_size:
+            raise ValueError(f"更新包为空：{package.name}")
+        result[platform] = {
+            "stable": {
+                "released": version,
+                "testing": version,
+                "link": f"/{prefix}{{version}}",
+            },
+        }
+
+    # 两个苹果架构必须各有更新包，不能把单架构包同时登记到两个键。
+    missing = {"win64", "linux", "mac", "armac"} - result.keys()
+    if missing:
+        raise ValueError("缺少必需的更新包：" + ", ".join(sorted(missing)))
+    return result
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("artifacts", type=Path)
+    parser.add_argument("version", type=int)
+    args = parser.parse_args()
+    result = generate_update_map(args.artifacts, args.version)
+    output = json.dumps(result, indent=2) + "\n"
+    (args.artifacts / "current6").write_text(output, encoding="utf-8")
+    print(output, end="")
+
+
+if __name__ == "__main__":
+    main()

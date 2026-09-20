@@ -72,6 +72,15 @@ namespace {
 constexpr auto kUpdaterTimeout = 10 * crl::time(1000);
 constexpr auto kMaxResponseSize = 1024 * 1024;
 
+// Linux 的上游键不区分架构，ARM 更新必须使用独立清单项。
+[[nodiscard]] QString UpdatePlatformKey() {
+#if defined Q_OS_LINUX && defined Q_PROCESSOR_ARM_64
+	return QStringLiteral("linuxarm");
+#else
+	return Platform::AutoUpdateKey();
+#endif
+}
+
 // tdata/version marker for installed v2 canary packages, holding the full
 // 64-bit (base << 32 | counter) version. 0x7FFFFFFF is the alpha marker.
 constexpr auto kVersionFileCanaryMarker = quint32(0x7FFFFFFE);
@@ -360,6 +369,7 @@ QString FindUpdateFile() {
 			"tmacupd|"
 			"tarmacupd|"
 			"tlinuxupd|"
+			"tlinuxarmupd|"
 			")\\d+(_[a-z\\d]+)?$",
 			QRegularExpression::CaseInsensitiveOption
 		);
@@ -611,10 +621,10 @@ QString ExtractFilename(const QString &url) {
 	// The expected target follows the feed key, not the build: an x64
 	// build under Rosetta asks for armac and must accept that package.
 	const auto target = Updates::TargetFromPlatformKey(
-		Platform::AutoUpdateKey().toLatin1());
+		UpdatePlatformKey().toLatin1());
 	if (!target) {
 		LOG(("Update Error: No v2 target for platform key '%1'."
-			).arg(Platform::AutoUpdateKey()));
+			).arg(UpdatePlatformKey()));
 		return false;
 	}
 
@@ -875,7 +885,7 @@ bool ParseCommonMap(
 		return false;
 	}
 	const auto platforms = document.object();
-	const auto platform = Platform::AutoUpdateKey();
+	const auto platform = UpdatePlatformKey();
 	const auto it = platforms.constFind(platform);
 	if (it == platforms.constEnd()) {
 		LOG(("Update Error: MTP platform '%1' not found in response."
@@ -1525,7 +1535,7 @@ void MtpChecker::parseCanaryMetadata(
 	}
 
 	const auto channels = object.value(u"channels"_q).toObject();
-	const auto platform = Platform::AutoUpdateKey();
+	const auto platform = UpdatePlatformKey();
 	auto bestVersion = quint64(0);
 	auto bestPostId = 0;
 	const auto readU32 = [](const QJsonValue &value, quint32 *result) {

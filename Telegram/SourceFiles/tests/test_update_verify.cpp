@@ -905,6 +905,10 @@ int main(int argc, char *argv[]) {
 				&& *TargetFromPlatformKey("armac") == Target{ Os::Mac, Arch::Arm }
 				&& TargetFromPlatformKey("win64")
 				&& *TargetFromPlatformKey("win64") == Target{ Os::Windows, Arch::X64 }
+				&& TargetFromPlatformKey("linuxarm")
+				&& *TargetFromPlatformKey("linuxarm") == Target{ Os::Linux, Arch::Arm }
+				&& *TargetFromPlatformKey("linux") != *TargetFromPlatformKey("linuxarm")
+				&& *TargetFromPlatformKey("mac") != *TargetFromPlatformKey("armac")
 				&& !TargetFromPlatformKey("amiga"),
 			"platform keys map to targets");
 	}

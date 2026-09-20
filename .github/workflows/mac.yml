@@ -47,9 +47,22 @@ concurrency:
 
 jobs:
   macos:
-    name: MacOS
-    runs-on: macos-latest
+    name: MacOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 359
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: macos-26-intel
+            cmake_arch: x86_64
+            updater: tmacupd
+          - arch: arm64
+            runner: macos-26
+            cmake_arch: arm64
+            updater: tarmacupd
 
     env:
       PREPARE_PATH: 'Telegram/build/prepare/prepare.py'
@@ -85,8 +98,8 @@ jobs:
           path: |
             Libraries
             ThirdParty
-          key: ${{ runner.OS }}-libs-${{ hashFiles(format('{0}/{1}', env.REPO_NAME, env.PREPARE_PATH)) }}
-          restore-keys: ${{ runner.OS }}-libs-
+          key: ${{ runner.OS }}-libs-${{ matrix.arch }}-${{ hashFiles(format('{0}/{1}', env.REPO_NAME, env.PREPARE_PATH)) }}
+          restore-keys: ${{ runner.OS }}-libs-${{ matrix.arch }}-
 
       - name: Build dependencies.
         run: |
@@ -125,6 +138,7 @@ jobs:
 
           ./configure.sh \
           -D CMAKE_CONFIGURATION_TYPES=Release \
+          -D CMAKE_OSX_ARCHITECTURES=${{ matrix.cmake_arch }} \
           -D CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
           -D TDESKTOP_API_ID=2040 \
           -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
@@ -145,7 +159,7 @@ jobs:
             exit 1
           fi
 
-      # 更新格式拒收解压后超过 1 GiB 的内容，带符号的通用二进制有 1.6 GiB
+      # 更新格式拒收解压后超过 1 GiB 的内容，打包前移除调试符号。
       - name: Strip debug symbols.
         run: |
           set -euo pipefail
@@ -168,9 +182,8 @@ jobs:
           version=$(sed -n 's/^AppVersionStrSmall //p' $REPO_NAME/Telegram/build/version)
           test -n "$version"
           cd $REPO_NAME/out/Release
-          rm -f "AyuGram-v${version}-macos.zip"
-          zip -r "AyuGram-v${version}-macos.zip" AyuGram.app
-          test ! -f Updater || zip "AyuGram-v${version}-macos.zip" Updater
+          zip -r "AyuGram-v${version}-macos-${{ matrix.arch }}.zip" AyuGram.app
+          test ! -f Updater || zip "AyuGram-v${version}-macos-${{ matrix.arch }}.zip" Updater
 
       # 包内固定放 AyuGram.app，客户端也按这个名字找，用户重命名 bundle 仍可更新
       - name: Pack update.
@@ -180,31 +193,18 @@ jobs:
           test -n "$version"
           cd $REPO_NAME/out/Release
 
-          # 客户端按运行机器选 mac 或 armac 键，只有通用二进制才能同时登记两个
+          # 安装包和更新包必须与当前矩阵的目标架构一致。
           archs=$(lipo -archs AyuGram.app/Contents/MacOS/AyuGram)
           echo "bundle arches: $archs"
-          case "$archs" in
-            *arm64*) ;;
-            *) echo "bundle has no arm64 slice, refusing to publish an update"; exit 1 ;;
-          esac
-          case "$archs" in
-            *x86_64*) ;;
-            *) echo "bundle has no x86_64 slice, refusing to publish an update"; exit 1 ;;
-          esac
-
-          case "$(uname -m)" in
-            arm64) archFlag="-arch arm64" ;;
-            *) archFlag="-arch x86_64" ;;
-          esac
-          ./Packer -version "$version" $archFlag -path AyuGram.app
-          ls -l t*upd${version}
+          test "$archs" = "${{ matrix.cmake_arch }}"
+          ./Packer -version "$version" -arch ${{ matrix.cmake_arch }} -path AyuGram.app
+          test -s "${{ matrix.updater }}${version}"
 
       - name: Upload artifact.
         uses: actions/upload-artifact@v7
         with:
-          name: AyuGram-macOS
+          name: AyuGram-macOS-${{ matrix.arch }}
           path: |
-            ${{ env.REPO_NAME }}/out/Release/AyuGram-v*-macos.zip
-            ${{ env.REPO_NAME }}/out/Release/tmacupd*
-            ${{ env.REPO_NAME }}/out/Release/tarmacupd*
+            ${{ env.REPO_NAME }}/out/Release/AyuGram-v*-macos-${{ matrix.arch }}.zip
+            ${{ env.REPO_NAME }}/out/Release/${{ matrix.updater }}*
           retention-days: 7

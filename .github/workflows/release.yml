@@ -76,7 +76,8 @@ jobs:
         if: steps.verify.outputs.ready == 'true'
         uses: actions/download-artifact@v8
         with:
-          name: AyuGram-Windows-x64
+          pattern: AyuGram-Windows-*
+          merge-multiple: true
           run-id: ${{ steps.runs.outputs.win }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifacts
@@ -85,7 +86,8 @@ jobs:
         if: steps.verify.outputs.ready == 'true'
         uses: actions/download-artifact@v8
         with:
-          name: AyuGram-Linux-x64
+          pattern: AyuGram-Linux-*
+          merge-multiple: true
           run-id: ${{ steps.runs.outputs.linux }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifacts
@@ -94,7 +96,8 @@ jobs:
         if: steps.verify.outputs.ready == 'true'
         uses: actions/download-artifact@v8
         with:
-          name: AyuGram-macOS
+          pattern: AyuGram-macOS-*
+          merge-multiple: true
           run-id: ${{ steps.runs.outputs.mac }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifacts
@@ -107,51 +110,15 @@ jobs:
           APPVERSION: ${{ steps.version.outputs.appversion }}
         run: |
           set -euo pipefail
-          cd artifacts
-          python3 - <<'PY'
-          import json
-          import os
-          import pathlib
-
-          version = os.environ["APPVERSION"]
-
-          def entry_for(prefix):
-              return {
-                  "stable": {
-                      "released": int(version),
-                      "testing": int(version),
-                      "link": f"/{prefix}{{version}}",
-                  }
-              }
-
-          entry = {}
-          for prefix, platform in {
-              "tx64upd": "win64",
-              "tarm64upd": "winarm",
-              "tlinuxupd": "linux",
-          }.items():
-              if pathlib.Path(f"{prefix}{version}").is_file():
-                  entry[platform] = entry_for(prefix)
-
-          # mac 是通用二进制，一份包同时服务 Intel 与 ARM，客户端按运行机器选键
-          for prefix in ("tmacupd", "tarmacupd"):
-              if pathlib.Path(f"{prefix}{version}").is_file():
-                  entry["mac"] = entry_for(prefix)
-                  entry["armac"] = entry_for(prefix)
-                  break
-
-          if "win64" not in entry:
-              raise SystemExit(f"no win64 update package for {version}")
-          pathlib.Path("current6").write_text(json.dumps(entry, indent=2) + "\n")
-          print(json.dumps(entry))
-          PY
+          python3 -B -m unittest discover -s scripts/tests -v
+          python3 scripts/release_update_map.py artifacts "$APPVERSION"
 
       - name: List release files.
         if: steps.verify.outputs.ready == 'true'
         run: |
           set -euo pipefail
           ls -la artifacts/
-          test "$(find artifacts -name '*.zip' | wc -l)" -ge 3
+          test "$(find artifacts -name '*.zip' | wc -l)" -ge 4
 
       - name: Publish release.
         if: steps.verify.outputs.ready == 'true'

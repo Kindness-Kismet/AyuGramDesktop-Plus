@@ -520,6 +520,8 @@ std::optional<Target> TargetFromPlatformKey(const QByteArray &key) {
 		return Target{ Os::Mac, Arch::Arm };
 	} else if (key == "linux") {
 		return Target{ Os::Linux, Arch::X64 };
+	} else if (key == "linuxarm") {
+		return Target{ Os::Linux, Arch::Arm };
 	}
 	return std::nullopt;
 }

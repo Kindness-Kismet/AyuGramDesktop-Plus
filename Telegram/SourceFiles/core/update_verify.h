@@ -60,11 +60,7 @@ struct Target {
 [[nodiscard]] QByteArray OsName(Os os);
 [[nodiscard]] QByteArray ArchName(Arch arch);
 
-// The feed key of Platform::AutoUpdateKey(): win / win64 / winarm / mac
-// / armac / linux. It names the package a client should RECEIVE, which is
-// not always the client's own build (an x64 build under Rosetta asks for
-// armac), so clients compute the expected target from it, never from
-// compile-time macros.
+// 按更新清单键确认接收架构；Rosetta 下使用 armac，Linux ARM 使用 linuxarm。
 [[nodiscard]] std::optional<Target> TargetFromPlatformKey(
 	const QByteArray &key);
 

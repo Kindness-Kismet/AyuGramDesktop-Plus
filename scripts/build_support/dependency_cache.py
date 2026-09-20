@@ -1,6 +1,7 @@
 import glob
 import hashlib
 import os
+import re
 from pathlib import Path
 
 from build_support.dependency_env import environment_keys
@@ -51,7 +52,20 @@ def check_cache_key(stage: Stage, key: str) -> str:
     path = key_path(stage)
     if not path.exists():
         return "Stale"
-    return "Good" if path.read_text(encoding="utf-8") == key else "Stale"
+    if path.read_text(encoding="utf-8") != key:
+        return "Stale"
+    if stage.name.startswith("qt_6."):
+        # Qt 6 的安装包引用独立对象文件，缓存键一致也不能复用被裁剪的安装目录。
+        prefix = directory / ("Qt-" + stage.name.removeprefix("qt_"))
+        objects = set()
+        for target in (prefix / "lib/cmake").glob("**/*Targets-*.cmake"):
+            objects.update(re.findall(
+                r'\$\{_IMPORT_PREFIX\}/(lib/objects-[^";]+\.obj)',
+                target.read_text(encoding="utf-8"),
+            ))
+        if not objects or any(not (prefix / obj).is_file() for obj in objects):
+            return "Stale"
+    return "Good"
 
 
 def clear_cache_key(stage: Stage) -> None:
