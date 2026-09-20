@@ -1,172 +1,36 @@
-name: Release
+name: Migrate build signing secret
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
-  pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: release-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  validate:
-    name: Tests and static checks
+  migrate:
+    name: Copy signing secret to build repositories
+    if: github.actor == 'KiritoXDone'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
-      appversion: ${{ steps.version.outputs.appversion }}
 
     steps:
-      - name: Check out repository.
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Validate workflows.
+      - name: Configure repository secrets.
         env:
-          ACTIONLINT_VERSION: 1.7.12
+          GH_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
+          PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
         run: |
           set -euo pipefail
-          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          base="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
-          curl --fail --location --retry 3 --output "$RUNNER_TEMP/$archive" "$base/$archive"
-          curl --fail --location --retry 3 \
-            --output "$RUNNER_TEMP/actionlint_checksums.txt" \
-            "$base/actionlint_${ACTIONLINT_VERSION}_checksums.txt"
-          grep "  ${archive}$" "$RUNNER_TEMP/actionlint_checksums.txt" \
-            | (cd "$RUNNER_TEMP" && sha256sum --check -)
-          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
-          "$RUNNER_TEMP/actionlint" -shellcheck= -pyflakes=
+          test -n "$GH_TOKEN"
+          test -n "$PACKER_PRIVATE_H"
 
-      - name: Set up Python.
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
+          repositories=(
+            Kindness-Net/AyuGramDesktop-Plus-Windows-Build
+            Kindness-Net/AyuGramDesktop-Plus-Linux-Build
+            Kindness-Net/AyuGramDesktop-Plus-macOS-Build
+          )
 
-      - name: Read version.
-        id: version
-        run: |
-          set -euo pipefail
-          version=$(sed -n 's/^AppVersionStrSmall //p' Telegram/build/version)
-          test -n "$version"
-          appversion=$(sed -n 's/^AppUpdateVersion  *//p' Telegram/build/version)
-          test -n "$appversion"
-          echo "version=${version}" >> $GITHUB_OUTPUT
-          echo "tag=v${version}" >> $GITHUB_OUTPUT
-          echo "appversion=${appversion}" >> $GITHUB_OUTPUT
-
-      - name: Validate release inputs.
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          python3 -B -m unittest discover -s scripts/tests -v
-          python3 scripts/release_notes.py \
-            .github/CHANGELOG.md "$VERSION" "$RUNNER_TEMP/release-notes.md"
-          cat "$RUNNER_TEMP/release-notes.md"
-
-  windows:
-    name: Windows
-    needs: validate
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/win.yml
-    secrets:
-      PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
-
-  linux:
-    name: Linux
-    needs: validate
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/linux.yml
-    secrets:
-      PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
-
-  macos:
-    name: macOS
-    needs: validate
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/mac.yml
-    secrets:
-      PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
-
-  publish:
-    name: Publish release
-    needs: [validate, windows, linux, macos]
-    if: >-
-      github.ref == 'refs/heads/main'
-      && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      actions: read
-      contents: write
-
-    steps:
-      - name: Check out repository.
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      # 三个平台属于同一次调用流程，只下载本次运行的产物，避免误用旧任务。
-      - name: Download build artifacts.
-        uses: actions/download-artifact@v8
-        with:
-          pattern: AyuGram-*
-          merge-multiple: true
-          path: artifacts
-
-      # 客户端请求 <prefix>/current6 取版本清单，link 拼在同一前缀后。
-      # 只登记本次真的产出了更新包的平台，缺包的平台客户端会跳过检查。
-      - name: Generate update map.
-        env:
-          APPVERSION: ${{ needs.validate.outputs.appversion }}
-        run: |
-          set -euo pipefail
-          python3 scripts/release_update_map.py artifacts "$APPVERSION"
-
-      - name: List release files.
-        run: |
-          set -euo pipefail
-          ls -la artifacts/
-          test "$(find artifacts -name '*.zip' | wc -l)" -ge 4
-
-      - name: Generate release notes.
-        env:
-          VERSION: ${{ needs.validate.outputs.version }}
-        run: |
-          set -euo pipefail
-          python3 scripts/release_notes.py \
-            .github/CHANGELOG.md "$VERSION" "$RUNNER_TEMP/release-notes.md"
-          cat "$RUNNER_TEMP/release-notes.md"
-
-      - name: Publish release.
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ needs.validate.outputs.tag }}
-          target_commitish: ${{ github.sha }}
-          name: AyuGram Desktop Plus ${{ needs.validate.outputs.version }}
-          body_path: ${{ runner.temp }}/release-notes.md
-          files: artifacts/*
-          draft: false
-          prerelease: false
-          overwrite_files: true
-          make_latest: true
+          for repository in "${repositories[@]}"; do
+            printf '%s' "$PACKER_PRIVATE_H" \
+              | gh secret set PACKER_PRIVATE_H --repo "$repository" >/dev/null 2>&1
+            printf '%s: success\n' "$repository"
+          done
