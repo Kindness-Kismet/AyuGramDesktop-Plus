@@ -7,6 +7,8 @@ from pathlib import Path
 
 
 def generate_update_map(artifacts: Path, version: int) -> dict:
+    if not 1_016 < version <= 999_999_999:
+        raise ValueError("更新版本必须在 Packer 支持的 1017..999999999 范围内")
     prefixes = {
         "win64": "tx64upd",
         "winarm": "tarm64upd",

@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import json
 import re
 import sys
 from dataclasses import dataclass
@@ -8,12 +11,15 @@ if __package__ in (None, ""):
 
 from build_support.paths import ROOT, VERSION_FILE
 
-_PATTERN = re.compile(r"^\s*(\d+)\.(\d+)(\.(\d+)(\.(\d+|beta))?)?\s*$")
+_PATTERN = re.compile(r"^\s*(\d+)\.(\d+)\.(\d+)(?:\.(\d+|beta))?\s*$")
+_PACKER_VERSION_MAX = 999_999_999
+_STORAGE_VERSION_FLOOR = 7_002_010
 
 _CORE_VERSION = ROOT / "Telegram" / "SourceFiles" / "core" / "version.h"
 _TELEGRAM_RC = ROOT / "Telegram" / "Resources" / "winrc" / "Telegram.rc"
 _UPDATER_RC = ROOT / "Telegram" / "Resources" / "winrc" / "Updater.rc"
 _APPX_MANIFEST = ROOT / "Telegram" / "Resources" / "uwp" / "AppX" / "AppxManifest.xml"
+_UPSTREAM_TRACKING = ROOT / ".github" / "upstream.json"
 _CHANGELOG = ROOT / "changelog.txt"
 
 
@@ -23,16 +29,31 @@ class Version:
     major: int
     minor: int
     patch: int
-    alpha: int
+    revision: int
     beta: bool
 
     @property
     def full(self) -> int:
-        return self.major * 1000000 + self.minor * 1000 + self.patch
+        """保留官方整数编码，供存储格式和上游迁移阈值使用。"""
+        return self.major * 1_000_000 + self.minor * 1_000 + self.patch
+
+    @property
+    def update(self) -> int:
+        """生成 Packer 可接受且按官方版本和本库修订号递增的更新码。"""
+        return self.major * 10_000_000 + self.minor * 100_000 + self.patch * 100 + self.revision
+
+    @property
+    def storage_read(self) -> int:
+        """只兼容历史 7.2.10 测试构建，官方追平后随官方版本递增。"""
+        return max(self.full, _STORAGE_VERSION_FLOOR)
 
     @property
     def full_alpha(self) -> int:
-        return self.full * 1000 + self.alpha if self.alpha else 0
+        return 0
+
+    @property
+    def alpha(self) -> int:
+        return 0
 
     @property
     def text(self) -> str:
@@ -40,38 +61,50 @@ class Version:
 
     @property
     def text_small(self) -> str:
-        return self.text if self.patch else f"{self.major}.{self.minor}"
+        return f"{self.text}.{self.revision}" if self.revision else self.text
+
+    @property
+    def file_version(self) -> str:
+        return f"{self.major}.{self.minor}.{self.patch}.{self.revision}"
 
     @property
     def channel(self) -> str:
-        if self.beta:
-            return "beta"
-        return "closed alpha" if self.alpha else "stable"
+        return "beta" if self.beta else "stable"
 
 
 def parse_version(text: str) -> Version:
-    match = _PATTERN.match(text)
+    match = _PATTERN.fullmatch(text)
     if not match:
-        raise SystemExit(f"Bad version '{text}'. Expected major.minor[.patch[.alpha|beta]].")
+        raise SystemExit(f"Bad version '{text}'. Expected major.minor.patch[.revision|.beta].")
 
-    parts = [match.group(1), match.group(2), match.group(4) or "0"]
-    suffix = match.group(6) or ""
-    beta = suffix == "beta"
-    alpha = "0" if beta or not suffix else suffix
-
-    for part in parts + [alpha]:
-        # 每段限制在 0..999，否则合成的整数版本会串位
-        if str(int(part) % 1000) != part:
-            raise SystemExit(f"Bad version part: {part}")
-
-    return Version(
-        original=text.strip(),
-        major=int(parts[0]),
-        minor=int(parts[1]),
-        patch=int(parts[2]),
-        alpha=int(alpha),
-        beta=beta,
+    raw_major, raw_minor, raw_patch, suffix = match.groups()
+    raw_revision = "0" if suffix in (None, "beta") else suffix
+    limits = (
+        ("major", raw_major, 99),
+        ("minor", raw_minor, 99),
+        ("patch", raw_patch, 999),
+        ("revision", raw_revision, 99),
     )
+    values: dict[str, int] = {}
+    for name, raw, limit in limits:
+        value = int(raw)
+        if str(value) != raw or value > limit:
+            raise SystemExit(f"Bad {name} version part: {raw}; expected 0..{limit} without leading zeroes.")
+        values[name] = value
+    if suffix == "0":
+        raise SystemExit("Bad revision version part: 0; omit .0 for the first release.")
+
+    version = Version(
+        original=text.strip(),
+        major=values["major"],
+        minor=values["minor"],
+        patch=values["patch"],
+        revision=values["revision"],
+        beta=suffix == "beta",
+    )
+    if not 1_016 < version.update <= _PACKER_VERSION_MAX:
+        raise SystemExit(f"Update version {version.update} is outside Packer range 1017..{_PACKER_VERSION_MAX}.")
+    return version
 
 
 def read_current_version() -> str:
@@ -84,12 +117,23 @@ def read_current_version() -> str:
     raise SystemExit(f"AppVersionOriginal not found in {VERSION_FILE}.")
 
 
+def read_upstream_version() -> str:
+    try:
+        data = json.loads(_UPSTREAM_TRACKING.read_text(encoding="utf-8"))
+        return str(data["tdesktop"]["version"])
+    except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+        raise SystemExit(f"Could not read official version from {_UPSTREAM_TRACKING}: {error}") from error
+
+
 def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
+    upstream = read_upstream_version()
+    if version.text != upstream:
+        raise SystemExit(f"Version {version.text_small} must use the official baseline {upstream} as its first three parts.")
     if check_changelog:
         _check_changelog(version)
 
-    comma = ",".join(str(p) for p in (version.major, version.minor, version.patch, version.alpha))
-    dot = ".".join(str(p) for p in (version.major, version.minor, version.patch, version.alpha))
+    comma = ",".join(str(p) for p in (version.major, version.minor, version.patch, version.revision))
+    dot = ".".join(str(p) for p in (version.major, version.minor, version.patch, version.revision))
     rc_rules = [
         (r"(FILEVERSION\s+)\d+,\d+,\d+,\d+", r"\g<1>" + comma),
         (r"(PRODUCTVERSION\s+)\d+,\d+,\d+,\d+", r"\g<1>" + comma),
@@ -100,16 +144,22 @@ def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
     touched: list[str] = []
     touched += _replace(VERSION_FILE, [
         (r"(AppVersion\s+)\d+", r"\g<1>" + str(version.full)),
+        (r"(AppUpdateVersion\s+)\d+", r"\g<1>" + str(version.update)),
+        (r"(AppStorageReadVersion\s+)\d+", r"\g<1>" + str(version.storage_read)),
         (r"(AppVersionStrMajor\s+)\d[\d\.]*", r"\g<1>" + f"{version.major}.{version.minor}"),
+        (r"(AppVersionStrOfficial\s+)\d[\d\.]*", r"\g<1>" + version.text),
         (r"(AppVersionStrSmall\s+)\d[\d\.]*", r"\g<1>" + version.text_small),
-        (r"(AppVersionStr\s+)\d[\d\.]*", r"\g<1>" + version.text),
+        (r"(AppVersionStrFile\s+)\d[\d\.]*", r"\g<1>" + version.file_version),
+        (r"(AppVersionStr\s+)\d[\d\.]*", r"\g<1>" + version.text_small),
         (r"(BetaChannel\s+)\d", r"\g<1>" + ("1" if version.beta else "0")),
-        (r"(AlphaVersion\s+)\d+", r"\g<1>" + str(version.full_alpha)),
+        (r"(AlphaVersion\s+)\d+", r"\g<1>0"),
         (r"(AppVersionOriginal\s+)\d[\d\.beta]*", r"\g<1>" + version.original),
     ])
     touched += _replace(_CORE_VERSION, [
-        (r"(TDESKTOP_REQUESTED_ALPHA_VERSION\s+)\(\d+ULL\)", r"\g<1>" + f"({version.full_alpha}ULL)"),
+        (r"(TDESKTOP_REQUESTED_ALPHA_VERSION\s+)\(\d+ULL\)", r"\g<1>(0ULL)"),
         (r"(AppVersion\s+=\s+)\d+", r"\g<1>" + str(version.full)),
+        (r"(AppUpdateVersion\s+=\s+)\d+", r"\g<1>" + str(version.update)),
+        (r"(AppStorageReadVersion\s+=\s+)\d+", r"\g<1>" + str(version.storage_read)),
         (r"(AppVersionStr\s+=\s+)[^;]+", r"\g<1>" + f'"{version.text_small}"'),
         (r"(AppBetaVersion\s+=\s+)[a-z]+", r"\g<1>" + ("true" if version.beta else "false")),
     ])
@@ -122,12 +172,12 @@ def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
 def _check_changelog(version: Version) -> None:
     if not _CHANGELOG.is_file():
         raise SystemExit(f"{_CHANGELOG} not found.")
-    prefixes = (f"{version.text} ", f"{version.text_small} ")
-    count = sum(1 for line in _CHANGELOG.read_text(encoding="utf-8").splitlines() if line.startswith(prefixes))
+    prefix = f"{version.text_small} "
+    count = sum(1 for line in _CHANGELOG.read_text(encoding="utf-8").splitlines() if line.startswith(prefix))
     if count == 0:
-        raise SystemExit(f"Changelog entry for {version.text} not found.")
+        raise SystemExit(f"Changelog entry for {version.text_small} not found.")
     if count > 1:
-        raise SystemExit(f"Found {count} changelog entries for {version.text}, expected one.")
+        raise SystemExit(f"Found {count} changelog entries for {version.text_small}, expected one.")
 
 
 def _replace(path: Path, rules: list[tuple[str, str]]) -> list[str]:
@@ -162,7 +212,7 @@ def main(argv: list[str] | None = None) -> None:
         "version",
         nargs="?",
         metavar="VERSION",
-        help="New version as major.minor[.patch[.alpha|beta]]; omit to show the current one",
+        help="New version as major.minor.patch[.revision|.beta]; omit to show the current one",
     )
     parser.add_argument(
         "--skip-changelog",
@@ -174,13 +224,14 @@ def main(argv: list[str] | None = None) -> None:
     if not args.version:
         current = parse_version(read_current_version())
         print(header("Current version"))
-        print(f"  Version        {current.original}")
-        print(f"  Channel        {current.channel}")
-        print(f"  Numeric        {current.full}")
+        print(f"  Version         {current.original}")
+        print(f"  Channel         {current.channel}")
+        print(f"  Official code   {current.full}")
+        print(f"  Update code     {current.update}")
         return
 
     version = parse_version(args.version)
-    print(header(f"Setting version {version.text} {version.channel}"))
+    print(header(f"Setting version {version.text_small} {version.channel}"))
     touched = apply_version(version, check_changelog=not args.skip_changelog)
     print_summary(*(f"patched {path}" for path in touched) if touched else ["already up to date"])
 

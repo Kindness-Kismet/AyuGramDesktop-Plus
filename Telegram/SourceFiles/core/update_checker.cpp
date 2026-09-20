@@ -572,7 +572,7 @@ QString ExtractFilename(const QString &url) {
 		quint64 canaryVersion) {
 	// create tdata/version file
 	tempDir.mkdir(QDir(tempDirPath + u"/tdata"_q).absolutePath());
-	std::wstring versionString = FormatVersionDisplay(version).toStdWString();
+	std::wstring versionString = FormatUpdateVersionDisplay(version).toStdWString();
 
 	const auto versionNum = canaryVersion
 		? VersionInt(kVersionFileCanaryMarker)
@@ -832,8 +832,8 @@ bool UnpackUpdate(const QString &filepath) {
 				LOG(("Update Error: downloaded alpha version %1 is not greater, than mine %2").arg(alphaVersion).arg(cAlphaVersion()));
 				return false;
 			}
-		} else if (int32(version) <= AppVersion) {
-			LOG(("Update Error: downloaded version %1 is not greater, than mine %2").arg(version).arg(AppVersion));
+		} else if (int32(version) <= AppUpdateVersion) {
+			LOG(("Update Error: downloaded version %1 is not greater, than mine %2").arg(version).arg(AppUpdateVersion));
 			return false;
 		}
 
@@ -1123,7 +1123,7 @@ QString HttpChecker::validateLatestUrl(
 		QString url) const {
 	const auto myVersion = isAvailableAlpha
 		? cAlphaVersion()
-		: uint64(AppVersion);
+		: uint64(AppUpdateVersion);
 	const auto validVersion = (cAlphaVersion() || !isAvailableAlpha);
 	if (!validVersion || availableVersion <= myVersion) {
 		return QString();
@@ -1388,7 +1388,7 @@ auto MtpChecker::parseText(const QByteArray &text) const
 auto MtpChecker::validateLatestLocation(
 		uint64 availableVersion,
 		const FileLocation &location) const -> FileLocation {
-	const auto myVersion = uint64(AppVersion);
+	const auto myVersion = uint64(AppUpdateVersion);
 	return (availableVersion <= myVersion) ? FileLocation() : location;
 }
 
@@ -2307,8 +2307,8 @@ bool checkReadyUpdate() {
 			LOG(("Update Error: cant install a non-canary version %1 on a private canary").arg(versionNum));
 			ClearAll();
 			return false;
-		} else if (versionNum <= AppVersion) {
-			LOG(("Update Error: cant install version %1 having version %2").arg(versionNum).arg(AppVersion));
+		} else if (versionNum <= AppUpdateVersion) {
+			LOG(("Update Error: cant install version %1 having version %2").arg(versionNum).arg(AppUpdateVersion));
 			ClearAll();
 			return false;
 		}

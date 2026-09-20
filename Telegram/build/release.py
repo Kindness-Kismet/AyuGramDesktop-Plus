@@ -131,30 +131,29 @@ version_parts = version.split('.')
 stable = 1
 beta = 0
 
-if len(version_parts) < 2:
-  print('Error: expected at least major version ' + version)
+if len(version_parts) not in (3, 4):
+  print('Error: bad version passed ' + version)
   sys.exit(1)
-if len(version_parts) > 4:
+if not all(part.isdigit() for part in version_parts[:3]):
   print('Error: bad version passed ' + version)
   sys.exit(1)
 if (int(version_parts[0]), int(version_parts[1])) < (7, 2):
   print('Error: the v2 update format requires version 7.2 or newer.')
   sys.exit(1)
 version_major = version_parts[0] + '.' + version_parts[1]
-if len(version_parts) == 2:
-  version = version_major + '.0'
-  version_full = version
-else:
-  version = version_major + '.' + version_parts[2]
-  version_full = version
-  if len(version_parts) == 4:
-    if version_parts[3] == 'beta':
-      beta = 1
-      stable = 0
-      version_full = version + '.beta'
-    else:
-      print('Error: unexpected version part ' + version_parts[3])
-      sys.exit(1)
+version = version_major + '.' + version_parts[2]
+version_full = version
+if len(version_parts) == 4:
+  if version_parts[3] == 'beta':
+    beta = 1
+    stable = 0
+    version_full = version + '.beta'
+  elif version_parts[3].isdigit() and 0 < int(version_parts[3]) <= 99:
+    version = version + '.' + version_parts[3]
+    version_full = version
+  else:
+    print('Error: unexpected version part ' + version_parts[3])
+    sys.exit(1)
 
 access_token = ''
 if os.path.isfile(token_file):

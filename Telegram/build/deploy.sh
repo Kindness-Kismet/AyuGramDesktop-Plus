@@ -101,19 +101,19 @@ ArtifactSuffix=""
 if [ "$BetaChannel" != "0" ]; then
   ArtifactSuffix="-beta"
 fi
-MacUpdateFile="td-update-mac-x64-$AppVersion$ArtifactSuffix"
-ARMacUpdateFile="td-update-mac-arm-$AppVersion$ArtifactSuffix"
+MacUpdateFile="td-update-mac-x64-$AppUpdateVersion$ArtifactSuffix"
+ARMacUpdateFile="td-update-mac-arm-$AppUpdateVersion$ArtifactSuffix"
 MacSetupFile="td-setup-mac-$AppVersionStr$ArtifactSuffix.dmg"
-WinUpdateFile="td-update-win-x86-$AppVersion$ArtifactSuffix"
+WinUpdateFile="td-update-win-x86-$AppUpdateVersion$ArtifactSuffix"
 WinSetupFile="td-setup-win-x86-$AppVersionStr$ArtifactSuffix.exe"
 WinPortableFile="td-portable-win-x86-$AppVersionStr$ArtifactSuffix.zip"
-Win64UpdateFile="td-update-win-x64-$AppVersion$ArtifactSuffix"
+Win64UpdateFile="td-update-win-x64-$AppUpdateVersion$ArtifactSuffix"
 Win64SetupFile="td-setup-win-x64-$AppVersionStr$ArtifactSuffix.exe"
 Win64PortableFile="td-portable-win-x64-$AppVersionStr$ArtifactSuffix.zip"
-WinArmUpdateFile="td-update-win-arm-$AppVersion$ArtifactSuffix"
+WinArmUpdateFile="td-update-win-arm-$AppUpdateVersion$ArtifactSuffix"
 WinArmSetupFile="td-setup-win-arm-$AppVersionStr$ArtifactSuffix.exe"
 WinArmPortableFile="td-portable-win-arm-$AppVersionStr$ArtifactSuffix.zip"
-LinuxUpdateFile="td-update-linux-x64-$AppVersion$ArtifactSuffix"
+LinuxUpdateFile="td-update-linux-x64-$AppUpdateVersion$ArtifactSuffix"
 LinuxSetupFile="td-setup-linux-x64-$AppVersionStr$ArtifactSuffix.tar.xz"
 
 MacRemoteFolder="mac"
@@ -252,4 +252,3 @@ rsync -avR --no-g --progress ${Files[@]} "$FullScriptPath/../../../DesktopPrivat
 
 echo "Version $AppVersionStrFull was deployed!"
 cd $FullExecPath
-

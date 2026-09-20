@@ -17,6 +17,7 @@ namespace Core {
 
 [[nodiscard]] QString FormatVersionDisplay(int version);
 [[nodiscard]] QString FormatVersionPrecise(int version);
+[[nodiscard]] QString FormatUpdateVersionDisplay(int version);
 
 class Changelogs final : public base::has_weak_ptr {
 public:

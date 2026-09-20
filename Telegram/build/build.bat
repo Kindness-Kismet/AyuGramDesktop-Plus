@@ -90,7 +90,7 @@ if %AppVersion% lss 7002000 (
   exit /b 1
 )
 
-set "VersionForPacker=%AppVersion%"
+set "VersionForPacker=%AppUpdateVersion%"
 if %AlphaVersion% neq 0 (
   set "AppVersion=%AlphaVersion%"
   set "AppVersionStrFull=%AppVersionStr%_%AlphaVersion%"
@@ -139,21 +139,21 @@ if %AlphaVersion% neq 0 (
   exit /b 1
 )
 if %Build64% neq 0 (
-  set "UpdateFile=td-update-win-x64-%AppVersion%%ArtifactSuffix%"
+  set "UpdateFile=td-update-win-x64-%AppUpdateVersion%%ArtifactSuffix%"
   set "SetupFile=td-setup-win-x64-%AppVersionStr%%ArtifactSuffix%.exe"
   set "PortableFile=td-portable-win-x64-%AppVersionStr%%ArtifactSuffix%.zip"
   set "DeployFolder=win-x64"
   set "IsccNameParam=/dMyOutputBaseFilename=td-setup-win-x64-%AppVersionStr%%ArtifactSuffix%"
   set "DumpSymsPath=%SolutionPath%\..\..\Libraries\win64\breakpad\src\tools\windows\dump_syms\Release\dump_syms.exe"
 ) else if %BuildARM% neq 0 (
-  set "UpdateFile=td-update-win-arm-%AppVersion%%ArtifactSuffix%"
+  set "UpdateFile=td-update-win-arm-%AppUpdateVersion%%ArtifactSuffix%"
   set "SetupFile=td-setup-win-arm-%AppVersionStr%%ArtifactSuffix%.exe"
   set "PortableFile=td-portable-win-arm-%AppVersionStr%%ArtifactSuffix%.zip"
   set "DeployFolder=win-arm"
   set "IsccNameParam=/dMyOutputBaseFilename=td-setup-win-arm-%AppVersionStr%%ArtifactSuffix%"
   set "DumpSymsPath=%SolutionPath%\..\..\Libraries\breakpad\src\tools\windows\dump_syms\Release\dump_syms.exe"
 ) else (
-  set "UpdateFile=td-update-win-x86-%AppVersion%%ArtifactSuffix%"
+  set "UpdateFile=td-update-win-x86-%AppUpdateVersion%%ArtifactSuffix%"
   set "SetupFile=td-setup-win-x86-%AppVersionStr%%ArtifactSuffix%.exe"
   set "PortableFile=td-portable-win-x86-%AppVersionStr%%ArtifactSuffix%.zip"
   set "DeployFolder=win-x86"
@@ -268,7 +268,7 @@ if %BuildUWP% equ 0 (
   call :sign "Updater.exe"
 
   if %AlphaVersion% equ 0 (
-    iscc /dMyAppVersion=%AppVersionStrSmall% /dMyAppVersionZero=%AppVersionStr% /dMyAppVersionFull=%AppVersionStrFull% "/dReleasePath=%ReleasePath%" "/dMyBuildTarget=%BuildTarget%" %IsccNameParam% "%FullScriptPath%setup.iss" || goto error
+    iscc /dMyAppVersion=%AppVersionStr% /dMyAppVersionZero=%AppVersionStrFile% /dMyAppVersionFull=%AppVersionStrFull% "/dReleasePath=%ReleasePath%" "/dMyBuildTarget=%BuildTarget%" %IsccNameParam% "%FullScriptPath%setup.iss" || goto error
     if not exist "%SetupFile%" goto error
   )
 

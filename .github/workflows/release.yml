@@ -1,132 +1,151 @@
 name: Release
 
 on:
-  workflow_run:
-    workflows: [Windows, Linux, MacOS]
-    types: [completed]
+  push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'changelog.txt'
+      - 'LEGAL'
+      - 'LICENSE'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'changelog.txt'
+      - 'LEGAL'
+      - 'LICENSE'
   workflow_dispatch:
 
 permissions:
-  contents: write
-  actions: read
+  contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  release:
-    name: Publish release
+  validate:
+    name: Validate release inputs
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      appversion: ${{ steps.version.outputs.appversion }}
 
     steps:
       - name: Check out repository.
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
 
-      # 每个平台完成各触发一次本流程；三平台未全部成功时静默跳过发布
-      - name: Verify all platforms succeeded.
-        id: verify
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-        run: |
-          set -euo pipefail
-          ready="true"
-          for w in win linux mac; do
-            count=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${w}.yml/runs?head_sha=${HEAD_SHA}&status=success&per_page=1" --jq '.total_count')
-            if [ "$count" -eq 0 ]; then
-              echo "${w} has no successful run for ${HEAD_SHA}"
-              ready="false"
-            fi
-          done
-          echo "ready=${ready}" >> $GITHUB_OUTPUT
-          test "$ready" = "true" || echo "Release skipped, waiting for remaining platforms."
+      - name: Set up Python.
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
 
       - name: Read version.
-        if: steps.verify.outputs.ready == 'true'
         id: version
         run: |
           set -euo pipefail
           version=$(sed -n 's/^AppVersionStrSmall //p' Telegram/build/version)
           test -n "$version"
-          appversion=$(sed -n 's/^AppVersion  *//p' Telegram/build/version)
+          appversion=$(sed -n 's/^AppUpdateVersion  *//p' Telegram/build/version)
           test -n "$appversion"
           echo "version=${version}" >> $GITHUB_OUTPUT
           echo "tag=v${version}" >> $GITHUB_OUTPUT
           echo "appversion=${appversion}" >> $GITHUB_OUTPUT
 
-      - name: Collect run ids.
-        if: steps.verify.outputs.ready == 'true'
-        id: runs
+      - name: Validate release inputs.
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
-          for w in win linux mac; do
-            run_id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${w}.yml/runs?head_sha=${HEAD_SHA}&status=success&per_page=1" --jq '.workflow_runs[0].id')
-            echo "${w}=${run_id}" >> $GITHUB_OUTPUT
-          done
+          python3 -B -m unittest discover -s scripts/tests -v
+          python3 scripts/release_notes.py \
+            .github/CHANGELOG.md "$VERSION" "$RUNNER_TEMP/release-notes.md"
+          cat "$RUNNER_TEMP/release-notes.md"
 
-      - name: Download Windows artifact.
-        if: steps.verify.outputs.ready == 'true'
+  windows:
+    name: Windows
+    needs: validate
+    uses: ./.github/workflows/win.yml
+    secrets:
+      PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
+
+  linux:
+    name: Linux
+    needs: validate
+    uses: ./.github/workflows/linux.yml
+    secrets:
+      PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
+
+  macos:
+    name: macOS
+    needs: validate
+    uses: ./.github/workflows/mac.yml
+    secrets:
+      PACKER_PRIVATE_H: ${{ secrets.PACKER_PRIVATE_H }}
+
+  publish:
+    name: Publish release
+    needs: [validate, windows, linux, macos]
+    if: >-
+      github.ref == 'refs/heads/main'
+      && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: write
+
+    steps:
+      - name: Check out repository.
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+
+      # 三个平台属于同一次调用流程，只下载本次运行的产物，避免误用旧任务。
+      - name: Download build artifacts.
         uses: actions/download-artifact@v8
         with:
-          pattern: AyuGram-Windows-*
+          pattern: AyuGram-*
           merge-multiple: true
-          run-id: ${{ steps.runs.outputs.win }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: artifacts
-
-      - name: Download Linux artifact.
-        if: steps.verify.outputs.ready == 'true'
-        uses: actions/download-artifact@v8
-        with:
-          pattern: AyuGram-Linux-*
-          merge-multiple: true
-          run-id: ${{ steps.runs.outputs.linux }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: artifacts
-
-      - name: Download macOS artifact.
-        if: steps.verify.outputs.ready == 'true'
-        uses: actions/download-artifact@v8
-        with:
-          pattern: AyuGram-macOS-*
-          merge-multiple: true
-          run-id: ${{ steps.runs.outputs.mac }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifacts
 
       # 客户端请求 <prefix>/current6 取版本清单，link 拼在同一前缀后。
       # 只登记本次真的产出了更新包的平台，缺包的平台客户端会跳过检查。
       - name: Generate update map.
-        if: steps.verify.outputs.ready == 'true'
         env:
-          APPVERSION: ${{ steps.version.outputs.appversion }}
+          APPVERSION: ${{ needs.validate.outputs.appversion }}
         run: |
           set -euo pipefail
-          python3 -B -m unittest discover -s scripts/tests -v
           python3 scripts/release_update_map.py artifacts "$APPVERSION"
 
       - name: List release files.
-        if: steps.verify.outputs.ready == 'true'
         run: |
           set -euo pipefail
           ls -la artifacts/
           test "$(find artifacts -name '*.zip' | wc -l)" -ge 4
 
+      - name: Generate release notes.
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release_notes.py \
+            .github/CHANGELOG.md "$VERSION" "$RUNNER_TEMP/release-notes.md"
+          cat "$RUNNER_TEMP/release-notes.md"
+
       - name: Publish release.
-        if: steps.verify.outputs.ready == 'true'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: AyuGram Desktop Plus ${{ steps.version.outputs.version }}
-          body_path: .github/CHANGELOG.md
+          tag_name: ${{ needs.validate.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: AyuGram Desktop Plus ${{ needs.validate.outputs.version }}
+          body_path: ${{ runner.temp }}/release-notes.md
           files: artifacts/*
           draft: false
           prerelease: false

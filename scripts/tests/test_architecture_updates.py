@@ -64,7 +64,7 @@ class UpdateMapTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.directory = Path(temporary.name)
-        self.version = 7002010
+        self.version = 70200901
 
     def add_packages(self, *prefixes, version=None):
         for prefix in prefixes:
@@ -72,12 +72,12 @@ class UpdateMapTests(unittest.TestCase):
 
     def test_each_architecture_selects_its_own_package(self):
         expected = {
-            "win64": "tx64upd7002010",
-            "winarm": "tarm64upd7002010",
-            "linux": "tlinuxupd7002010",
-            "linuxarm": "tlinuxarmupd7002010",
-            "mac": "tmacupd7002010",
-            "armac": "tarmacupd7002010",
+            "win64": "tx64upd70200901",
+            "winarm": "tarm64upd70200901",
+            "linux": "tlinuxupd70200901",
+            "linuxarm": "tlinuxarmupd70200901",
+            "mac": "tmacupd70200901",
+            "armac": "tarmacupd70200901",
         }
         for name in expected.values():
             (self.directory / name).write_bytes(b"package")
@@ -106,9 +106,13 @@ class UpdateMapTests(unittest.TestCase):
 
     def test_empty_package_is_rejected(self):
         self.add_packages("tx64upd", "tlinuxupd", "tmacupd", "tarmacupd")
-        (self.directory / "tarmacupd7002010").write_bytes(b"")
+        (self.directory / "tarmacupd70200901").write_bytes(b"")
         with self.assertRaisesRegex(ValueError, "为空"):
             generate_update_map(self.directory, self.version)
+
+    def test_version_outside_packer_range_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Packer"):
+            generate_update_map(self.directory, 1_000_000_000)
 
 
 if __name__ == "__main__":

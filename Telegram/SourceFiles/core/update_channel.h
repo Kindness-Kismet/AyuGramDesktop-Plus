@@ -67,7 +67,7 @@ inline constexpr auto CanaryMetadataMessageId
 
 [[nodiscard]] inline constexpr quint64 RunningUpdateVersion() {
 	return Updates::MakeUpdateVersion(
-		quint32(AppVersion),
+		quint32(AppUpdateVersion),
 		CanaryBuildCounter);
 }
 
