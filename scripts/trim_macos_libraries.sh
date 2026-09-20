@@ -3,6 +3,7 @@ set -euo pipefail
 
 libraries_dir=${1:-Libraries}
 test -d "$libraries_dir"
+strip_tool=${STRIP:-strip}
 
 before=$(du -sk "$libraries_dir" | cut -f1)
 
@@ -28,7 +29,16 @@ find "$libraries_dir" \
   ')' \
   -delete
 
-# 保留库和对象文件原样，避免 strip 在依赖中的旧架构文件上崩溃。
+# Release 构建不会发布依赖调试信息，缓存前移除它以免挤占 Actions 配额。
+# 遇到 strip 不支持的旧架构文件时跳过该文件，继续处理其余文件。
+strip_failures=0
+while IFS= read -r -d '' file; do
+  if ! "$strip_tool" -S "$file"; then
+    echo "::warning file=${file}::跳过 strip 不支持的依赖文件"
+    strip_failures=$((strip_failures + 1))
+  fi
+done < <(find "$libraries_dir" -type f \( -name '*.a' -o -name '*.o' \) -print0)
+echo "Skipped strip files: $strip_failures"
 
 after=$(du -sk "$libraries_dir" | cut -f1)
 echo "Libraries cache: $((before * 1024)) -> $((after * 1024)) bytes"
