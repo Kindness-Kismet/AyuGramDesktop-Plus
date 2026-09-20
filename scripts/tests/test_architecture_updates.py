@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from build_support import dependency_cache
 from build_support.recipe import Stage
 from release_update_map import generate_update_map
+from trim_windows_cache import trim_intermediate_files
 
 
 class QtCacheTests(unittest.TestCase):
@@ -42,6 +43,15 @@ class QtCacheTests(unittest.TestCase):
                 f'set_property(TARGET Qt6::Gui_resources_1 PROPERTY IMPORTED_OBJECTS_{configuration.upper()} "' + ";".join(references) + '")\n',
                 encoding="utf-8",
             )
+            plugin = f"plugins/imageformats/objects-{configuration}/QGifPlugin_init/QGifPlugin_init.cpp.obj"
+            (cmake / f"Qt6QGifPluginTargets-{configuration.lower()}.cmake").write_text(
+                f'set_property(TARGET Qt6::QGifPlugin_init PROPERTY IMPORTED_OBJECTS_{configuration.upper()} "${{_IMPORT_PREFIX}}/{plugin}")\n',
+                encoding="utf-8",
+            )
+            if (configuration, "QGifPlugin_init") != missing:
+                plugin_object = prefix / plugin
+                plugin_object.parent.mkdir(parents=True, exist_ok=True)
+                plugin_object.write_bytes(b"plugin object")
 
     def test_complete_installation_is_reused(self):
         self.install_objects()
@@ -51,12 +61,51 @@ class QtCacheTests(unittest.TestCase):
         self.install_objects(missing=("Debug", "qpdf_init"))
         self.assertEqual(dependency_cache.check_cache_key(self.stage, "matching"), "Stale")
 
+    def test_missing_nested_plugin_object_invalidates_matching_cache(self):
+        self.install_objects(missing=("Debug", "QGifPlugin_init"))
+        self.assertEqual(dependency_cache.check_cache_key(self.stage, "matching"), "Stale")
+
     def test_missing_installation_invalidates_matching_cache(self):
         self.assertEqual(dependency_cache.check_cache_key(self.stage, "matching"), "Stale")
 
     def test_changed_recipe_invalidates_complete_installation(self):
         self.install_objects()
         self.assertEqual(dependency_cache.check_cache_key(self.stage, "changed"), "Stale")
+
+    def test_trimmed_complete_installation_is_reused(self):
+        self.install_objects()
+        intermediate = self.directory / "Qt-6.11.2/build/src/gui/CMakeFiles/gui.dir/gui.cpp.obj"
+        intermediate.parent.mkdir(parents=True)
+        intermediate.write_bytes(b"intermediate")
+
+        trim_intermediate_files([self.directory])
+
+        self.assertFalse(intermediate.exists())
+        self.assertEqual(dependency_cache.check_cache_key(self.stage, "matching"), "Good")
+
+
+class WindowsCacheTrimTests(unittest.TestCase):
+    def test_nested_qt_install_objects_survive_trim(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            qt = root / "Libraries/Qt-6.11.2"
+            library_object = qt / "lib/objects-Release/Gui_resources/qrc_gui.cpp.obj"
+            plugin_object = qt / "plugins/imageformats/objects-Debug/QGifPlugin_init/QGifPlugin_init.cpp.obj"
+            qml_object = qt / "qml/QtQuick/Controls/objects-Release/Qml_init/Qml_init.cpp.obj"
+            qt_intermediate = qt / "build/src/gui/CMakeFiles/gui.dir/gui.cpp.obj"
+            third_party_intermediate = root / "ThirdParty/project/build.pdb"
+            for path in (library_object, plugin_object, qml_object, qt_intermediate, third_party_intermediate):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"data")
+
+            removed = trim_intermediate_files([root / "Libraries", root / "ThirdParty"])
+
+            self.assertTrue(library_object.is_file())
+            self.assertTrue(plugin_object.is_file())
+            self.assertTrue(qml_object.is_file())
+            self.assertFalse(qt_intermediate.exists())
+            self.assertFalse(third_party_intermediate.exists())
+            self.assertEqual(set(removed), {qt_intermediate, third_party_intermediate})
 
 
 class UpdateMapTests(unittest.TestCase):

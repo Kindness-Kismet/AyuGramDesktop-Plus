@@ -85,7 +85,7 @@ jobs:
           path: |
             build/tmp/Libraries
             build/tmp/ThirdParty
-          key: win-libs-${{ matrix.arch }}-${{ hashFiles('scripts/prebuild.py', 'scripts/build_support/recipes.py', 'scripts/build_support/recipes_arm64.py', 'scripts/build_support/dependency_cache.py') }}
+          key: win-libs-${{ matrix.arch }}-${{ hashFiles('scripts/prebuild.py', 'scripts/trim_windows_cache.py', 'scripts/build_support/recipes.py', 'scripts/build_support/recipes_arm64.py', 'scripts/build_support/dependency_cache.py') }}
           restore-keys: win-libs-${{ matrix.arch }}-
 
       # 缓存归档保不住符号链接，msys2 的 mtab 与 dev 由运行时重建
@@ -104,12 +104,8 @@ jobs:
       # 中间产物不入库可把缓存压到 10 GB 限制内，恢复后阶段标记仍完整
       # Qt 6 的 cmake 配置引用安装目录里的 objects-*，裁掉会让 arm64 配置阶段直接失败
       - name: Trim intermediate build files.
-        shell: bash
-        run: |
-          set -euo pipefail
-          find build/tmp/Libraries build/tmp/ThirdParty \
-            \( -name '*.obj' -o -name '*.pdb' -o -name '*.pch' \) -type f \
-            -not -path '*/Qt-*/lib/objects-*' -delete
+        shell: cmd
+        run: python scripts/trim_windows_cache.py build/tmp/Libraries build/tmp/ThirdParty
 
       # 依赖建好立即入库，后续构建失败不再连带丢失 prebuild 缓存
       - name: Save libraries cache.

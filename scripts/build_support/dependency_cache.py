@@ -60,7 +60,7 @@ def check_cache_key(stage: Stage, key: str) -> str:
         objects = set()
         for target in (prefix / "lib/cmake").glob("**/*Targets-*.cmake"):
             objects.update(re.findall(
-                r'\$\{_IMPORT_PREFIX\}/(lib/objects-[^";]+\.obj)',
+                r'\$\{_IMPORT_PREFIX\}/([^";]*objects-[^";]+\.obj)',
                 target.read_text(encoding="utf-8"),
             ))
         if not objects or any(not (prefix / obj).is_file() for obj in objects):
