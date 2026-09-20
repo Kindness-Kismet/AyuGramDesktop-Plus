@@ -535,11 +535,11 @@ bool ReadFile(
 				).arg(name));
 			continue;
 		}
-		if (version > AppVersion) {
+		if (version > AppStorageReadVersion) {
 			DEBUG_LOG(("App Info: version too big %1 for '%2', my version %3"
 				).arg(version
 				).arg(name
-				).arg(AppVersion));
+				).arg(AppStorageReadVersion));
 			continue;
 		}
 

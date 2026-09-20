@@ -32,7 +32,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   eval $1="$2"
 done < "$FullScriptPath/version"
 
-VersionForPacker="$AppVersion"
+VersionForPacker="$AppUpdateVersion"
 if [ "$AlphaVersion" != "0" ]; then
   AppVersion="$AlphaVersion"
   AppVersionStrFull="${AppVersionStr}_${AlphaVersion}"

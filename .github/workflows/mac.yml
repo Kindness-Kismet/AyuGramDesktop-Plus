@@ -1,49 +1,13 @@
 name: MacOS
 
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/mac.yml'
-      - 'lib/xdg/**'
-      - 'snap/**'
-      - 'scripts/**'
-      - 'Telegram/build/docker/**'
-      - 'Telegram/Resources/uwp/**'
-      - 'Telegram/Resources/winrc/**'
-      - 'Telegram/SourceFiles/platform/win/**'
-      - 'Telegram/SourceFiles/platform/linux/**'
-      - 'Telegram/configure.bat'
-  pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/mac.yml'
-      - 'lib/xdg/**'
-      - 'snap/**'
-      - 'scripts/**'
-      - 'Telegram/build/docker/**'
-      - 'Telegram/Resources/uwp/**'
-      - 'Telegram/Resources/winrc/**'
-      - 'Telegram/SourceFiles/platform/win/**'
-      - 'Telegram/SourceFiles/platform/linux/**'
-      - 'Telegram/configure.bat'
-  workflow_dispatch:
+  workflow_call:
+    secrets:
+      PACKER_PRIVATE_H:
+        required: true
 
-concurrency:
-  group: mac-${{ github.ref }}
-  cancel-in-progress: true
+permissions:
+  contents: read
 
 jobs:
   macos:
@@ -66,6 +30,11 @@ jobs:
 
     env:
       PREPARE_PATH: 'Telegram/build/prepare/prepare.py'
+      MAC_LIBRARIES_CACHE_VERSION: 'v2'
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_INSTALL_CLEANUP: '1'
+      HOMEBREW_NO_INSTALL_UPGRADE: '1'
+      HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: '1'
 
     steps:
       - name: Get repository name.
@@ -78,18 +47,32 @@ jobs:
           path: ${{ env.REPO_NAME }}
 
       - name: First set up.
+        timeout-minutes: 15
         run: |
           set -euo pipefail
-          sudo chown -R `whoami`:admin /usr/local/share
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
-          brew update
-          brew upgrade || true
-          brew install automake libtool meson nasm ninja pkg-config
+          formulae=()
+          if ! command -v automake >/dev/null || ! command -v autoreconf >/dev/null; then
+            formulae+=(automake)
+          fi
+          command -v glibtoolize >/dev/null || formulae+=(libtool)
+          command -v meson >/dev/null || formulae+=(meson)
+          command -v nasm >/dev/null || formulae+=(nasm)
+          command -v ninja >/dev/null || formulae+=(ninja)
+          command -v pkg-config >/dev/null || formulae+=(pkg-config)
+          if ((${#formulae[@]})); then
+            brew install "${formulae[@]}"
+          fi
 
           # Spotlight indexing only slows the dependency build down.
           sudo mdutil -a -i off
 
-          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodeKey=$(xcodebuild -version | shasum -a 256 | cut -d' ' -f1)
+          echo "XCODE_CACHE_KEY=$xcodeKey" >> "$GITHUB_ENV"
+
+      - name: Check libraries cache trim.
+        run: python3 -m unittest $REPO_NAME/scripts/tests/test_macos_cache.py -v
 
       - name: Restore libraries cache.
         id: cache-libs
@@ -97,9 +80,9 @@ jobs:
         with:
           path: |
             Libraries
-            ThirdParty
-          key: ${{ runner.OS }}-libs-${{ matrix.arch }}-${{ hashFiles(format('{0}/{1}', env.REPO_NAME, env.PREPARE_PATH)) }}
-          restore-keys: ${{ runner.OS }}-libs-${{ matrix.arch }}-
+          key: ${{ runner.OS }}-libs-${{ env.MAC_LIBRARIES_CACHE_VERSION }}-${{ matrix.arch }}-${{ env.XCODE_CACHE_KEY }}-${{ hashFiles(format('{0}/{1}', env.REPO_NAME, env.PREPARE_PATH), format('{0}/Telegram/build/qt_version.py', env.REPO_NAME), format('{0}/scripts/trim_macos_libraries.sh', env.REPO_NAME)) }}
+          restore-keys: |
+            ${{ runner.OS }}-libs-${{ env.MAC_LIBRARIES_CACHE_VERSION }}-${{ matrix.arch }}-${{ env.XCODE_CACHE_KEY }}-
 
       - name: Build dependencies.
         run: |
@@ -110,7 +93,7 @@ jobs:
       - name: Free up disk space.
         run: |
           set -euo pipefail
-          find Libraries '(' '(' ! '(' -name '*.a' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -name '*.pc' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' -o -perm +111 ')' -type f ')' -o -empty ')' -delete
+          ./$REPO_NAME/scripts/trim_macos_libraries.sh Libraries
 
       # 瘦身后立即入库，后续构建失败不再连带丢失依赖缓存
       - name: Save libraries cache.
@@ -119,7 +102,6 @@ jobs:
         with:
           path: |
             Libraries
-            ThirdParty
           key: ${{ steps.cache-libs.outputs.cache-primary-key }}
 
       # Packer 是 Telegram 的构建依赖，私钥头文件必须在编译前就位
@@ -137,14 +119,15 @@ jobs:
           cd $REPO_NAME/Telegram
 
           ./configure.sh \
-          -D CMAKE_CONFIGURATION_TYPES=Release \
-          -D CMAKE_OSX_ARCHITECTURES=${{ matrix.cmake_arch }} \
-          -D CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
-          -D TDESKTOP_API_ID=2040 \
-          -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
-          -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF \
-          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF \
-          -D AYUGRAM_BUILD_PACKER=ON
+            -D CMAKE_CONFIGURATION_TYPES=Release \
+            -D CMAKE_OSX_ARCHITECTURES=${{ matrix.cmake_arch }} \
+            -D CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
+            -D CMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=NO \
+            -D TDESKTOP_API_ID=2040 \
+            -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
+            -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF \
+            -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF \
+            -D AYUGRAM_BUILD_PACKER=ON
 
           cmake --build ../out --config Release --parallel
 
@@ -189,7 +172,7 @@ jobs:
       - name: Pack update.
         run: |
           set -euo pipefail
-          version=$(sed -n 's/^AppVersion  *//p' $REPO_NAME/Telegram/build/version)
+          version=$(sed -n 's/^AppUpdateVersion  *//p' $REPO_NAME/Telegram/build/version)
           test -n "$version"
           cd $REPO_NAME/out/Release
 

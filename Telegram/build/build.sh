@@ -62,7 +62,7 @@ if [ "$AppVersion" -lt 7002000 ]; then
   Error "The v2 update format requires version 7.2 or newer."
 fi
 
-VersionForPacker="$AppVersion"
+VersionForPacker="$AppUpdateVersion"
 if [ "$AlphaVersion" != "0" ]; then
   AppVersion="$AlphaVersion"
   AppVersionStrFull="${AppVersionStr}_${AlphaVersion}"
@@ -124,7 +124,7 @@ echo ""
 HomePath="$FullScriptPath/.."
 if [ "$BuildTarget" == "linux" ]; then
   echo "Building version $AppVersionStrFull for Linux 64bit.."
-  UpdateFile="td-update-linux-x64-$AppVersion$ArtifactSuffix"
+  UpdateFile="td-update-linux-x64-$AppUpdateVersion$ArtifactSuffix"
   SetupFile="td-setup-linux-x64-$AppVersionStr$ArtifactSuffix.tar.xz"
   ProjectPath="$HomePath/../out"
   ReleasePath="$ProjectPath/Release"
@@ -152,8 +152,8 @@ elif [ "$BuildTarget" == "mac" ] ; then
   if [ "$AC_USERNAME" == "" ]; then
     Error "AC_USERNAME not found!"
   fi
-  UpdateFileAMD64="td-update-mac-x64-$AppVersion$ArtifactSuffix"
-  UpdateFileARM64="td-update-mac-arm-$AppVersion$ArtifactSuffix"
+  UpdateFileAMD64="td-update-mac-x64-$AppUpdateVersion$ArtifactSuffix"
+  UpdateFileARM64="td-update-mac-arm-$AppUpdateVersion$ArtifactSuffix"
   if [ "$MacArch" == "arm64" ]; then
     UpdateFile="$UpdateFileARM64"
   elif [ "$MacArch" == "x86_64" ]; then

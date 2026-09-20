@@ -172,7 +172,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>@desktop_app_version_string@</string>
+	<string>@desktop_app_update_version@</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSApplicationCategoryType</key>

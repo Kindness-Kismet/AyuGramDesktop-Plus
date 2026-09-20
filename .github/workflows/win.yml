@@ -1,51 +1,13 @@
 name: Windows
 
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/win.yml'
-      - 'lib/xdg/**'
-      - 'snap/**'
-      - 'Telegram/build/docker/**'
-      - 'Telegram/build/prepare/mac.sh'
-      - 'Telegram/build/prepare/linux.sh'
-      - 'Telegram/Resources/uwp/**'
-      - 'Telegram/SourceFiles/platform/mac/**'
-      - 'Telegram/SourceFiles/platform/linux/**'
-      - 'Telegram/configure.sh'
-      - 'Telegram/Telegram.plist'
-  pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/win.yml'
-      - 'lib/xdg/**'
-      - 'snap/**'
-      - 'Telegram/build/docker/**'
-      - 'Telegram/build/prepare/mac.sh'
-      - 'Telegram/build/prepare/linux.sh'
-      - 'Telegram/Resources/uwp/**'
-      - 'Telegram/SourceFiles/platform/mac/**'
-      - 'Telegram/SourceFiles/platform/linux/**'
-      - 'Telegram/configure.sh'
-      - 'Telegram/Telegram.plist'
-  workflow_dispatch:
+  workflow_call:
+    secrets:
+      PACKER_PRIVATE_H:
+        required: true
 
-concurrency:
-  group: win-${{ github.ref }}
-  cancel-in-progress: true
+permissions:
+  contents: read
 
 jobs:
   windows:
@@ -105,9 +67,6 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.vcvars }}
-
-      - name: Validate architecture updates.
-        run: python -B -m unittest discover -s scripts/tests -v
 
       - name: Free up disk space.
         shell: bash
@@ -189,7 +148,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version=$(sed -n 's/^AppVersion  *//p' Telegram/build/version)
+          version=$(sed -n 's/^AppUpdateVersion  *//p' Telegram/build/version)
           test -n "$version"
           packer=$(pwd)/build/tmp/out/Release/Packer.exe
           test -f "$packer"

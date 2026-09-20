@@ -167,4 +167,18 @@ QString FormatVersionPrecise(int version) {
 		+ '.' + QString::number(version % 1000);
 }
 
+QString FormatUpdateVersionDisplay(int version) {
+	if (version < 10000000 || version > 999999999) {
+		return FormatVersionDisplay(version);
+	}
+	const auto revision = version % 100;
+	const auto patch = (version / 100) % 1000;
+	const auto minor = (version / 100000) % 100;
+	const auto major = version / 10000000;
+	return QString::number(major)
+		+ '.' + QString::number(minor)
+		+ '.' + QString::number(patch)
+		+ (revision ? ('.' + QString::number(revision)) : QString());
+}
+
 } // namespace Core

@@ -129,7 +129,8 @@ python scripts/build.py --jobs 16    # more parallelism, see memory notes
 ```
 
 Output lands in `build/AyuGram-v<version>-win-x64-{release|dev}/`. The
-version number follows upstream Telegram Desktop.
+first three version components follow upstream Telegram Desktop; repeated
+releases on the same upstream version append a fourth revision component.
 
 Notes:
 
@@ -221,10 +222,15 @@ dependency rebuilds are only needed when submodule pointers or
 On Windows, `build.py --pack` additionally produces
 `build/AyuGram-v<version>-win-x64.zip` containing just the executables;
 pass `--clean-pack` to first remove any runtime leftovers (tdata, logs)
-from the output directory. The same zip layout is produced by CI on all
-three platforms and published to GitHub Releases automatically once
-Windows, Linux, and macOS have all succeeded on the same commit.
-Release notes come from `.github/CHANGELOG.md`.
+from the output directory. Pull requests run the `Release` workflow's unit
+tests, release-note checks, and actionlint validation without starting the
+Windows, Linux, or macOS builds. A push to `main` starts all three platform
+workflows in parallel and publishes their artifacts after the required jobs
+succeed. Manual runs also perform the complete three-platform build; runs from
+`main` publish, while runs from other branches only validate the build.
+Release notes are extracted from the matching version section in
+`.github/CHANGELOG.md`; older version sections stay in the repository history
+but are not copied into a new GitHub Release.
 
 ## Repository layout
 

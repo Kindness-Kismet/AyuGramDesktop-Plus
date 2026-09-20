@@ -116,7 +116,6 @@ elif (winarm):
 elif (mac):
     environment.update({
         'SPECIAL_TARGET': 'mac',
-        'MAKE_THREADS_CNT': '-j' + str(os.cpu_count()),
         'MACOSX_DEPLOYMENT_TARGET': '10.13',
         'UNGUARDED': '-Werror=unguarded-availability-new',
         'MIN_VER': '-mmacosx-version-min=10.13',
@@ -139,6 +138,10 @@ for key in environment:
         envForThirdPartyKeyString += part
 environmentKey = hashlib.sha1(environmentKeyString.encode('utf-8')).hexdigest()
 envForThirdPartyKey = hashlib.sha1(envForThirdPartyKeyString.encode('utf-8')).hexdigest()
+
+# 并行数只影响构建速度，不能让同一套依赖缓存随 runner 核数失效。
+if mac:
+    environment['MAKE_THREADS_CNT'] = '-j' + str(os.cpu_count())
 
 modifiedEnv = os.environ.copy()
 for key in environment:

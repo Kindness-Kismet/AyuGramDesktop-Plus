@@ -127,6 +127,23 @@ void delFolder() {
 DWORD versionNum = 0, versionLen = 0, readLen = 0;
 WCHAR versionStr[32] = { 0 };
 
+void normalizeUpdateVersionString() {
+	// 新更新码自行反解，避免旧客户端写入的三段显示串污染卸载信息。
+	if (versionNum < 10000000 || versionNum > 999999999) {
+		return;
+	}
+	const auto revision = versionNum % 100;
+	const auto patch = (versionNum / 100) % 1000;
+	const auto minor = (versionNum / 100000) % 100;
+	const auto major = versionNum / 10000000;
+	if (revision) {
+		wsprintf(versionStr, L"%lu.%lu.%lu.%lu", major, minor, patch, revision);
+	} else {
+		wsprintf(versionStr, L"%lu.%lu.%lu", major, minor, patch);
+	}
+	versionLen = DWORD(wcslen(versionStr) * sizeof(WCHAR));
+}
+
 bool update() {
 	writeLog(L"Update started..");
 
@@ -280,6 +297,7 @@ bool update() {
 void updateRegistry() {
 	if (versionNum && versionNum != 0x7FFFFFFF && versionNum != 0x7FFFFFFE) {
 		writeLog(L"Updating registry..");
+		normalizeUpdateVersionString();
 		versionStr[versionLen / 2] = 0;
 		HKEY rkey;
 		LSTATUS status = RegOpenKeyEx(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{53F49750-6209-4FBF-9CA8-7A333C87D1ED}_is1", 0, KEY_QUERY_VALUE | KEY_SET_VALUE, &rkey);

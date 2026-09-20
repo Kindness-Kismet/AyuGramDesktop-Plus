@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""分别校验本项目发布版本和官方适配基线。"""
+"""校验本项目修订版本、官方适配基线和各平台版本元数据。"""
 import argparse
 import datetime
 import json
@@ -43,8 +43,12 @@ def main() -> int:
 
     for key, expected in {
         "AppVersion": str(version.full),
-        "AppVersionStr": version.text,
+        "AppUpdateVersion": str(version.update),
+        "AppStorageReadVersion": str(version.storage_read),
+        "AppVersionStr": version.text_small,
         "AppVersionStrSmall": version.text_small,
+        "AppVersionStrOfficial": version.text,
+        "AppVersionStrFile": version.file_version,
         "AppVersionStrMajor": f"{version.major}.{version.minor}",
         "BetaChannel": "1" if version.beta else "0",
         "AlphaVersion": str(version.full_alpha),
@@ -55,6 +59,8 @@ def main() -> int:
     for key, expected in {
         **BRAND_VERSION_H,
         "AppVersion": str(version.full),
+        "AppUpdateVersion": str(version.update),
+        "AppStorageReadVersion": str(version.storage_read),
         "AppVersionStr": f'"{version.text_small}"',
         "AppBetaVersion": "true" if version.beta else "false",
     }.items():
@@ -65,7 +71,7 @@ def main() -> int:
         str(version.full_alpha),
     )
 
-    parts = (version.major, version.minor, version.patch, version.alpha)
+    parts = (version.major, version.minor, version.patch, version.revision)
     dotted = ".".join(map(str, parts))
     comma = ",".join(map(str, parts))
     for name, description in (
@@ -105,7 +111,7 @@ def main() -> int:
     if not upstream_version:
         failures.append(f"官方基线不是稳定版提交：{commit[:10]} {subject}")
 
-    # 元数据从官方提交推导，本项目发布版本不参与基线判断。
+    # 元数据从官方提交推导，发布版本的前三段必须与该基线一致。
     if args.write and upstream_version:
         upstream.update(
             version=upstream_version,
@@ -113,6 +119,7 @@ def main() -> int:
             synced_at=datetime.date.today().isoformat(),
         )
     check("官方基线版本", upstream.get("version"), upstream_version)
+    check("发布版本前三段", version.text, upstream_version)
     check("官方基线日期", upstream.get("commit_date"), commit_date)
     synced = upstream.get("synced_at", "")
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", synced):
