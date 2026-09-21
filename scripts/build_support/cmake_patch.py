@@ -13,9 +13,15 @@ _VARIABLES = ROOT / "cmake" / "variables.cmake"
 _VALIDATE = ROOT / "cmake" / "validate_special_target.cmake"
 _ROOT_LISTS = ROOT / "CMakeLists.txt"
 _CMARK = ROOT / "cmake" / "external" / "cmark_gfm" / "CMakeLists.txt"
+_WINDOWS_OPTIONS = ROOT / "cmake" / "options_win.cmake"
 
 _MARKER = f"# {LIBS_LOC_OPTION} override"
 _CMARK_MARKER = "# cmark_gfm warnings off"
+_WINDOWS_DEBUG_MARKER = "/DEBUG:FULL"
+
+# VS 2026 已移除 FASTLINK，直接生成完整调试信息。
+_WINDOWS_DEBUG_ORIGINAL = "/DEBUG:FASTLINK"
+_WINDOWS_DEBUG_PATCHED = _WINDOWS_DEBUG_MARKER
 
 _VARIABLES_ORIGINAL = """if (build_win64)
     get_filename_component(libs_loc "../Libraries/win64" REALPATH)
@@ -92,6 +98,7 @@ _PATCHES = (
     (_VALIDATE, _MARKER, _VALIDATE_ORIGINAL, _VALIDATE_PATCHED),
     (_ROOT_LISTS, _MARKER, _ROOT_ORIGINAL, _ROOT_PATCHED),
     (_CMARK, _CMARK_MARKER, _CMARK_ORIGINAL, _CMARK_PATCHED),
+    (_WINDOWS_OPTIONS, _WINDOWS_DEBUG_MARKER, _WINDOWS_DEBUG_ORIGINAL, _WINDOWS_DEBUG_PATCHED),
 )
 
 

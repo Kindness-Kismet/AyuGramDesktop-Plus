@@ -498,9 +498,10 @@
       "repository": "desktop-app/cmake_helpers",
       "branch": "master",
       "fork_point": "5e21e7ac353138128145ec4419c0666dc9959347",
-      "$patches_comment": "No fork. Points at the official submodule; customisations are applied at build time by scripts/build_support/cmake_patch.py: LIBS_LOC override in variables.cmake / validate_special_target.cmake, Python3_EXECUTABLE guard in the root CMakeLists.txt, cmark-gfm warning suppression.",
+      "$patches_comment": "使用官方子模块，构建时由 scripts/build_support/cmake_patch.py 应用定制：覆盖依赖目录、保护 Python 路径、关闭 cmark-gfm 警告，并为 VS 2026 使用 /DEBUG:FULL。",
       "customised_paths": [
         "external/cmark_gfm/CMakeLists.txt",
+        "options_win.cmake",
         "validate_special_target.cmake",
         "variables.cmake"
       ],
