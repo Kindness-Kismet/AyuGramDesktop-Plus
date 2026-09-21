@@ -24,6 +24,8 @@ DialogRow {
 	topicsHeight: pixels;
 	unreadMarkDiameter: pixels;
 	tagTop: pixels;
+	activeMargin: margins;
+	activeRadius: pixels;
 }
 DialogRightButton {
 	button: RoundButton;
@@ -100,6 +102,8 @@ defaultDialogRow: DialogRow {
 	nameTop: 10px;
 	textLeft: 68px;
 	textTop: 34px;
+	activeMargin: margins(6px, 3px, 6px, 3px);
+	activeRadius: 10px;
 }
 communityRequestableListItem: PeerListItem(defaultPeerListItem) {
 	height: dialogsRowHeight;            // == st::defaultDialogRow.height (62px)

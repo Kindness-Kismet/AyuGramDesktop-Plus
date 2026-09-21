@@ -474,11 +474,6 @@ void PaintRow(
 		&& itemIsEmpty
 		&& itemIsFiltered;
 
-	auto bg = context.active
-		? st::dialogsBgActive
-		: context.selected
-		? st::dialogsBgOver
-		: context.currentBg;
 	auto swipeTranslation = 0.;
 	auto swipeMirrored = false;
 	if (history
@@ -493,12 +488,27 @@ void PaintRow(
 	if (swipeTranslation) {
 		p.translate(swipeMirrored ? swipeTranslation : -swipeTranslation, 0);
 	}
-	p.fillRect(geometry, bg);
+	// 选中与悬停画成内缩圆角矩形，四周留出列表底色。
+	const auto highlight = geometry.marginsRemoved(context.st->activeMargin);
+	const auto radius = context.st->activeRadius;
+	p.fillRect(geometry, context.currentBg);
+	if (context.active || context.selected) {
+		auto hq = PainterHighQualityEnabler(p);
+		p.setPen(Qt::NoPen);
+		p.setBrush(context.active
+			? st::dialogsBgActive
+			: st::dialogsBgOver);
+		p.drawRoundedRect(highlight, radius, radius);
+	}
 	if (!(flags & Flag::TopicJumpRipple)) {
 		auto ripple = context.active
 			? st::dialogsRippleBgActive
 			: st::dialogsRippleBg;
+		auto path = QPainterPath();
+		path.addRoundedRect(highlight, radius, radius);
+		p.setClipPath(path);
 		row->paintRipple(p, 0, 0, context.width, &ripple->c);
+		p.setClipping(false);
 	}
 
 	if (flags & Flag::SavedMessages) {
