@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from build_support.console import format_bytes, header, print_summary, utf8_output
 from build_support.dependency_runner import run_stages
+from build_support.emoji_presets import STAGE_NAME as EMOJI_STAGE, prepare_presets
 from build_support.help import MultilineHelpFormatter, format_choice_help
 from build_support.paths import LIBRARIES_DIR, TARGET, TARGET_SUFFIX, THIRD_PARTY_DIR, TMP_DIR
 from build_support.recipes import STAGE_NAMES, qt_version, resolved_stages
@@ -24,7 +25,7 @@ from build_support.toolchain import describe_toolset, msvc_environment
 
 STAGE_HELP = format_choice_help(
     "Build only the named stages, repeatable. Available stages:",
-    [(name, "") for name in STAGE_NAMES],
+    [(name, "") for name in STAGE_NAMES + [EMOJI_STAGE]],
 )
 
 
@@ -36,6 +37,12 @@ def main() -> None:
         for stage in resolved_stages(TARGET):
             version = f"#{stage.version}" if stage.version != "0" else ""
             print(f"  {stage.name:<18} {stage.location}{version}")
+        print(f"  {EMOJI_STAGE:<18} Resources")
+        return
+
+    if args.stages and set(args.stages) == {EMOJI_STAGE}:
+        with timed_step("Prepare emoji presets"):
+            prepare_presets()
         return
 
     environment = msvc_environment()
@@ -55,8 +62,13 @@ def main() -> None:
 
     with timed_step("Prepare third party libraries"):
         with utf8_output():
-            built = run_stages(resolved_stages(TARGET), environment, args.stages, args.verbose)
+            stages = [name for name in args.stages if name != EMOJI_STAGE]
+            built = run_stages(resolved_stages(TARGET), environment, stages, args.verbose)
         print(f"  {built} stage(s) built", flush=True)
+
+    if not args.stages or EMOJI_STAGE in args.stages:
+        with timed_step("Prepare emoji presets"):
+            prepare_presets()
 
     report()
 
