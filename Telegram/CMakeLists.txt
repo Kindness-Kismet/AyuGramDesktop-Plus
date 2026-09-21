@@ -2655,6 +2655,9 @@ if (MSVC)
     target_link_libraries(Telegram
     PRIVATE
         delayimp
+        # arm64 的 Qt 是 CMake 构建，没有 .prl 元数据传递系统库，
+        # qdnslookup_win.cpp 引用的 DnsQueryEx 等符号需要显式链接。
+        dnsapi
     )
     target_link_options(Telegram
     PRIVATE
