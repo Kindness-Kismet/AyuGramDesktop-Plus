@@ -18,7 +18,7 @@ TARGETS = {
         "required": True,
     },
     "windows-arm64": {
-        "repository": "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
+        "repository": "Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build",
         "archive_platform": "win",
         "updater_prefixes": ("tarm64upd",),
         "required": False,
@@ -46,6 +46,13 @@ TARGETS = {
         "archive_platform": "macos",
         "updater_prefixes": ("tarmacupd",),
         "required": True,
+    },
+    # 兼容旧版 Universal builder 的来源清单；新 Release 不再声明这个目标。
+    "macos-universal": {
+        "repository": "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
+        "archive_platform": "macos",
+        "updater_prefixes": ("tmacupd", "tarmacupd"),
+        "required": False,
     },
 }
 

@@ -71,8 +71,8 @@ jobs:
             .github/CHANGELOG.md "$VERSION" "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
 
-  windows:
-    name: Windows remote build
+  windows-x64:
+    name: Windows x64 remote build
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 360
@@ -86,15 +86,16 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 1
 
-      - name: Dispatch and wait for Windows.
+      - name: Dispatch and wait for Windows x64.
         id: remote
         env:
           REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
         run: |
           set -euo pipefail
           exec python3 scripts/remote_build.py \
-            --label Windows \
+            --label "Windows x64" \
             --repository Kindness-Net/AyuGramDesktop-Plus-Windows-Build \
             --workflow build.yml \
             --ref main \
@@ -106,7 +107,7 @@ jobs:
             --appupdateversion "${{ needs.validate.outputs.appversion }}" \
             --timeout-seconds 21300
 
-      - name: Cancel Windows remote build.
+      - name: Cancel Windows x64 remote build.
         if: ${{ cancelled() && steps.remote.outputs.run_id != '' }}
         env:
           REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
@@ -121,6 +122,68 @@ jobs:
           cancel_remote_run(
               GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
               "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
+              int(os.environ["REMOTE_RUN_ID"]),
+          )
+          PY
+
+  # arm64 配方已就位但未在 CI 跑通，通过前不阻塞发布
+  windows-arm64:
+    name: Windows ARM64 remote build
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      run_id: ${{ steps.remote.outputs.run_id }}
+      run_attempt: ${{ steps.remote.outputs.run_attempt }}
+      run_url: ${{ steps.remote.outputs.run_url }}
+
+    steps:
+      - name: Check out orchestration code.
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Dispatch and wait for Windows ARM64.
+        id: remote
+        continue-on-error: true
+        env:
+          REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
+        run: |
+          set -euo pipefail
+          exec python3 scripts/remote_build.py \
+            --label "Windows ARM64" \
+            --repository Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build \
+            --workflow build.yml \
+            --ref main \
+            --source-sha "$GITHUB_SHA" \
+            --source-ref "$GITHUB_REF" \
+            --source-run-id "$GITHUB_RUN_ID" \
+            --source-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --version "${{ needs.validate.outputs.version }}" \
+            --appupdateversion "${{ needs.validate.outputs.appversion }}" \
+            --timeout-seconds 21300
+
+      - name: Report Windows ARM64 outcome.
+        if: steps.remote.outcome == 'failure'
+        run: |
+          echo "::warning::Windows ARM64 build failed; the release continues without it. ${GITHUB_SERVER_URL}/${{ github.repository }}/actions"
+
+      - name: Cancel Windows ARM64 remote build.
+        if: ${{ cancelled() && steps.remote.outputs.run_id != '' }}
+        env:
+          REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
+          REMOTE_RUN_ID: ${{ steps.remote.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+
+          from scripts.remote_build import GitHubApi, cancel_remote_run
+
+          cancel_remote_run(
+              GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
+              "Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build",
               int(os.environ["REMOTE_RUN_ID"]),
           )
           PY
@@ -235,7 +298,7 @@ jobs:
 
   publish:
     name: Verify and publish release
-    needs: [validate, windows, linux, macos]
+    needs: [validate, windows-x64, windows-arm64, linux, macos]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -248,15 +311,28 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      - name: Download Windows artifacts.
+      - name: Download Windows x64 artifacts.
         uses: actions/download-artifact@v8
         with:
           repository: Kindness-Net/AyuGramDesktop-Plus-Windows-Build
-          run-id: ${{ needs.windows.outputs.run_id }}
+          run-id: ${{ needs.windows-x64.outputs.run_id }}
           github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
           pattern: AyuGram-*
           merge-multiple: true
           path: artifacts/windows
+
+      # arm64 构建失败时整个下载步骤缺失产物，容忍并交给来源校验跳过
+      - name: Download Windows ARM64 artifacts.
+        if: needs.windows-arm64.outputs.run_id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          repository: Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build
+          run-id: ${{ needs.windows-arm64.outputs.run_id }}
+          github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
+          pattern: AyuGram-*
+          merge-multiple: true
+          path: artifacts/windows-arm64
 
       - name: Download Linux artifacts.
         uses: actions/download-artifact@v8
@@ -282,8 +358,10 @@ jobs:
         env:
           VERSION: ${{ needs.validate.outputs.version }}
           APPVERSION: ${{ needs.validate.outputs.appversion }}
-          WINDOWS_RUN_ID: ${{ needs.windows.outputs.run_id }}
-          WINDOWS_RUN_ATTEMPT: ${{ needs.windows.outputs.run_attempt }}
+          WINDOWS_RUN_ID: ${{ needs.windows-x64.outputs.run_id }}
+          WINDOWS_RUN_ATTEMPT: ${{ needs.windows-x64.outputs.run_attempt }}
+          WINDOWS_ARM64_RUN_ID: ${{ needs.windows-arm64.outputs.run_id }}
+          WINDOWS_ARM64_RUN_ATTEMPT: ${{ needs.windows-arm64.outputs.run_attempt }}
           LINUX_RUN_ID: ${{ needs.linux.outputs.run_id }}
           LINUX_RUN_ATTEMPT: ${{ needs.linux.outputs.run_attempt }}
           MACOS_RUN_ID: ${{ needs.macos.outputs.run_id }}
@@ -320,15 +398,16 @@ jobs:
               }
             }')
 
-          if find artifacts/windows -type f -name 'provenance-windows-arm64.json' \
+          if test -d artifacts/windows-arm64 \
+            && find artifacts/windows-arm64 -type f -name 'provenance-windows-arm64.json' \
             -print -quit | grep -q .; then
             build_runs=$(jq -cn \
               --argjson current "$build_runs" \
-              --argjson run "$WINDOWS_RUN_ID" \
-              --argjson attempt "$WINDOWS_RUN_ATTEMPT" \
+              --argjson run "$WINDOWS_ARM64_RUN_ID" \
+              --argjson attempt "$WINDOWS_ARM64_RUN_ATTEMPT" \
               '$current + {
                 "windows-arm64": {
-                  repository: "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
+                  repository: "Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build",
                   run_id: $run,
                   run_attempt: $attempt
                 }
@@ -373,7 +452,7 @@ jobs:
             test ! -e "release-artifacts/$name"
             cp -- "$file" "release-artifacts/$name"
           done < <(find artifacts -type f -print0)
-          test "$(find release-artifacts -maxdepth 1 -type f -name '*.zip' | wc -l)" -ge 3
+          test "$(find release-artifacts -maxdepth 1 -type f -name '*.zip' | wc -l)" -ge 4
 
       - name: Generate update map.
         env:
