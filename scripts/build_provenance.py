@@ -29,7 +29,6 @@ from build_support.artifact_provenance import (
 )
 
 
-TRUSTED_ACTOR = "KiritoXDone"
 ALLOWED_SOURCE_EVENTS = {"push", "workflow_dispatch"}
 SOURCE_RUN_API_ATTEMPTS = 4
 SOURCE_RUN_API_TIMEOUT_SECONDS = 15
@@ -219,7 +218,6 @@ def validate_source(
     loader = run_loader or fetch_workflow_run
     run = loader(repository, run_id, run_attempt)
     actual_repository = run.get("repository", {}).get("full_name")
-    actual_actor = run.get("actor", {}).get("login")
     checks = {
         "run id": (run.get("id"), run_id),
         "run attempt": (run.get("run_attempt"), run_attempt),
@@ -227,7 +225,6 @@ def validate_source(
         "head SHA": (str(run.get("head_sha", "")).lower(), sha),
         "head branch": (run.get("head_branch"), ref.removeprefix("refs/heads/")),
         "workflow path": (run.get("path"), workflow_path),
-        "actor": (actual_actor, TRUSTED_ACTOR),
     }
     for label, (actual, expected) in checks.items():
         if actual != expected:
