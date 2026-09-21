@@ -23,9 +23,9 @@ constexpr auto AppNameOld = "AyuGram for Windows"_cs;
 constexpr auto AppName = "AyuGram Desktop"_cs;
 constexpr auto AppFile = "AyuGram"_cs;
 constexpr auto AppVersion = 7002009;
-constexpr auto AppUpdateVersion = 70200901;
+constexpr auto AppUpdateVersion = 70200902;
 // 仅允许读取历史 7.2.10 测试构建数据，写入仍使用官方版本。
 constexpr auto AppStorageReadVersion = 7002010;
-constexpr auto AppVersionStr = "7.2.9.1";
+constexpr auto AppVersionStr = "7.2.9.2";
 constexpr auto AppBetaVersion = false;
 constexpr auto AppAlphaVersion = TDESKTOP_ALPHA_VERSION;

@@ -1,11 +1,11 @@
 AppVersion         7002009
-AppUpdateVersion   70200901
+AppUpdateVersion   70200902
 AppStorageReadVersion 7002010
 AppVersionStrMajor 7.2
 AppVersionStrOfficial 7.2.9
-AppVersionStrSmall 7.2.9.1
-AppVersionStrFile  7.2.9.1
-AppVersionStr      7.2.9.1
+AppVersionStrSmall 7.2.9.2
+AppVersionStrFile  7.2.9.2
+AppVersionStr      7.2.9.2
 BetaChannel        0
 AlphaVersion       0
-AppVersionOriginal 7.2.9.1
+AppVersionOriginal 7.2.9.2
