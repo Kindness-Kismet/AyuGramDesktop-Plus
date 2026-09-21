@@ -89,8 +89,8 @@ settings.local.json
 # Python bytecode from skill scripts
 __pycache__/
 
-# Generated changelog page (built by CI, deployed to GitHub Pages)
-/docs/changelog/
+# 本地文档与生成页面
+/docs/
 
 # Project specific
 Telegram/SourceFiles/_other/packer_private.h
