@@ -2,27 +2,14 @@ name: Release
 
 on:
   push:
-    branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
-  pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
-  workflow_dispatch:
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.event.pull_request.number || github.ref }}
+  group: release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -70,6 +57,7 @@ jobs:
           test -n "$version"
           appversion=$(sed -n 's/^AppUpdateVersion  *//p' Telegram/build/version)
           test -n "$appversion"
+          test "$GITHUB_REF" = "refs/tags/v${version}"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=v${version}" >> "$GITHUB_OUTPUT"
           echo "appversion=${appversion}" >> "$GITHUB_OUTPUT"
@@ -87,7 +75,6 @@ jobs:
   windows:
     name: Windows remote build
     needs: validate
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -142,7 +129,6 @@ jobs:
   linux:
     name: Linux remote build
     needs: validate
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -197,7 +183,6 @@ jobs:
   macos:
     name: macOS remote build
     needs: validate
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -252,9 +237,7 @@ jobs:
   publish:
     name: Verify and publish release
     needs: [validate, windows, linux, macos]
-    if: >-
-      github.ref == 'refs/heads/main'
-      && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

@@ -29,7 +29,7 @@ from build_support.artifact_provenance import (
 )
 
 
-ALLOWED_SOURCE_EVENTS = {"push", "workflow_dispatch"}
+ALLOWED_SOURCE_EVENTS = {"push"}
 SOURCE_RUN_API_ATTEMPTS = 4
 SOURCE_RUN_API_TIMEOUT_SECONDS = 15
 MAX_RETRY_DELAY_SECONDS = 30
@@ -194,6 +194,8 @@ def validate_source(
     sha = validate_sha(sha)
     ref = validate_source_ref(ref)
     version = validate_version(version)
+    if ref != f"refs/tags/v{version}":
+        raise ProvenanceError(f"source tag 与版本不一致：{ref!r}")
     require_positive_integers(
         {"source run id": run_id, "source run attempt": run_attempt, "AppUpdateVersion": appupdateversion}
     )
@@ -223,7 +225,7 @@ def validate_source(
         "run attempt": (run.get("run_attempt"), run_attempt),
         "repository": (actual_repository, repository),
         "head SHA": (str(run.get("head_sha", "")).lower(), sha),
-        "head branch": (run.get("head_branch"), ref.removeprefix("refs/heads/")),
+        "head branch": (run.get("head_branch"), ref.removeprefix("refs/tags/")),
         "workflow path": (run.get("path"), workflow_path),
     }
     for label, (actual, expected) in checks.items():

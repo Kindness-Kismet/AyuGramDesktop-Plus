@@ -23,7 +23,7 @@ from build_provenance import (
 
 
 SOURCE_SHA = "0123456789abcdef0123456789abcdef01234567"
-SOURCE_REF = "refs/heads/release-test"
+SOURCE_REF = "refs/tags/v7.2.9.1"
 VERSION = "7.2.9.1"
 APP_UPDATE_VERSION = 70_200_901
 SOURCE_RUN_ID = 1001
@@ -169,9 +169,9 @@ class SourceValidationTests(unittest.TestCase):
             "run_attempt": SOURCE_RUN_ATTEMPT,
             "repository": {"full_name": SOURCE_REPOSITORY},
             "head_sha": SOURCE_SHA,
-            "head_branch": "release-test",
+            "head_branch": "v7.2.9.1",
             "path": ".github/workflows/release.yml",
-            "event": "workflow_dispatch",
+            "event": "push",
             "actor": {"login": "KiritoXDone"},
         }
         payload.update(overrides)
@@ -192,7 +192,7 @@ class SourceValidationTests(unittest.TestCase):
                 run_loader=loader,
             )
 
-    def test_accepts_matching_manual_run(self):
+    def test_accepts_matching_tag_run(self):
         def loader(repository, run_id, run_attempt):
             self.assertEqual((repository, run_id, run_attempt), (SOURCE_REPOSITORY, 1001, 2))
             return self.run_payload()
@@ -212,6 +212,38 @@ class SourceValidationTests(unittest.TestCase):
     def test_rejects_pull_request_source_run(self):
         with self.assertRaisesRegex(ProvenanceError, "事件"):
             self.validate(lambda *_: self.run_payload(event="pull_request"))
+
+    def test_rejects_tag_that_does_not_match_version(self):
+        with self.assertRaisesRegex(ProvenanceError, "tag 与版本"):
+            with patch("build_provenance._git_head", return_value=SOURCE_SHA):
+                validate_source(
+                    self.root,
+                    repository=SOURCE_REPOSITORY,
+                    sha=SOURCE_SHA,
+                    ref="refs/tags/v7.2.9.2",
+                    run_id=SOURCE_RUN_ID,
+                    run_attempt=SOURCE_RUN_ATTEMPT,
+                    version=VERSION,
+                    appupdateversion=APP_UPDATE_VERSION,
+                    workflow_path=".github/workflows/release.yml",
+                    run_loader=lambda *_: self.run_payload(),
+                )
+
+    def test_rejects_branch_source_ref(self):
+        with self.assertRaisesRegex(ProvenanceError, "refs/tags"):
+            with patch("build_provenance._git_head", return_value=SOURCE_SHA):
+                validate_source(
+                    self.root,
+                    repository=SOURCE_REPOSITORY,
+                    sha=SOURCE_SHA,
+                    ref="refs/heads/main",
+                    run_id=SOURCE_RUN_ID,
+                    run_attempt=SOURCE_RUN_ATTEMPT,
+                    version=VERSION,
+                    appupdateversion=APP_UPDATE_VERSION,
+                    workflow_path=".github/workflows/release.yml",
+                    run_loader=lambda *_: self.run_payload(),
+                )
 
     def test_rejects_wrong_source_run_attempt(self):
         calls = []
@@ -355,7 +387,7 @@ class ArtifactProvenanceTests(unittest.TestCase):
     def test_wrong_source_ref_is_rejected(self):
         self.add_required_targets()
         path = self.root / "windows/provenance-windows-x64.json"
-        self.rewrite_manifest(path, lambda data: data["source"].update(ref="refs/heads/other"))
+        self.rewrite_manifest(path, lambda data: data["source"].update(ref="refs/tags/v7.2.9.2"))
         with self.assertRaisesRegex(ProvenanceError, "source ref"):
             self.verify()
 

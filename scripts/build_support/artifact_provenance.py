@@ -66,10 +66,10 @@ def validate_repository(value: str) -> str:
 
 
 def validate_source_ref(value: str) -> str:
-    branch = value.removeprefix("refs/heads/")
-    if branch == value or not branch or ".." in branch or "\\" in branch:
-        raise ProvenanceError(f"source ref 必须是有效的 refs/heads/*：{value!r}")
-    if any(character.isspace() or ord(character) < 32 for character in branch):
+    tag = value.removeprefix("refs/tags/")
+    if tag == value or not tag or ".." in tag or "\\" in tag:
+        raise ProvenanceError(f"source ref 必须是有效的 refs/tags/*：{value!r}")
+    if any(character.isspace() or ord(character) < 32 for character in tag):
         raise ProvenanceError(f"source ref 包含无效字符：{value!r}")
     return value
 
