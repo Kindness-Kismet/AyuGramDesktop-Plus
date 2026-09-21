@@ -22,7 +22,7 @@ class VersionEncodingTests(unittest.TestCase):
         base = parse_version("7.2.9")
         revision = parse_version("7.2.9.1")
         next_revision = parse_version("7.2.9.2")
-        next_official = parse_version("7.2.10")
+        next_official = parse_version("7.2.11")
 
         self.assertEqual(revision.full, 7_002_009)
         self.assertEqual(revision.update, 70_200_901)
@@ -51,9 +51,9 @@ class VersionEncodingTests(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(SystemExit):
                 parse_version(invalid)
 
-    def test_storage_read_ceiling_is_limited_to_historical_test_build(self):
-        self.assertEqual(parse_version("7.2.9.1").storage_read, 7_002_010)
-        self.assertEqual(parse_version("7.2.10").storage_read, 7_002_010)
+    def test_storage_read_version_follows_official_version(self):
+        self.assertEqual(parse_version("7.2.9.1").storage_read, 7_002_009)
+        self.assertEqual(parse_version("7.2.9.2").storage_read, 7_002_009)
         self.assertEqual(parse_version("7.2.11").storage_read, 7_002_011)
 
     def test_beta_remains_separate_from_numeric_revision(self):
@@ -143,7 +143,7 @@ VALUE "ProductVersion", "1.0.0.0"
         values = dict(line.split() for line in self.version_file.read_text(encoding="utf-8").splitlines())
         self.assertEqual(values["AppVersion"], "7002009")
         self.assertEqual(values["AppUpdateVersion"], "70200902")
-        self.assertEqual(values["AppStorageReadVersion"], "7002010")
+        self.assertEqual(values["AppStorageReadVersion"], "7002009")
         self.assertEqual(values["AppVersionStr"], "7.2.9.2")
         self.assertEqual(values["AppVersionStrFile"], "7.2.9.2")
         self.assertIn('Version="7.2.9.2"', self.manifest.read_text(encoding="utf-8"))
@@ -152,7 +152,7 @@ VALUE "ProductVersion", "1.0.0.0"
 
     def test_apply_rejects_release_for_another_official_baseline(self):
         with self.locations(), self.assertRaisesRegex(SystemExit, "official baseline 7.2.9"):
-            apply_version(parse_version("7.2.10"), check_changelog=False)
+            apply_version(parse_version("7.2.11"), check_changelog=False)
 
 
 class VersionIntegrationTests(unittest.TestCase):

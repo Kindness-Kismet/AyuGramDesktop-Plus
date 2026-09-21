@@ -13,7 +13,6 @@ from build_support.paths import ROOT, VERSION_FILE
 
 _PATTERN = re.compile(r"^\s*(\d+)\.(\d+)\.(\d+)(?:\.(\d+|beta))?\s*$")
 _PACKER_VERSION_MAX = 999_999_999
-_STORAGE_VERSION_FLOOR = 7_002_010
 
 _CORE_VERSION = ROOT / "Telegram" / "SourceFiles" / "core" / "version.h"
 _TELEGRAM_RC = ROOT / "Telegram" / "Resources" / "winrc" / "Telegram.rc"
@@ -44,8 +43,8 @@ class Version:
 
     @property
     def storage_read(self) -> int:
-        """只兼容历史 7.2.10 测试构建，官方追平后随官方版本递增。"""
-        return max(self.full, _STORAGE_VERSION_FLOOR)
+        """存储读取上限跟随官方版本，不兼容未来版本写入的数据。"""
+        return self.full
 
     @property
     def full_alpha(self) -> int:
