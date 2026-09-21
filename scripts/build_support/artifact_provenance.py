@@ -14,37 +14,31 @@ TARGETS = {
     "windows-x64": {
         "repository": "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
         "archive_platform": "win",
-        "updater_prefix": "tx64upd",
+        "updater_prefixes": ("tx64upd",),
         "required": True,
     },
     "windows-arm64": {
         "repository": "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
         "archive_platform": "win",
-        "updater_prefix": "tarm64upd",
+        "updater_prefixes": ("tarm64upd",),
         "required": False,
     },
     "linux-x64": {
         "repository": "Kindness-Net/AyuGramDesktop-Plus-Linux-Build",
         "archive_platform": "linux",
-        "updater_prefix": "tlinuxupd",
+        "updater_prefixes": ("tlinuxupd",),
         "required": True,
     },
     "linux-arm64": {
         "repository": "Kindness-Net/AyuGramDesktop-Plus-Linux-Build",
         "archive_platform": "linux",
-        "updater_prefix": "tlinuxarmupd",
+        "updater_prefixes": ("tlinuxarmupd",),
         "required": False,
     },
-    "macos-x64": {
+    "macos-universal": {
         "repository": "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
         "archive_platform": "macos",
-        "updater_prefix": "tmacupd",
-        "required": True,
-    },
-    "macos-arm64": {
-        "repository": "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
-        "archive_platform": "macos",
-        "updater_prefix": "tarmacupd",
+        "updater_prefixes": ("tmacupd", "tarmacupd"),
         "required": True,
     },
 }
@@ -72,10 +66,10 @@ def validate_repository(value: str) -> str:
 
 
 def validate_source_ref(value: str) -> str:
-    branch = value.removeprefix("refs/heads/")
-    if branch == value or not branch or ".." in branch or "\\" in branch:
-        raise ProvenanceError(f"source ref 必须是有效的 refs/heads/*：{value!r}")
-    if any(character.isspace() or ord(character) < 32 for character in branch):
+    tag = value.removeprefix("refs/tags/")
+    if tag == value or not tag or ".." in tag or "\\" in tag:
+        raise ProvenanceError(f"source ref 必须是有效的 refs/tags/*：{value!r}")
+    if any(character.isspace() or ord(character) < 32 for character in tag):
         raise ProvenanceError(f"source ref 包含无效字符：{value!r}")
     return value
 
@@ -107,7 +101,7 @@ def _expected_filenames(platform: str, arch: str, version: str, appupdateversion
     target = TARGETS[_target_key(platform, arch)]
     return {
         f"AyuGram-v{version}-{target['archive_platform']}-{arch}.zip",
-        f"{target['updater_prefix']}{appupdateversion}",
+        *(f"{prefix}{appupdateversion}" for prefix in target["updater_prefixes"]),
     }
 
 
@@ -160,12 +154,12 @@ def write_artifact_manifest(
     expected_output = f"provenance-{platform}-{arch}.json"
     if output.name != expected_output:
         raise ProvenanceError(f"来源清单必须命名为 {expected_output}")
-    if len(files) != 2:
-        raise ProvenanceError(f"{key} 必须恰好记录 archive 和 updater 两个文件")
+    expected_names = _expected_filenames(platform, arch, version, appupdateversion)
+    if len(files) != len(expected_names):
+        raise ProvenanceError(f"{key} 必须记录完整的 archive 和 updater 文件集")
     if any(path.parent.resolve() != output.parent.resolve() for path in files):
         raise ProvenanceError("来源清单必须与 archive 和 updater 位于同一目录")
 
-    expected_names = _expected_filenames(platform, arch, version, appupdateversion)
     actual_names = [path.name for path in files]
     if len(set(actual_names)) != len(actual_names):
         raise ProvenanceError("产物文件名重复")
@@ -270,8 +264,8 @@ def _validate_manifest_shape(manifest: dict, path: Path) -> None:
         "repository", "run_id", "run_attempt",
     }:
         raise ProvenanceError(f"builder 字段格式无效：{path}")
-    if not isinstance(manifest["files"], list) or len(manifest["files"]) != 2:
-        raise ProvenanceError(f"来源清单必须恰好记录两个文件：{path}")
+    if not isinstance(manifest["files"], list) or not manifest["files"]:
+        raise ProvenanceError(f"来源清单必须记录产物文件：{path}")
 
 
 def _collect_artifacts(root: Path) -> tuple[list[Path], dict[str, Path]]:
@@ -294,7 +288,10 @@ def _manifest_paths(all_files: list[Path]) -> dict[str, Path]:
     for path in all_files:
         if not path.name.startswith("provenance-") or not path.name.endswith(".json"):
             continue
-        match = re.fullmatch(r"provenance-(windows|linux|macos)-(x64|arm64)\.json", path.name)
+        match = re.fullmatch(
+            r"provenance-(windows|linux|macos)-(x64|arm64|universal)\.json",
+            path.name,
+        )
         if not match:
             raise ProvenanceError(f"来源清单文件名无效：{path.name}")
         key = _target_key(match.group(1), match.group(2))
