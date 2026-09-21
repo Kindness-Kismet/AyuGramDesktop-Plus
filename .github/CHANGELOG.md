@@ -2,7 +2,7 @@
 
 ## 7.2.9.4
 
-- 支持自定义表情包：可导入彩色表情字体，并提供 Apple、JoyPixels、OpenMoji、微软、三星、Blobmoji、Google 等预设。
+- 可以更换聊天里的表情样式，支持导入字体，并提供 Apple、JoyPixels、OpenMoji、微软、三星、Blobmoji、Google 等可选样式。
 
 ## 7.2.9.3
 
