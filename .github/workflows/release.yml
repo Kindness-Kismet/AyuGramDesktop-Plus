@@ -326,12 +326,7 @@ jobs:
                 run_id: $linux_run,
                 run_attempt: $linux_attempt
               },
-              "macos-x64": {
-                repository: "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
-                run_id: $macos_run,
-                run_attempt: $macos_attempt
-              },
-              "macos-arm64": {
+              "macos-universal": {
                 repository: "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
                 run_id: $macos_run,
                 run_attempt: $macos_attempt
@@ -391,7 +386,7 @@ jobs:
             test ! -e "release-artifacts/$name"
             cp -- "$file" "release-artifacts/$name"
           done < <(find artifacts -type f -print0)
-          test "$(find release-artifacts -maxdepth 1 -type f -name '*.zip' | wc -l)" -ge 4
+          test "$(find release-artifacts -maxdepth 1 -type f -name '*.zip' | wc -l)" -ge 3
 
       - name: Generate update map.
         env:

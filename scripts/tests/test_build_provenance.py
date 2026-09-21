@@ -262,9 +262,12 @@ class ArtifactProvenanceTests(unittest.TestCase):
         directory = self.root / platform
         directory.mkdir(exist_ok=True)
         archive = directory / f"AyuGram-v{VERSION}-{target['archive_platform']}-{arch}.zip"
-        updater = directory / f"{target['updater_prefix']}{APP_UPDATE_VERSION}"
         archive.write_bytes(f"archive-{key}".encode())
-        updater.write_bytes(f"updater-{key}".encode())
+        updaters = []
+        for prefix in target["updater_prefixes"]:
+            updater = directory / f"{prefix}{APP_UPDATE_VERSION}"
+            updater.write_bytes(f"updater-{key}-{prefix}".encode())
+            updaters.append(updater)
         output = directory / f"provenance-{platform}-{arch}.json"
         write_artifact_manifest(
             platform=platform,
@@ -280,7 +283,7 @@ class ArtifactProvenanceTests(unittest.TestCase):
             version=VERSION,
             appupdateversion=APP_UPDATE_VERSION,
             output=output,
-            files=[archive, updater],
+            files=[archive, *updaters],
         )
         self.build_runs[key] = {
             "repository": target["repository"],
@@ -325,9 +328,22 @@ class ArtifactProvenanceTests(unittest.TestCase):
 
     def test_missing_required_architecture_is_rejected(self):
         self.add_required_targets()
-        self.build_runs.pop("macos-arm64")
-        with self.assertRaisesRegex(ProvenanceError, "缺少必需目标.*macos-arm64"):
+        self.build_runs.pop("macos-universal")
+        with self.assertRaisesRegex(ProvenanceError, "缺少必需目标.*macos-universal"):
             self.verify()
+
+    def test_universal_macos_manifest_covers_both_update_channels(self):
+        self.add_required_targets()
+        path = self.root / "macos/provenance-macos-universal.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            {entry["name"] for entry in manifest["files"]},
+            {
+                f"AyuGram-v{VERSION}-macos-universal.zip",
+                f"tmacupd{APP_UPDATE_VERSION}",
+                f"tarmacupd{APP_UPDATE_VERSION}",
+            },
+        )
 
     def test_wrong_source_sha_is_rejected(self):
         self.add_required_targets()
@@ -359,7 +375,7 @@ class ArtifactProvenanceTests(unittest.TestCase):
 
     def test_manifest_path_traversal_is_rejected(self):
         self.add_required_targets()
-        path = self.root / "macos/provenance-macos-x64.json"
+        path = self.root / "macos/provenance-macos-universal.json"
         self.rewrite_manifest(path, lambda data: data["files"][0].update(name="../outside.zip"))
         with self.assertRaisesRegex(ProvenanceError, "不能包含路径"):
             self.verify()

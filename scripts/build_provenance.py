@@ -247,9 +247,9 @@ def _build_parser() -> argparse.ArgumentParser:
     source.add_argument("--appupdateversion", type=_positive_int, required=True)
     source.add_argument("--workflow-path", required=True)
 
-    write = commands.add_parser("write-artifact-manifest", help="生成单架构产物来源清单")
+    write = commands.add_parser("write-artifact-manifest", help="生成目标产物来源清单")
     write.add_argument("--platform", choices=("windows", "linux", "macos"), required=True)
-    write.add_argument("--arch", choices=("x64", "arm64"), required=True)
+    write.add_argument("--arch", choices=("x64", "arm64", "universal"), required=True)
     for name in (
         "source-repository", "source-ref", "source-sha", "builder-repository", "version",
     ):
