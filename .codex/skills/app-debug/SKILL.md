@@ -156,16 +156,14 @@ Debug 应用的 `tdata` 建在产物目录旁边，与正式安装版的账号�
 
 命令新增、删除、重命名，或入口、参数、返回值、行为发生变化时，按以下顺序处理：
 
-1. **修改前先备份**：将要修改的每个文件（`SKILL.md`、`scripts/cli.py`、每个实际修改的
-   `guides/*.md`）先复制一份，备份命名统一为 `原名.bak.<YYYYMMDD-HHMMSS>`，备份保留，不主动删除。
-2. **三层同步**：服务端 `Telegram/SourceFiles/ayu/debug/commands/` 对应域文件
+1. **三层同步**：服务端 `Telegram/SourceFiles/ayu/debug/commands/` 对应域文件
    （新增域要建新文件并在 `debug_commands.cpp` 注册表与 `CMakeLists.txt` 登记）、
    `scripts/cli.py` 的 `register_commands()` 和 `build_server_command()`、
    对应 `guides/*.md` 与本文的命令一览表；未受影响的层不做机械修改。
-3. 新增或删除指令域时，同步更新本文"先读哪份指引"索引。
-4. **双侧同步**：`.claude/skills/app-debug/` 与 `.codex/skills/app-debug/` 内容保持一致
+2. 新增或删除指令域时，同步更新本文"先读哪份指引"索引。
+3. **双侧同步**：`.claude/skills/app-debug/` 与 `.codex/skills/app-debug/` 内容保持一致
    （Codex 从 `.codex/skills/` 加载），改完一侧立即复制到另一侧。
-5. 服务端改动必须 `python scripts/build.py --dev` 重新编译才生效。
+4. 服务端改动必须 `python scripts/build.py --dev` 重新编译才生效。
 
 注意 `.gitignore` 有 `Debug/` 规则，Windows 大小写不敏感会连带忽略 `ayu/debug/`，
 已用 `!/Telegram/SourceFiles/ayu/debug/` 显式放行，新增该目录下的文件前先确认没有被忽略。
