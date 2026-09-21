@@ -18,7 +18,7 @@ TARGETS = {
         "required": True,
     },
     "windows-arm64": {
-        "repository": "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
+        "repository": "Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build",
         "archive_platform": "win",
         "updater_prefixes": ("tarm64upd",),
         "required": False,
