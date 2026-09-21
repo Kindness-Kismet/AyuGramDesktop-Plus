@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.2.9.4
+
+- 支持自定义表情包：可导入彩色表情字体，并提供 Apple、JoyPixels、OpenMoji、微软、三星、Blobmoji、Google 等预设。
+
 ## 7.2.9.3
 
 - 会话列表的选中态改为内缩圆角矩形样式。
