@@ -360,19 +360,25 @@ class ArtifactProvenanceTests(unittest.TestCase):
 
     def test_missing_required_architecture_is_rejected(self):
         self.add_required_targets()
-        self.build_runs.pop("macos-universal")
-        with self.assertRaisesRegex(ProvenanceError, "缺少必需目标.*macos-universal"):
+        self.build_runs.pop("macos-x64")
+        with self.assertRaisesRegex(ProvenanceError, "缺少必需目标.*macos-x64"):
             self.verify()
 
-    def test_universal_macos_manifest_covers_both_update_channels(self):
+    def test_macos_architecture_manifests_have_separate_update_channels(self):
         self.add_required_targets()
-        path = self.root / "macos/provenance-macos-universal.json"
-        manifest = json.loads(path.read_text(encoding="utf-8"))
+        x64 = json.loads((self.root / "macos/provenance-macos-x64.json").read_text(encoding="utf-8"))
+        arm64 = json.loads((self.root / "macos/provenance-macos-arm64.json").read_text(encoding="utf-8"))
         self.assertEqual(
-            {entry["name"] for entry in manifest["files"]},
+            {entry["name"] for entry in x64["files"]},
             {
-                f"AyuGram-v{VERSION}-macos-universal.zip",
+                f"AyuGram-v{VERSION}-macos-x64.zip",
                 f"tmacupd{APP_UPDATE_VERSION}",
+            },
+        )
+        self.assertEqual(
+            {entry["name"] for entry in arm64["files"]},
+            {
+                f"AyuGram-v{VERSION}-macos-arm64.zip",
                 f"tarmacupd{APP_UPDATE_VERSION}",
             },
         )
@@ -407,7 +413,7 @@ class ArtifactProvenanceTests(unittest.TestCase):
 
     def test_manifest_path_traversal_is_rejected(self):
         self.add_required_targets()
-        path = self.root / "macos/provenance-macos-universal.json"
+        path = self.root / "macos/provenance-macos-x64.json"
         self.rewrite_manifest(path, lambda data: data["files"][0].update(name="../outside.zip"))
         with self.assertRaisesRegex(ProvenanceError, "不能包含路径"):
             self.verify()

@@ -35,11 +35,24 @@ TARGETS = {
         "updater_prefixes": ("tlinuxarmupd",),
         "required": False,
     },
+    "macos-x64": {
+        "repository": "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
+        "archive_platform": "macos",
+        "updater_prefixes": ("tmacupd",),
+        "required": True,
+    },
+    "macos-arm64": {
+        "repository": "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
+        "archive_platform": "macos",
+        "updater_prefixes": ("tarmacupd",),
+        "required": True,
+    },
+    # 兼容旧版 Universal builder 的来源清单；新 Release 不再声明这个目标。
     "macos-universal": {
         "repository": "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
         "archive_platform": "macos",
         "updater_prefixes": ("tmacupd", "tarmacupd"),
-        "required": True,
+        "required": False,
     },
 }
 
