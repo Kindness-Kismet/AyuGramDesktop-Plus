@@ -35,10 +35,16 @@ TARGETS = {
         "updater_prefixes": ("tlinuxarmupd",),
         "required": False,
     },
-    "macos-universal": {
+    "macos-x64": {
         "repository": "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
         "archive_platform": "macos",
-        "updater_prefixes": ("tmacupd", "tarmacupd"),
+        "updater_prefixes": ("tmacupd",),
+        "required": True,
+    },
+    "macos-arm64": {
+        "repository": "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
+        "archive_platform": "macos",
+        "updater_prefixes": ("tarmacupd",),
         "required": True,
     },
 }
