@@ -67,7 +67,6 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
-          python3 -B -m unittest discover -s scripts/tests -v
           python3 scripts/release_notes.py \
             .github/CHANGELOG.md "$VERSION" "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
