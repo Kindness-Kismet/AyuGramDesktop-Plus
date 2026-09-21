@@ -29,6 +29,7 @@ get_filename_component(src_loc SourceFiles REALPATH)
 get_filename_component(res_loc Resources REALPATH)
 
 include(cmake/telegram_options.cmake)
+include(cmake/ayu_emoji_fonts.cmake)
 include(cmake/lib_ffmpeg.cmake)
 include(cmake/lib_stripe.cmake)
 include(cmake/lib_tgcalls.cmake)
@@ -108,6 +109,12 @@ PRIVATE
 )
 
 set(ayugram_files
+        ayu/features/emoji_packs/emoji_font.cpp
+        ayu/features/emoji_packs/emoji_font.h
+        ayu/features/emoji_packs/emoji_packs.cpp
+        ayu/features/emoji_packs/emoji_packs.h
+        ayu/ui/boxes/emoji_pack_import.cpp
+        ayu/ui/boxes/emoji_pack_import.h
         ayu/ayu_worker.cpp
         ayu/ayu_worker.h
         ayu/ayu_url_handlers.cpp

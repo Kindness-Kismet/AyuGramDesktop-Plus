@@ -101,6 +101,7 @@
       "Telegram/SourceFiles/chat_helpers/bot_keyboard.cpp",
       "Telegram/SourceFiles/chat_helpers/chat_helpers.style",
       "Telegram/SourceFiles/chat_helpers/emoji_list_widget.cpp",
+      "Telegram/SourceFiles/chat_helpers/emoji_sets_manager.cpp",
       "Telegram/SourceFiles/chat_helpers/field_autocomplete.cpp",
       "Telegram/SourceFiles/chat_helpers/gifs_list_widget.cpp",
       "Telegram/SourceFiles/chat_helpers/gifs_list_widget.h",
@@ -350,6 +351,7 @@
       "Telegram/SourceFiles/storage/localimageloader.cpp",
       "Telegram/SourceFiles/storage/localstorage.cpp",
       "Telegram/SourceFiles/storage/storage_sparse_ids_list.cpp",
+      "Telegram/SourceFiles/tests/test_emoji_font.cpp",
       "Telegram/SourceFiles/tests/test_update_verify.cpp",
       "Telegram/SourceFiles/tray.cpp",
       "Telegram/SourceFiles/ui/boxes/choose_font_box.cpp",
@@ -434,6 +436,7 @@
       "Telegram/build/setup.iss",
       "Telegram/build/version",
       "Telegram/cmake/ayugram_version.cmake",
+      "Telegram/cmake/ayu_emoji_fonts.cmake",
       "Telegram/cmake/generate_lang.cmake",
       "Telegram/cmake/td_ui.cmake",
       "changelog.txt"

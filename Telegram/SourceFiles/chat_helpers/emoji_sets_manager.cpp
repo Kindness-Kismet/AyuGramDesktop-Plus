@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/emoji_sets_manager.h"
 
+#include "ayu/features/emoji_packs/emoji_packs.h"
+#include "ayu/ui/boxes/emoji_pack_import.h"
 #include "mtproto/dedicated_file_loader.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/fade_wrap.h"
@@ -17,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/emoji_config.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
+#include "ui/toast/toast.h"
 #include "core/application.h"
 #include "lang/lang_keys.h"
 #include "main/main_account.h"
@@ -68,12 +71,13 @@ private:
 
 class Inner : public Ui::RpWidget {
 public:
-	Inner(QWidget *parent, not_null<Main::Session*> session);
+	Inner(QWidget *parent, not_null<Main::Session*> session, Fn<void()> refresh);
 
 private:
 	void setupContent();
 
 	const not_null<Main::Session*> _session;
+	Fn<void()> _refresh;
 
 };
 
@@ -145,6 +149,8 @@ SetState ComputeState(int id) {
 		return Active();
 	} else if (SetIsReady(id)) {
 		return Ready();
+	} else if (Ayu::EmojiPacks::isCustom(id)) {
+		return Failed();
 	}
 	return Available{ GetDownloadSize(id) };
 }
@@ -206,17 +212,33 @@ void Loader::fail() {
 	BlobLoader::fail();
 }
 
-Inner::Inner(QWidget *parent, not_null<Main::Session*> session)
+Inner::Inner(QWidget *parent, not_null<Main::Session*> session, Fn<void()> refresh)
 : RpWidget(parent)
-, _session(session) {
+, _session(session)
+, _refresh(std::move(refresh)) {
 	setupContent();
 }
 
 void Inner::setupContent() {
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	const auto presets = Ayu::EmojiPacks::presets();
 
 	for (const auto &set : kSets) {
+		if (!presets.empty() && (set.id == 1 || set.id == 3)
+			&& set.id != CurrentSetId()) {
+			continue;
+		}
 		content->add(object_ptr<Row>(content, _session, set));
+	}
+	Ayu::EmojiPacks::addPresetRows(content, _refresh);
+	for (const auto &pack : Ayu::EmojiPacks::installed()) {
+		if (std::any_of(presets.begin(), presets.end(), [&](const auto &preset) {
+			return preset.hash == pack.hash;
+		})) {
+			continue;
+		}
+		content->add(object_ptr<Row>(content, _session,
+			Set{ { pack.id, 0, 0, pack.name }, pack.previewPath }));
 	}
 
 	content->resizeToWidth(st::boxWidth);
@@ -228,6 +250,7 @@ Row::Row(QWidget *widget, not_null<Main::Session*> session, const Set &set)
 , _session(session)
 , _id(set.id)
 , _state(Available{ set.size }) {
+	setObjectName(u"emoji/set/%1"_q.arg(_id));
 	setupContent(set);
 	setupHandler();
 }
@@ -403,7 +426,11 @@ void Row::setupHandler() {
 		SwitchToSet(_id, crl::guard(this, [=](bool success) {
 			_switching = false;
 			if (!success) {
-				load();
+				if (Ayu::EmojiPacks::isCustom(_id)) {
+					Ui::Toast::Show(tr::ayu_EmojiPackSwitchError(tr::now));
+				} else {
+					load();
+				}
 			} else if (GlobalLoader && GlobalLoader->id() == _id) {
 				GlobalLoader->destroy();
 			}
@@ -446,6 +473,10 @@ void Row::setupLabels(const Set &set) {
 			+ st::manageEmojiNameTop;
 		const auto statusy = st::manageEmojiPreviewPadding.top()
 			+ st::manageEmojiStatusTop;
+		name->setText(st::localStorageRowTitle.style.font->elided(
+			set.name,
+			std::max(1, size.width() - left - st::manageEmojiMarginRight
+				- st::defaultRadio.diameter - st::defaultRadio.thickness)));
 		name->moveToLeft(left, namey);
 		_status->moveToLeft(left, statusy);
 	}, name->lifetime());
@@ -544,13 +575,22 @@ ManageSetsBox::ManageSetsBox(QWidget*, not_null<Main::Session*> session)
 }
 
 void ManageSetsBox::prepare() {
-	const auto inner = setInnerWidget(object_ptr<Inner>(this, _session));
+	const auto refresh = lifetime().make_state<Fn<void()>>();
+	*refresh = [=] {
+		const auto inner = setInnerWidget(object_ptr<Inner>(this, _session, *refresh));
+		inner->resizeToWidth(st::boxWidth);
+		inner->heightValue() | rpl::on_next([=](int height) {
+			setDimensions(st::boxWidth, std::min(height, st::boxMaxListHeight));
+		}, inner->lifetime());
+		inner->show();
+		setInnerVisible(true);
+	};
+	(*refresh)();
 
 	setTitle(tr::lng_emoji_manage_sets());
 
 	addButton(tr::lng_close(), [=] { closeBox(); });
-
-	setDimensionsToContent(st::boxWidth, inner);
+	Ayu::EmojiPacks::addImportButton(this, *refresh);
 }
 
 void LoadAndSwitchTo(not_null<Main::Session*> session, int id) {

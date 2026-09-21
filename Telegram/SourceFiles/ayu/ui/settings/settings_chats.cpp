@@ -7,6 +7,7 @@
 #include "ayu/ui/settings/ayu_builder.h"
 #include "ayu/ui/settings/settings_ayu_utils.h"
 #include "ayu/ui/settings/settings_main.h"
+#include "chat_helpers/emoji_sets_manager.h"
 #include "settings/settings_builder.h"
 #include "settings/settings_common.h"
 #include "styles/style_ayu_icons.h"
@@ -30,6 +31,17 @@ struct PreviewState {
 
 void BuildStickersAndEmoji(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 	builder.addSubsectionTitle(tr::lng_settings_stickers_emoji());
+	const auto controller = builder.controller();
+	builder.addButton({
+		.id = u"ayu/emojiPacks"_q,
+		.title = tr::ayu_EmojiPacks(),
+		.st = &st::settingsButtonNoIcon,
+		.onClick = [=] {
+			controller->show(Box<Ui::Emoji::ManageSetsBox>(&controller->session()));
+		},
+		.keywords = { u"emoji"_q, u"字体"_q, u"表情包"_q },
+	});
+	builder.addDividerText(tr::ayu_EmojiPackDescription());
 
 	ayu.addSettingToggle({
 		.id = u"ayu/showOnlyAddedEmojisAndStickers"_q,
