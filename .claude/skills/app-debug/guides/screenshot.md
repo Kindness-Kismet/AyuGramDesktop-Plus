@@ -2,12 +2,12 @@
 
 ## `screenshot.take`
 
-截取活动窗口并保存为 PNG。CLI 自动生成路径 `build/screenshots/shot-<时间戳>.png`，
+截取活动窗口并保存为 JPG（质量 80）。CLI 自动生成路径 `build/screenshots/shot-<时间戳>.jpg`，
 不接受路径参数。
 
 ```bash
 python .claude/skills/app-debug/scripts/cli.py screenshot.take
-# {"height":938,"path":"<repo>/build/screenshots/shot-20260901-190750.png","width":1200}
+# {"height":938,"path":"<repo>/build/screenshots/shot-20260901-190750.jpg","width":1200}
 ```
 
 **前提**：必须有活动窗口（`hasWindow: true`）。

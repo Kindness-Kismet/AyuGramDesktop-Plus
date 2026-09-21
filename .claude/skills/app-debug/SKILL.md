@@ -84,7 +84,7 @@ python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true + 
 | `settings.open <main\|ayu\|search>` | 直接打开设置页：上游主页 / AyuGram 偏好 / 设置搜索页 |
 | `ghost.status` | 全局与当前账号的幽灵模式状态，需已登录 |
 | `storage.stats` | 保存开关、`ayudata.db` 路径与大小 |
-| `screenshot.take` | 截活动窗口到 `build/screenshots/shot-<时间戳>.png` |
+| `screenshot.take` | 截活动窗口到 `build/screenshots/shot-<时间戳>.jpg` |
 | `control.list [filter] [--all]` | 列控件树：序号、objectName、类名、几何、可见性 |
 | `control.click <objectName \| #序号>` | 合成鼠标点击，进程内走真实事件分发路径 |
 
@@ -163,8 +163,8 @@ Debug 应用的 `tdata` 建在产物目录旁边，与正式安装版的账号�
    `scripts/cli.py` 的 `register_commands()` 和 `build_server_command()`、
    对应 `guides/*.md` 与本文的命令一览表；未受影响的层不做机械修改。
 3. 新增或删除指令域时，同步更新本文"先读哪份指引"索引。
-4. **双侧同步**：`.claude/skills/app-debug/` 与 `.agents/skills/app-debug/` 内容保持一致
-   （Codex 从 `.agents/skills/` 加载），改完一侧立即复制到另一侧。
+4. **双侧同步**：`.claude/skills/app-debug/` 与 `.codex/skills/app-debug/` 内容保持一致
+   （Codex 从 `.codex/skills/` 加载），改完一侧立即复制到另一侧。
 5. 服务端改动必须 `python scripts/build.py --dev` 重新编译才生效。
 
 注意 `.gitignore` 有 `Debug/` 规则，Windows 大小写不敏感会连带忽略 `ayu/debug/`，

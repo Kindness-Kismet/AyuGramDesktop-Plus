@@ -28,7 +28,7 @@ using json = nlohmann::json;
 	}
 	const auto target = QFileInfo(args.front()).absoluteFilePath();
 	QDir().mkpath(QFileInfo(target).absolutePath());
-	if (!image.save(target, "PNG")) {
+	if (!image.save(target, "JPG", 80)) {
 		return Result::Err(u"cannot write "_q + target);
 	}
 	return Result::Ok(Compact(json{

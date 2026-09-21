@@ -217,7 +217,7 @@ def execute_command(args: argparse.Namespace) -> None:
     if command == "screenshot.take":
         ensure_debug_app()
         SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
-        target = SCREENSHOT_DIR / time.strftime("shot-%Y%m%d-%H%M%S.png")
+        target = SCREENSHOT_DIR / time.strftime("shot-%Y%m%d-%H%M%S.jpg")
         print(send_command(f"screenshot.take {quote_arg(str(target))}"))
         return
 
