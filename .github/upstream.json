@@ -464,6 +464,8 @@
         "ui/widgets/checkbox.cpp",
         "ui/widgets/fields/input_field.cpp",
         "ui/widgets/popup_menu.cpp",
+        "ui/widgets/side_bar_button.cpp",
+        "ui/widgets/side_bar_button.h",
         "ui/widgets/widgets.style",
         "ui/wrap/slide_wrap.cpp",
         "ui/wrap/slide_wrap.h"
