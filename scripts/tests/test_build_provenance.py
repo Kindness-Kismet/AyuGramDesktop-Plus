@@ -192,12 +192,22 @@ class SourceValidationTests(unittest.TestCase):
                 run_loader=loader,
             )
 
-    def test_accepts_matching_trusted_manual_run(self):
+    def test_accepts_matching_manual_run(self):
         def loader(repository, run_id, run_attempt):
             self.assertEqual((repository, run_id, run_attempt), (SOURCE_REPOSITORY, 1001, 2))
             return self.run_payload()
 
         self.validate(loader)
+
+    def test_actor_does_not_affect_source_validation(self):
+        for actor in ({"login": "Kindness-Kismet"}, None):
+            with self.subTest(actor=actor):
+                payload = self.run_payload()
+                if actor is None:
+                    payload.pop("actor")
+                else:
+                    payload["actor"] = actor
+                self.validate(lambda *_: payload)
 
     def test_rejects_pull_request_source_run(self):
         with self.assertRaisesRegex(ProvenanceError, "事件"):
