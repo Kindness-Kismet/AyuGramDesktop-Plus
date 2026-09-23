@@ -31,6 +31,7 @@ description: Use this skill when the user asks to commit changes, write a commit
 
 正文：
 
+- **全英文**，与标题一致；提交消息里不出现中文
 - 说明**为什么改**，其次才是怎么改；不复述 diff
 - 有副作用、约束或关键决策时单独成行写明，方便后人定位
 
@@ -39,12 +40,12 @@ description: Use this skill when the user asks to commit changes, write a commit
 ```
 fix: destroy debug server before QApplication teardown
 
-关闭 Debug 构建时弹出 CRT abort 弹窗。根因：QTcpServer 由
-文件级静态 unique_ptr 持有，析构落到 QApplication 销毁之后，
-属未定义行为。
+Closing a Debug build raised a CRT abort dialog. The QTcpServer was
+owned by a file-level static unique_ptr, so its destructor ran after
+QApplication teardown, which is undefined behaviour.
 
-修复：StartServer 挂 aboutToQuit 显式销毁。已验证三条退出
-路径全部干净。
+StartServer now destroys it on aboutToQuit. Verified all three exit
+paths are clean.
 ```
 
 ## 推送

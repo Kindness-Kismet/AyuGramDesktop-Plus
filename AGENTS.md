@@ -218,7 +218,7 @@ void Process(const TextWithEntities &text) {
 
 ```bash
 python scripts/prebuild.py            # 全量预编译，产物在 build/tmp
-python scripts/prebuild.py --list     # 31 个阶段清单（qt_5.15.19、openssl3、ffmpeg、tg_angle、tg_owt、breakpad、tde2e 等）
+python scripts/prebuild.py --list     # 34 个阶段清单（qt_5.15.19、openssl3、ffmpeg、tg_angle、tg_owt、breakpad、tde2e 等）
 python scripts/prebuild.py --stage openssl3 --stage qt_5.15.19   # 只跑指定阶段，可重复指定
 python scripts/prebuild.py --clean    # 清空依赖缓存
 ```
@@ -233,7 +233,7 @@ python scripts/prebuild.py --clean    # 清空依赖缓存
 python scripts/build.py               # Release，默认
 python scripts/build.py --dev         # Debug（同时收集 AyuGram.pdb）
 python scripts/build.py --all         # 两个配置都构建
-python scripts/build.py --jobs 16     # 并行编译数，默认 8
+python scripts/build.py --jobs 16     # 并行编译数，默认 32
 python scripts/build.py --reconfigure # 丢弃 CMake 缓存重新配置
 python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 ```
@@ -246,7 +246,7 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 
 - MSVC 预编译头约 514 MB，每个 `cl.exe` 进程各映射一份
 - `--jobs 8` 约占 4 GB 提交内存（峰值约 10 GB）；32 GB 物理内存加 16 GB 页面文件足够
-- 16 GB 物理内存的机器用 `--jobs 16` 会因提交内存耗尽触发 C3859 / C1076，不要盲目调高
+- 默认 32 是按 32 GB 内存定的；16 GB 物理内存的机器必须显式 `--jobs 8`，否则提交内存耗尽会触发 C3859 / C1076
 - CI 运行环境只有 16 GB，用 `--jobs 4`
 
 ### 增量编译时长（经验值）
@@ -327,7 +327,7 @@ python .claude/skills/upstream-diff/scripts/upstream.py bump tdesktop <sha>     
 
 ## AI 助手配置目录
 
-`.claude/skills/` 与 `.codex/skills/` 内容完全相同，分别供不同的 AI 工具读取，修改时两边同步。`.claude/` 另有 `commands/` 与 `scripts/`，存放崩溃报告处理流程及其脚本。
+`.claude/skills/` 与 `.codex/skills/` 内容完全相同，分别供不同的 AI 工具读取，修改时两边同步。`CLAUDE.md` 只有一行 `@AGENTS.md`，规范只维护本文件这一份。`.claude/` 另有 `commands/` 与 `scripts/`，存放崩溃报告处理流程及其脚本。
 
 `.pi/` 只有 `settings.json` 进入版本控制，运行时产生的 `tasks/` 已被忽略。
 

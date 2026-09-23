@@ -52,7 +52,7 @@ PR 是单一主题的完整交付：改动可读、决策可追溯、结果可�
 
 审查 PR 时按此清单过：
 
-- [ ] 新代码放对了目录（见 CLAUDE.md"改哪里决策表"）
+- [ ] 新代码放对了目录（见 AGENTS.md"改动位置对照表"）
 - [ ] 新文件已登记 `Telegram/CMakeLists.txt` 的 `ayugram_files`
 - [ ] 调试代码有 `#ifdef _DEBUG` 包裹
 - [ ] 新设置项在 `ayu_settings` 成员 / `to_json` / `from_json` 三处同步

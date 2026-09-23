@@ -35,7 +35,7 @@ a debugger UI. The moving parts:
 
 ### 1. A single agent-facing specification
 
-[`AGENTS.md`](AGENTS.md) (mirrored as `CLAUDE.md`) is the one document an
+[`AGENTS.md`](AGENTS.md) (`CLAUDE.md` imports it) is the one document an
 assistant reads first: where every kind of change belongs, naming rules, the
 rpl/reactive and threading conventions, build knowledge, and a review
 checklist. Keeping it accurate is part of every change.
@@ -139,7 +139,8 @@ Notes:
 - Builds default to the official public test API credentials. Pass
   `--api-id/--api-hash` to `build.py` to use your own.
 - MSVC precompiled headers take roughly 0.5 GB of committed memory per
-  compiler process; with 32 GB of RAM, `--jobs 8` is the sweet spot.
+  compiler process. Builds default to 32 jobs, which suits a 32 GB
+  machine; pass `--jobs 8` on a 16 GB one.
 - The `cmake` submodule is the official `desktop-app/cmake_helpers`;
   project-specific patches are applied at configure time by
   `scripts/build_support/cmake_patch.py`, so a "modified content" marker on
@@ -247,7 +248,7 @@ Telegram/
   codegen           upstream desktop-app modules, treated as read-only
 .github/
   upstream.json     the adaptation baseline: which upstream commits are merged
-AGENTS.md           the agent-facing specification (mirror: CLAUDE.md)
+AGENTS.md           the agent-facing specification (CLAUDE.md imports it)
 .claude/, .codex/   skill packages for AI assistants (skills only)
 ```
 
