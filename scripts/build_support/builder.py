@@ -25,6 +25,7 @@ from build_support.paths import (
 )
 from build_support.processes import run
 from build_support.recipes import qt_version
+from build_support.style_regen import regenerate_styles
 from build_support.timer import timed_step
 from build_support.toolchain import CMAKE_GENERATOR, CMAKE_TOOLSET, msvc_environment
 from build_support.version import parse_version, read_current_version
@@ -108,6 +109,8 @@ def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bo
     produced: list[tuple[str, object]] = []
     for profile in configurations:
         cmake_config = _CONFIGURATIONS[profile]
+        with timed_step(f"Regenerate styles {cmake_config}"):
+            print(f"  {regenerate_styles(environment, cmake_config)}", flush=True)
         with timed_step(f"Build {cmake_config}"):
             compile_target(environment, cmake_config, jobs)
         with timed_step(f"Collect {cmake_config}"):
@@ -195,6 +198,7 @@ def compile_target(environment: dict[str, str], cmake_config: str, jobs: int | N
 
 def stop_running_instances(configurations: list[str]) -> str:
     """停掉本项目产物目录里正在运行的实例，按可执行文件绝对路径匹配。"""
+    reaped = reap_orphaned_build_processes()
     targets = [
         output_dir(profile) / name
         for profile in configurations
@@ -206,7 +210,49 @@ def stop_running_instances(configurations: list[str]) -> str:
         if locking_pids(target):
             release_target(target)
             stopped += 1
-    return f"stopped {stopped} instance(s)" if stopped else "nothing running"
+    parts = []
+    if reaped:
+        parts.append(f"reaped {reaped} orphaned build process(es)")
+    parts.append(f"stopped {stopped} instance(s)" if stopped else "nothing running")
+    return ", ".join(parts)
+
+
+def reap_orphaned_build_processes() -> int:
+    """清掉父进程已退出的编译进程。上一轮构建被中断后它们会一直占着。
+
+    只收父进程已经不在的，正在跑的构建不会被误杀。
+    """
+    if sys.platform == "win32":
+        script = (
+            "$names = 'msbuild.exe','cl.exe','link.exe'; "
+            "$procs = Get-CimInstance Win32_Process | Where-Object { $names -contains $_.Name }; "
+            "$alive = [System.Collections.Generic.HashSet[int]]::new(); "
+            "foreach ($proc in $procs) { [void]$alive.Add([int]$proc.ProcessId) }; "
+            "foreach ($proc in $procs) { "
+            "  $parent = Get-CimInstance Win32_Process -Filter \"ProcessId=$($proc.ParentProcessId)\" "
+            "    -ErrorAction SilentlyContinue; "
+            "  if (-not $parent -and -not $alive.Contains([int]$proc.ParentProcessId)) { "
+            "    Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue; "
+            "    $proc.ProcessId "
+            "  } "
+            "}"
+        )
+        command = ["powershell", "-NoProfile", "-Command", script]
+    else:
+        # ppid 为 1 表示父进程已退出、被 init 接管。只匹配编译器命令名，
+        # 不碰 clangd 这类前缀相同的工具。
+        names = (
+            "cc1plus|cc1|clang|ld|ld.lld"
+            if sys.platform == "linux"
+            else "clang|clang\\+\\+|ld"
+        )
+        command = [
+            "bash", "-c",
+            f"ps -axo pid=,ppid=,comm= | awk '$2==1 && $3 ~ /^({names})$/ {{print $1}}' | "
+            "while read -r pid; do kill -9 \"$pid\" 2>/dev/null && echo \"$pid\"; done",
+        ]
+    result = subprocess.run(command, cwd=str(ROOT), text=True, errors="replace", capture_output=True, check=False)
+    return sum(1 for line in result.stdout.splitlines() if line.strip().isdigit())
 
 
 def locking_pids(path: Path) -> list[int]:

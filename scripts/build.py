@@ -93,8 +93,8 @@ def parse_args() -> argparse.Namespace:
         "--jobs",
         metavar="N",
         type=int,
-        default=8,
-        help="Parallel compile jobs (default: 8)",
+        default=32,
+        help="Parallel compile jobs (default: 32)",
     )
     parser.add_argument(
         "--pack",
