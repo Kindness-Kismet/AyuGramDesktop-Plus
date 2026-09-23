@@ -230,6 +230,7 @@ private:
 
 	[[nodiscard]] bool adjustPaletteRequired();
 	void applyDefaultThemeAccentColorizer();
+	void adjustPaletteUsingPaper(const QImage &prepared);
 	void adjustPaletteUsingBackground(const QImage &image);
 	void adjustPaletteUsingColors(const std::vector<QColor> &colors);
 	void adjustPaletteUsingColor(QColor color);

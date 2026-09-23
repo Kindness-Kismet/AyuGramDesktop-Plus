@@ -39,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/background_box.h"
 #include "core/application.h"
 #include "webview/webview_common.h"
+#include "ayu/ayu_settings.h"
 
 #include <QtCore/QBuffer>
 #include <QtCore/QJsonDocument>
@@ -536,6 +537,14 @@ void ChatBackground::start() {
 
 	initialRead();
 
+	// 开关改变了染色前提,运行中切换时先还原调色板再按当前壁纸重算。
+	AyuSettings::getInstance().disableChatBackgroundValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		restoreAdjustableColors();
+		adjustPaletteUsingPaper(_prepared);
+		_updates.fire({ BackgroundUpdate::Type::New, tile() });
+	}, _lifetime);
+
 	Core::App().domain().activeSessionValue(
 	) | rpl::filter([=](Main::Session *session) {
 		return session != _session;
@@ -800,14 +809,7 @@ void ChatBackground::setPrepared(
 	if (!prepared.isNull() && !_paper.isPattern() && _paper.isBlurred()) {
 		prepared = Ui::PrepareBlurredBackground(std::move(prepared));
 	}
-	if (adjustPaletteRequired()) {
-		if ((prepared.isNull() || _paper.isPattern())
-			&& !_paper.backgroundColors().empty()) {
-			adjustPaletteUsingColors(_paper.backgroundColors());
-		} else if (!prepared.isNull()) {
-			adjustPaletteUsingBackground(prepared);
-		}
-	}
+	adjustPaletteUsingPaper(prepared);
 
 	_original = std::move(original);
 	_prepared = std::move(prepared);
@@ -832,6 +834,10 @@ bool ChatBackground::adjustPaletteRequired() {
 			|| Data::details::IsTestingDefaultWallPaper(_paper);
 	};
 
+	// 禁用聊天壁纸时不画壁纸,再按壁纸主色染 msgServiceBg 等键只会串色。
+	if (AyuSettings::getInstance().disableChatBackground()) {
+		return false;
+	}
 	if (_editingTheme.has_value()) {
 		return false;
 	} else if (isNonDefaultThemeOrBackground() || nightMode()) {
@@ -872,6 +878,18 @@ void ChatBackground::adjustPaletteUsingBackground(const QImage &image) {
 void ChatBackground::adjustPaletteUsingColors(
 		const std::vector<QColor> &colors) {
 	adjustPaletteUsingColor(Ui::CountAverageColor(colors));
+}
+
+void ChatBackground::adjustPaletteUsingPaper(const QImage &prepared) {
+	if (!adjustPaletteRequired()) {
+		return;
+	}
+	if ((prepared.isNull() || _paper.isPattern())
+		&& !_paper.backgroundColors().empty()) {
+		adjustPaletteUsingColors(_paper.backgroundColors());
+	} else if (!prepared.isNull()) {
+		adjustPaletteUsingBackground(prepared);
+	}
 }
 
 void ChatBackground::adjustPaletteUsingColor(QColor color) {
