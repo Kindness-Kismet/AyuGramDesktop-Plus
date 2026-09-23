@@ -37,6 +37,10 @@ columnMinimalWidthMain: 380px;
 columnMinimalWidthThird: 292px;
 columnMaximalWidthThird: 392px;
 
+// 卡片化布局:栏间间隙与卡片圆角,卡片之间靠 2px 描边区分
+windowCardGap: 8px;
+windowCardRadius: 12px;
+
 adaptiveChatWideWidth: 880px;
 
 notifyBorder: windowShadowFgFallback;

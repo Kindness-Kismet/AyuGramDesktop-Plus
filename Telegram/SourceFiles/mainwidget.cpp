@@ -28,6 +28,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_histories.h"
 #include "data/stickers/data_stickers.h"
 #include "ui/chat/chat_theme.h"
+#include "ui/chat/floating_bar.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
 #include "ui/widgets/dropdown_menu.h"
@@ -445,6 +446,16 @@ MainWidget::MainWidget(
 	} else {
 		_history->show();
 	}
+
+	// 卡片圆角与描边遮罩层:透明鼠标事件、始终置顶,统一画各栏圆角和边框
+	_cardOverlay.create(this);
+	_cardOverlay->setAttribute(Qt::WA_TransparentForMouseEvents);
+	_cardOverlay->paintRequest(
+	) | rpl::on_next([=](QRect clip) {
+		paintCardOverlay(clip);
+	}, _cardOverlay->lifetime());
+	_cardOverlay->show();
+
 	orderWidgets();
 
 	if (!Core::UpdaterDisabled()) {
@@ -2139,6 +2150,8 @@ void MainWidget::showNewSection(
 
 	floatPlayerCheckVisibility();
 	orderWidgets();
+	// 新栏此时才可见,补一次布局让遮罩层收集到它的矩形,画出圆角和描边
+	updateControlsGeometry();
 }
 
 void MainWidget::checkMainSectionToLayer() {
@@ -2445,6 +2458,9 @@ void MainWidget::orderWidgets() {
 		_player->entity()->raiseDropdowns();
 	}
 	if (_hider) _hider->raise();
+	if (_cardOverlay) {
+		_cardOverlay->raise();
+	}
 }
 
 QPixmap MainWidget::grabForShowAnimation(const Window::SectionSlideParams &params) {
@@ -2550,9 +2566,42 @@ void MainWidget::paintEvent(QPaintEvent *e) {
 	if (_background) {
 		checkChatBackground();
 	}
+	auto p = QPainter(this);
+	// 卡片间隙露出的统一底色,与各面板同源
+	p.fillRect(e->rect(), st::windowBg);
 	if (_showAnimation) {
-		auto p = QPainter(this);
 		_showAnimation->paintContents(p);
+	}
+}
+
+void MainWidget::paintCardOverlay(QRect clip) {
+	if (_cardRects.empty()) {
+		return;
+	}
+	auto p = QPainter(_cardOverlay.data());
+	p.setRenderHint(QPainter::Antialiasing);
+
+	// 遮罩四角用的统一底色,与缝隙同色
+	const auto fill = st::windowBg->c;
+	const auto radius = st::windowCardRadius;
+	const auto border = Ui::FloatingBarBorder();
+
+	for (const auto &r : _cardRects) {
+		if (!r.intersects(clip)) {
+			continue;
+		}
+		// 用底色填掉方角与圆角之间的四角,制造圆角观感
+		auto square = QPainterPath();
+		square.addRect(r);
+		auto rounded = QPainterPath();
+		rounded.addRoundedRect(r, radius, radius);
+		p.fillPath(square.subtracted(rounded), fill);
+		p.setPen(QPen(border, 2));
+		p.setBrush(Qt::NoBrush);
+		p.drawRoundedRect(
+			QRectF(r).adjusted(1, 1, -1, -1),
+			radius,
+			radius);
 	}
 }
 
@@ -2752,76 +2801,79 @@ void MainWidget::updateControlsGeometry() {
 			_contentScrollAddToY);
 		if (_hider) _hider->setGeometry(0, 0, dialogsWidth, height());
 	} else {
+		const auto gap = st::windowCardGap;
+		const auto half = gap / 2;
 		auto thirdSectionWidth = _thirdSection ? _thirdColumnWidth : 0;
-		if (_thirdSection) {
-			auto thirdSectionTop = getThirdSectionTop();
-			_thirdSection->setGeometry(
-				width() - thirdSectionWidth,
-				thirdSectionTop,
-				thirdSectionWidth,
-				height() - thirdSectionTop);
-		}
-		const auto shadowTop = _controller->window().verticalShadowTop();
-		const auto shadowHeight = height() - shadowTop;
 		if (_dialogs) {
 			accumulate_min(
 				dialogsWidth,
 				width() - st::columnMinimalWidthMain);
-			_dialogs->setGeometryToLeft(0, 0, dialogsWidth, height());
 		}
+		const auto thirdTop = getThirdSectionTop();
+		// 三栏内缩留出间隙,间隙里露出 MainWidget 铺的底色
+		const auto historyLeft = dialogsWidth + half;
+		const auto historyRight = _thirdSection
+			? (width() - thirdSectionWidth - half)
+			: (width() - gap);
+		const auto historyWidth = historyRight - historyLeft;
+		if (_thirdSection) {
+			_thirdSection->setGeometry(
+				width() - thirdSectionWidth + half,
+				thirdTop + gap,
+				thirdSectionWidth - gap - half,
+				height() - thirdTop - gap * 2);
+		}
+		if (_dialogs) {
+			_dialogs->setGeometryToLeft(
+				gap,
+				gap,
+				dialogsWidth - gap - half,
+				height() - gap * 2);
+		}
+		// 卡片间隙已经区分各栏,两条 1px 竖直分隔线设零宽隐藏
 		if (_sideShadow) {
-			_sideShadow->setGeometryToLeft(
-				dialogsWidth,
-				shadowTop,
-				st::lineWidth,
-				shadowHeight);
+			_sideShadow->setGeometryToLeft(dialogsWidth, 0, 0, 0);
 		}
 		if (_thirdShadow) {
 			_thirdShadow->setGeometryToLeft(
-				width() - thirdSectionWidth - st::lineWidth,
-				shadowTop,
-				st::lineWidth,
-				shadowHeight);
+				width() - thirdSectionWidth,
+				0,
+				0,
+				0);
 		}
-		const auto mainSectionWidth = width()
-			- dialogsWidth
-			- thirdSectionWidth;
+		const auto mainSectionWidth = historyWidth;
 		if (_callTopBar) {
 			_callTopBar->resizeToWidth(mainSectionWidth);
-			_callTopBar->moveToLeft(dialogsWidth, 0);
+			_callTopBar->moveToLeft(historyLeft, gap);
 		}
 		if (_exportTopBar) {
 			_exportTopBar->resizeToWidth(mainSectionWidth);
-			_exportTopBar->moveToLeft(dialogsWidth, _callTopBarHeight);
+			_exportTopBar->moveToLeft(historyLeft, gap + _callTopBarHeight);
 		}
 		if (_player) {
 			_player->resizeToWidth(mainSectionWidth);
 			_player->moveToLeft(
-				dialogsWidth,
-				_callTopBarHeight + _exportTopBarHeight);
+				historyLeft,
+				gap + _callTopBarHeight + _exportTopBarHeight);
 		}
 		_history->setGeometryWithTopMoved(QRect(
-			dialogsWidth,
-			mainSectionTop,
+			historyLeft,
+			mainSectionTop + gap,
 			mainSectionWidth,
-			height() - mainSectionTop
+			height() - mainSectionTop - gap * 2
 		), _contentScrollAddToY);
 		if (_hider) {
 			_hider->setGeometryToLeft(
-				dialogsWidth,
-				0,
+				historyLeft,
+				gap,
 				mainSectionWidth,
-				height());
+				height() - gap * 2);
 		}
 	}
 	if (_mainSection) {
-		const auto mainSectionGeometry = QRect(
-			_history->x(),
-			mainSectionTop,
-			_history->width(),
-			height() - mainSectionTop);
+		// 内容区 section 与 history 卡片几何对齐(已内缩 gap)
 		_mainSection->setGeometryWithTopMoved(
-			mainSectionGeometry,
+			_history->geometry(),
 			_contentScrollAddToY);
 	}
 	refreshResizeAreas();
@@ -2830,6 +2882,26 @@ void MainWidget::updateControlsGeometry() {
 	}
 	updateMediaPlaylistPosition(_playerPlaylist->x());
 	_contentScrollAddToY = 0;
+
+	// 收集当前各栏矩形供遮罩层画圆角和描边;单栏模式铺满不画卡片
+	_cardRects.clear();
+	if (!isOneColumn()) {
+		if (_dialogs && !_dialogs->isHidden()) {
+			_cardRects.push_back(_dialogs->geometry());
+		}
+		if (_mainSection && !_mainSection->isHidden()) {
+			_cardRects.push_back(_mainSection->geometry());
+		} else if (!_history->isHidden()) {
+			_cardRects.push_back(_history->geometry());
+		}
+		if (_thirdSection && !_thirdSection->isHidden()) {
+			_cardRects.push_back(_thirdSection->geometry());
+		}
+	}
+	if (_cardOverlay) {
+		_cardOverlay->setGeometry(rect());
+		_cardOverlay->update();
+	}
 
 	floatPlayerUpdatePositions();
 }

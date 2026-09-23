@@ -27,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_premium_limits.h"
 #include "data/data_unread_value.h"
 #include "lang/lang_keys.h"
+#include "ui/chat/floating_bar.h"
 #include "ui/filter_icons.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/vertical_layout_reorder.h"
@@ -49,6 +50,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_menu_icons.h"
 
 #include <QtGui/QtEvents>
+#include <QtGui/QPainterPath>
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
@@ -140,21 +142,65 @@ void FiltersMenu::setup() {
 	) | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(&_outer);
 		p.setPen(Qt::NoPen);
-		p.setBrush(st::windowFiltersButton.textBg);
+		// 侧边栏与整窗共用统一底色,靠卡片描边区分,不用 filtersButton 底色
+		p.setBrush(st::windowBg);
 		p.drawRect(clip);
 	}, _outer.lifetime());
 
+	// 侧栏内容内缩成卡片:左上下留间隙,右边缘贴 _outer 让出的间隙由会话列表补齐。
+	const auto gap = st::windowCardGap;
 	_parent->heightValue(
 	) | rpl::on_next([=](int height) {
 		const auto width = st::windowFiltersWidth;
+		const auto cardWidth = width - gap;
 		_outer.setGeometry({ 0, 0, width, height });
-		_menu.resizeToWidth(width);
-		_menu.move(0, 0);
-		_scroll.setGeometry(
-			{ 0, _menu.height(), width, height - _menu.height() });
-		_container->resizeToWidth(width);
+		_menu.resizeToWidth(cardWidth);
+		_menu.move(gap, gap);
+		_scroll.setGeometry({
+			gap,
+			gap + _menu.height(),
+			cardWidth,
+			height - gap * 2 - _menu.height() });
+		_container->resizeToWidth(cardWidth);
 		_container->move(0, 0);
 	}, _outer.lifetime());
+
+	// 圆角与描边遮罩层:鼠标穿透并盖在按钮之上,与主窗口各栏卡片同一规格。
+	const auto overlay = Ui::CreateChild<Ui::RpWidget>(&_outer);
+	overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
+	overlay->show();
+	_outer.sizeValue(
+	) | rpl::on_next([=](QSize size) {
+		overlay->setGeometry(QRect(QPoint(), size));
+		overlay->raise();
+	}, _outer.lifetime());
+	overlay->paintRequest(
+	) | rpl::on_next([=] {
+		const auto card = QRect(
+			gap,
+			gap,
+			_outer.width() - gap,
+			_outer.height() - gap * 2);
+		if (card.isEmpty()) {
+			return;
+		}
+		auto p = QPainter(overlay);
+		p.setRenderHint(QPainter::Antialiasing);
+		const auto fill = st::windowBg->c;
+		const auto radius = st::windowCardRadius;
+		const auto border = Ui::FloatingBarBorder();
+		auto square = QPainterPath();
+		square.addRect(card);
+		auto rounded = QPainterPath();
+		rounded.addRoundedRect(card, radius, radius);
+		p.fillPath(square.subtracted(rounded), fill);
+		p.setPen(QPen(border, 2));
+		p.setBrush(Qt::NoBrush);
+		p.drawRoundedRect(
+			QRectF(card).adjusted(1, 1, -1, -1),
+			radius,
+			radius);
+	}, overlay->lifetime());
 
 	auto premium = Data::AmPremiumValue(&_session->session());
 
@@ -433,7 +479,7 @@ void FiltersMenu::refresh() {
 	}
 	_reorder->start();
 
-	_container->resizeToWidth(_outer.width());
+	_container->resizeToWidth(_outer.width() - st::windowCardGap);
 
 	// After the filters are refreshed, the scroll is reset,
 	// so we have to restore it.
