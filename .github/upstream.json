@@ -18,6 +18,7 @@
     "customised_paths": [
       ".gitmodules",
       "CMakeLists.txt",
+      "README.md",
       "Telegram/CMakeLists.txt",
       "Telegram/Resources/art/icon128.png",
       "Telegram/Resources/art/icon128@2x.png",
