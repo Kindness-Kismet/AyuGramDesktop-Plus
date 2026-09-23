@@ -284,8 +284,6 @@ QString embeddedThemeDisplayName(Window::Theme::EmbeddedType type) {
 		return tr::lng_settings_theme_day(tr::now);
 	case Window::Theme::EmbeddedType::Night:
 		return tr::lng_settings_theme_tinted(tr::now);
-	case Window::Theme::EmbeddedType::NightGreen:
-		return tr::lng_settings_theme_night(tr::now);
 	}
 	return tr::ayu_MessageShotThemeDefault(tr::now);
 }

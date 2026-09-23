@@ -153,18 +153,6 @@ style::colorizer ColorizerFrom(
 		} };
 		result.lightnessMin = 64;
 		break;
-	case EmbeddedType::NightGreen:
-		result.keepContrast = base::flat_map<QLatin1String, Pair>{ {
-			//{ qstr("windowFgActive"), Pair{ cColor("3fc1b0"), cColor("282e33") } }, // windowBgActive, windowBg
-			{ qstr("activeButtonFg"), Pair{ cColor("2da192"), cColor("282e33") } }, // activeButtonBg, windowBg
-			{ qstr("profileVerifiedCheckFg"), Pair{ cColor("3fc1b0"), cColor("282e33") } }, // profileVerifiedCheckBg, windowBg
-			{ qstr("overviewCheckFgActive"), Pair{ cColor("3fc1b0"), cColor("282e33") } }, // overviewCheckBgActive
-			// callIconFg is used not only over callAnswerBg,
-			// so this contrast-forcing breaks other buttons.
-			//{ qstr("callIconFg"), Pair{ cColor("5ad1c1"), cColor("1b1f23") } }, // callAnswerBg, callBgOpaque
-		} };
-		result.lightnessMin = 64;
-		break;
 	}
 	const auto nowLightness = color.lightness();
 	const auto limitedLightness = std::clamp(
@@ -274,17 +262,6 @@ std::vector<EmbeddedScheme> EmbeddedThemes() {
 			":/gui/night.tdesktop-theme",
 			qColor("5288c1")
 		},
-		EmbeddedScheme{
-			EmbeddedType::NightGreen,
-			qColor("485761"),
-			qColor("6b808d"),
-			qColor("6b808d"),
-			qColor("6b808d"),
-			qColor("75bfb5"),
-			name(tr::lng_settings_theme_night),
-			":/gui/night-green.tdesktop-theme",
-			qColor("3fc1b0")
-		},
 	};
 }
 
@@ -325,17 +302,6 @@ std::vector<QColor> DefaultAccentColors(EmbeddedType type) {
 			qColor("ab5149"),
 			qColor("697b97"),
 			qColor("9b834b"),
-		};
-	case EmbeddedType::NightGreen:
-		return {
-			qColor("60a8e7"),
-			qColor("4e9c57"),
-			qColor("ca7896"),
-			qColor("cc925c"),
-			qColor("a58ed2"),
-			qColor("d27570"),
-			qColor("7b8799"),
-			qColor("cbac67"),
 		};
 	}
 	Unexpected("Type in Window::Theme::AccentColors.");
@@ -424,7 +390,6 @@ bool AccentColors::setFromSerialized(const QByteArray &serialized) {
 		case EmbeddedType::Default:
 		case EmbeddedType::DayBlue:
 		case EmbeddedType::Night:
-		case EmbeddedType::NightGreen:
 			data.emplace(uncheckedType, color);
 			break;
 		default:
