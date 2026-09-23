@@ -8,7 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/emoji_sets_manager.h"
 
 #include "ayu/features/emoji_packs/emoji_packs.h"
-#include "ayu/ui/boxes/emoji_pack_import.h"
+#include "ayu/ui/boxes/emoji_packs_box.h"
 #include "mtproto/dedicated_file_loader.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/fade_wrap.h"
@@ -221,25 +221,16 @@ Inner::Inner(QWidget *parent, not_null<Main::Session*> session, Fn<void()> refre
 
 void Inner::setupContent() {
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
-	const auto presets = Ayu::EmojiPacks::presets();
 
 	for (const auto &set : kSets) {
-		if (!presets.empty() && (set.id == 1 || set.id == 3)
-			&& set.id != CurrentSetId()) {
-			continue;
-		}
 		content->add(object_ptr<Row>(content, _session, set));
 	}
-	Ayu::EmojiPacks::addPresetRows(content, _refresh);
+	// 已安装的表情包都带预览，统一用官方样式的行；预设行只列出未下载的。
 	for (const auto &pack : Ayu::EmojiPacks::installed()) {
-		if (std::any_of(presets.begin(), presets.end(), [&](const auto &preset) {
-			return preset.hash == pack.hash;
-		})) {
-			continue;
-		}
 		content->add(object_ptr<Row>(content, _session,
 			Set{ { pack.id, 0, 0, pack.name }, pack.previewPath }));
 	}
+	Ayu::EmojiPacks::addPresetRows(content, _refresh);
 
 	content->resizeToWidth(st::boxWidth);
 	Ui::ResizeFitChild(this, content);

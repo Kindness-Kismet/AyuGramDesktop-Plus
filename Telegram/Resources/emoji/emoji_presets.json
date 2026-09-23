@@ -1,0 +1,26 @@
+{
+  "source": "https://t.me/s/nagram_remote_metadata?q=%23emojiv2",
+  "presets": [
+    {
+      "id": "apple",
+      "name": "Apple",
+      "url": "https://github.com/samuelngs/apple-emoji-ttf/releases/download/macos-26-20260722-484daf4e/AppleColorEmoji-Linux.ttf",
+      "sha256": "e37c7af6265ac4a0af6d57bc65e86109a776d9966e8343334557f63da482516f",
+      "size": 115969256
+    },
+    {
+      "id": "joypixels",
+      "name": "JoyPixels",
+      "url": "https://raw.githubusercontent.com/shivangswain/joypixels/8c5a204d58f1830303a499e0335a223452decbff/system/fonts/JoyPixels.ttf",
+      "sha256": "ad28df711c496bf5d84e1511379762162eef3a585ebf0bea256ba11f7309acd7",
+      "size": 13321908
+    },
+    {
+      "id": "oneui",
+      "name": "Samsung One UI",
+      "url": "https://raw.githubusercontent.com/RealityRipple/oneui-emoji/d587ab50481ff2fd2cd48d27ced7489d2b2ecf6c/OneUI.ttf",
+      "sha256": "a3c7b8db7cd24dfd5558c433a1e6f3c08ee06011de2b70f9a0c197b18f7dd4d1",
+      "size": 20524872
+    }
+  ]
+}

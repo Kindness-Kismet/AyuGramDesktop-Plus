@@ -39,7 +39,7 @@ void BuildStickersAndEmoji(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 		.onClick = [=] {
 			controller->show(Box<Ui::Emoji::ManageSetsBox>(&controller->session()));
 		},
-		.keywords = { u"emoji"_q, u"字体"_q, u"表情包"_q },
+		.keywords = tr::ayu_EmojiPackSearchKeywords(tr::now).split(' '),
 	});
 	builder.addDividerText(tr::ayu_EmojiPackDescription());
 

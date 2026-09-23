@@ -8,7 +8,6 @@ from pathlib import Path
 
 from build_support.cmake_patch import LIBS_LOC_OPTION, PYTHON_OPTION, ensure_libs_loc_override
 from build_support.console import format_bytes, header, print_summary, warn
-from build_support.emoji_presets import DIRECTORY_NAME as EMOJI_DIRECTORY, prepared_files
 from build_support.paths import (
     APP_NAME,
     BUILD_DIR,
@@ -51,22 +50,20 @@ def clean_output_dir(profile: str) -> int:
     """删除产物目录里的运行残留，只保留构建产物，返回删除项数。"""
     directory = output_dir(profile)
     wanted = set(PRODUCT_BINARIES + (DEBUG_SYMBOLS if profile == "dev" else ()))
-    wanted.add(EMOJI_DIRECTORY)
     removed = 0
     for entry in directory.iterdir():
         if entry.name in wanted:
             continue
         if entry.is_dir():
-            shutil.rmtree(entry, ignore_errors=True)
+            shutil.rmtree(entry)
         else:
-            entry.unlink(missing_ok=True)
+            entry.unlink()
         removed += 1
     return removed
 
 
 def zip_output(profile: str) -> Path:
     directory = output_dir(profile)
-    emoji_files = prepared_files(directory / EMOJI_DIRECTORY)
     # release 是发布产物不带后缀，dev 本地调试用带 -dev 区分
     version = parse_version(read_current_version()).original
     suffix = "" if profile == "release" else f"-{profile}"
@@ -75,7 +72,6 @@ def zip_output(profile: str) -> Path:
         archive.unlink()
     # 目录里可能残留运行期数据（tdata、日志），只打包构建产物本身
     wanted = PRODUCT_BINARIES + (DEBUG_SYMBOLS if profile == "dev" else ())
-    wanted += tuple(f"{EMOJI_DIRECTORY}/{path.name}" for path in emoji_files)
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
         for name in wanted:
             source = directory / name
@@ -91,7 +87,6 @@ def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bo
 
     if not LIBRARIES_ARCH_DIR.is_dir():
         raise SystemExit(f"Dependencies missing at {LIBRARIES_ARCH_DIR}. Run scripts/prebuild.py first.")
-    prepared_files()
 
     with timed_step("Patch cmake helpers"):
         for note in ensure_libs_loc_override():
@@ -278,10 +273,4 @@ def collect(cmake_config: str, profile: str) -> list[tuple[str, object]]:
 
     if not any(path.suffix == ".exe" for _, path in collected):
         raise SystemExit(f"No executable found in {source_dir}")
-    emoji_destination = destination / EMOJI_DIRECTORY
-    emoji_destination.mkdir(exist_ok=True)
-    for source in prepared_files():
-        target = emoji_destination / source.name
-        shutil.copy2(source, target)
-        collected.append((profile, target))
     return collected

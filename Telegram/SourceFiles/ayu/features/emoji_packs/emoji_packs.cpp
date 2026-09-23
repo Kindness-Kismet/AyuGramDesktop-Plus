@@ -6,8 +6,8 @@
 #include <crl/crl_async.h>
 #include <crl/crl_on_main.h>
 
-#include <QtCore/QCryptographicHash>
 #include <QtCore/QCoreApplication>
+#include <QtCore/QCryptographicHash>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
@@ -17,6 +17,9 @@
 #include <QtCore/QSaveFile>
 #include <QtCore/QTemporaryDir>
 #include <QtGui/QPainter>
+#include <QtNetwork/QNetworkAccessManager>
+#include <QtNetwork/QNetworkReply>
+#include <QtNetwork/QNetworkRequest>
 
 namespace Ayu::EmojiPacks {
 namespace {
@@ -29,8 +32,29 @@ constexpr auto kSize = 72;
 constexpr auto kColumns = 32;
 constexpr auto kPerSprite = 512;
 constexpr auto kFontSizeLimit = 64 * 1024 * 1024;
+// 预设字体由清单登记大小，允许的余量比手动导入宽。
+constexpr auto kPresetSizeLimit = 4 * int64(kFontSizeLimit);
 
 bool Importing = false;
+
+// 每个预设同时只有一个下载，key 为预设 id。
+base::flat_map<QString, QPointer<QNetworkReply>> Downloads;
+std::unique_ptr<QNetworkAccessManager> Manager;
+
+// Manager 是静态持有，必须在 aboutToQuit 时销毁：静态析构期已在
+// QApplication 之后，那时操作 Qt 对象是未定义行为。
+QNetworkAccessManager &networkManager() {
+	if (!Manager) {
+		Manager = std::make_unique<QNetworkAccessManager>();
+		QObject::connect(
+			qApp,
+			&QCoreApplication::aboutToQuit,
+			qApp,
+			[] { Downloads.clear(); Manager = nullptr; },
+			Qt::UniqueConnection);
+	}
+	return *Manager;
+}
 
 QJsonObject readConfig(const QString &folder) {
 	auto file = QFile(folder + u"/config.json"_q);
@@ -55,7 +79,9 @@ ImportResult convertFont(
 		const std::vector<QString> &emojis,
 		const QString &presetName) {
 	auto file = QFile(path);
-	const auto sizeLimit = presetName.isEmpty() ? kFontSizeLimit : 4 * kFontSizeLimit;
+	const auto sizeLimit = presetName.isEmpty()
+		? int64(kFontSizeLimit)
+		: kPresetSizeLimit;
 	if (!file.open(QIODevice::ReadOnly)
 		|| file.size() <= 0 || file.size() > sizeLimit) {
 		return { .error = ImportError::Read };
@@ -197,8 +223,7 @@ std::vector<Pack> installed() {
 }
 
 std::vector<Preset> presets() {
-	const auto root = QCoreApplication::applicationDirPath() + u"/emoji-presets/"_q;
-	auto file = QFile(root + u"presets.json"_q);
+	auto file = QFile(u":/gui/emoji/emoji_presets.json"_q);
 	if (!file.open(QIODevice::ReadOnly)) {
 		return {};
 	}
@@ -207,15 +232,17 @@ std::vector<Preset> presets() {
 	auto result = std::vector<Preset>();
 	for (const auto &value : list) {
 		const auto preset = value.toObject();
-		const auto name = preset[u"file"_q].toString();
-		if (name.isEmpty() || QFileInfo(name).fileName() != name) {
+		const auto url = preset[u"url"_q].toString();
+		const auto hash = preset[u"sha256"_q].toString();
+		if (url.isEmpty() || hash.isEmpty()) {
 			continue;
 		}
 		result.push_back({
 			preset[u"id"_q].toString(),
 			preset[u"name"_q].toString(),
-			root + name,
-			preset[u"sha256"_q].toString(),
+			url,
+			hash,
+			int64(preset[u"size"_q].toDouble()),
 		});
 	}
 	return result;
@@ -242,6 +269,93 @@ void importFont(const QString &path, Fn<void(ImportResult)> done,
 			done(result);
 		});
 	});
+}
+
+void installPreset(const Preset &preset,
+		Fn<void(DownloadProgress)> progress,
+		Fn<void(ImportResult)> done) {
+	if (Downloads.contains(preset.id) || Importing) {
+		done({ .error = ImportError::Busy });
+		return;
+	}
+	const auto folder = Ui::Emoji::internal::CacheFileFolder()
+		+ u"/presets"_q;
+	if (!QDir().mkpath(folder)) {
+		done({ .error = ImportError::Write });
+		return;
+	}
+	const auto path = folder + '/' + preset.id + u".ttf"_q;
+	const auto id = preset.id;
+	const auto name = preset.name;
+	const auto hash = preset.hash;
+	const auto expected = preset.size;
+	auto request = QNetworkRequest(QUrl(preset.url));
+	request.setAttribute(
+		QNetworkRequest::RedirectPolicyAttribute,
+		QNetworkRequest::NoLessSafeRedirectPolicy);
+	const auto reply = networkManager().get(request);
+	const auto file = std::make_shared<QSaveFile>(path);
+	if (!file->open(QIODevice::WriteOnly)) {
+		reply->deleteLater();
+		done({ .error = ImportError::Write });
+		return;
+	}
+	Downloads.emplace(id, reply);
+	const auto digest = std::make_shared<QCryptographicHash>(
+		QCryptographicHash::Sha256);
+	// 写入失败也要 abort，靠这个标记和主动取消区分开。
+	const auto writeFailed = std::make_shared<bool>(false);
+	QObject::connect(reply, &QNetworkReply::downloadProgress,
+		reply, [=](qint64 already, qint64 total) {
+			progress({ already, (total > 0) ? total : expected });
+		});
+	// 边收边写并累加哈希，避免把整份字体留在内存里。
+	QObject::connect(reply, &QIODevice::readyRead, reply, [=] {
+		const auto bytes = reply->readAll();
+		digest->addData(bytes);
+		if (file->write(bytes) != bytes.size()) {
+			*writeFailed = true;
+			reply->abort();
+		}
+	});
+	QObject::connect(reply, &QNetworkReply::finished, reply, [=] {
+		Downloads.remove(id);
+		reply->deleteLater();
+		const auto error = reply->error();
+		const auto hashOk =
+			(QString::fromLatin1(digest->result().toHex()) == hash);
+		if (*writeFailed) {
+			file->cancelWriting();
+			done({ .error = ImportError::Write });
+			return;
+		} else if (error == QNetworkReply::OperationCanceledError) {
+			file->cancelWriting();
+			done({ .error = ImportError::Cancelled });
+			return;
+		} else if (error != QNetworkReply::NoError
+			|| !hashOk
+			|| !file->commit()) {
+			file->cancelWriting();
+			done({ .error = ImportError::Download });
+			return;
+		}
+		importFont(path, [=](ImportResult result) {
+			QFile(path).remove();
+			done(result);
+		}, name);
+	});
+}
+
+void cancelPreset(const QString &id) {
+	const auto i = Downloads.find(id);
+	if (i == Downloads.end()) {
+		return;
+	}
+	const auto reply = i->second;
+	Downloads.erase(i);
+	if (reply) {
+		reply->abort();
+	}
 }
 
 } // namespace Ayu::EmojiPacks

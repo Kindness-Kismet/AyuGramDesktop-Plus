@@ -109,12 +109,6 @@ PRIVATE
 )
 
 set(ayugram_files
-        ayu/features/emoji_packs/emoji_font.cpp
-        ayu/features/emoji_packs/emoji_font.h
-        ayu/features/emoji_packs/emoji_packs.cpp
-        ayu/features/emoji_packs/emoji_packs.h
-        ayu/ui/boxes/emoji_pack_import.cpp
-        ayu/ui/boxes/emoji_pack_import.h
         ayu/ayu_worker.cpp
         ayu/ayu_worker.h
         ayu/ayu_url_handlers.cpp
@@ -190,6 +184,8 @@ set(ayugram_files
         ayu/ui/message_history/history_section.h
         ayu/ui/boxes/edit_mark_box.cpp
         ayu/ui/boxes/edit_mark_box.h
+        ayu/ui/boxes/emoji_packs_box.cpp
+        ayu/ui/boxes/emoji_packs_box.h
         ayu/ui/boxes/font_selector.cpp
         ayu/ui/boxes/font_selector.h
         ayu/ui/boxes/import_filters_box.cpp
@@ -232,6 +228,10 @@ set(ayugram_files
         ayu/features/message_shot/message_shot.h
         ayu/features/auto_space/auto_space.cpp
         ayu/features/auto_space/auto_space.h
+        ayu/features/emoji_packs/emoji_font.cpp
+        ayu/features/emoji_packs/emoji_font.h
+        ayu/features/emoji_packs/emoji_packs.cpp
+        ayu/features/emoji_packs/emoji_packs.h
         ayu/features/message_shot/message_shot_theme_state.cpp
         ayu/features/message_shot/message_shot_theme_state.h
         ayu/features/forward/ayu_forward.cpp

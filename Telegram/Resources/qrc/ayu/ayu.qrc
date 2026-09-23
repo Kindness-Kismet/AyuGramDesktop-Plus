@@ -32,6 +32,7 @@
         <file alias="icons/ayu/donates/solana.svg">../../icons/ayu/donates/solana.svg</file>
         <file alias="icons/ayu/donates/tron.svg">../../icons/ayu/donates/tron.svg</file>
         <file alias="icons/ayu/donates/support_logo.svg">../../icons/ayu/donates/support_logo.svg</file>
+        <file alias="emoji/emoji_presets.json">../../emoji/emoji_presets.json</file>
         <file alias="langs/ayu/en.json">../../langs/ayu/en.json</file>
         <file alias="langs/ayu/zh-hans.json">../../langs/ayu/zh-hans.json</file>
     </qresource>
