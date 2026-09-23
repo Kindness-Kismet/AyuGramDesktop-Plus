@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/sponsored_message_bar.h"
 
+#include "ui/chat/floating_bar.h"
 #include "core/application.h"
 #include "core/click_handler_types.h"
 #include "core/ui_integration.h" // TextContext
@@ -275,7 +276,7 @@ void FillSponsoredMessageBar(
 
 	const auto draw = [=](QPainter &p) {
 		const auto r = widget->rect();
-		p.fillRect(r, st::historyPinnedBg);
+		PaintFloatingRounded(p, r, st::historyPinnedBg->c, st::windowCardRadius);
 		widget->paintRipple(p, 0, 0);
 		const auto leftPadding = st::msgReplyBarSkip + st::msgReplyBarSkip;
 		const auto rightPadding = st::msgReplyBarSkip;

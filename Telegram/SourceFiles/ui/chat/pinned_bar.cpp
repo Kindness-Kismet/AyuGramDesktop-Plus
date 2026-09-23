@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/pinned_bar.h"
 
+#include "ui/chat/floating_bar.h"
 #include "ui/chat/message_bar.h"
 #include "ui/effects/spoiler_mess.h"
 #include "ui/widgets/shadow.h"
@@ -29,19 +30,15 @@ PinnedBar::PinnedBar(
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();
 
-	_shadow->showOn(rpl::combine(
-		_wrap.shownValue(),
-		_wrap.heightValue(),
-		rpl::mappers::_1 && rpl::mappers::_2 > 0
-	) | rpl::filter([=](bool shown) {
-		return (shown == _shadow->isHidden());
-	}));
-
 	_wrap.entity()->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
-		QPainter(_wrap.entity()).fillRect(clip, st::historyPinnedBg);
+		auto p = QPainter(_wrap.entity());
+		PaintFloatingRounded(
+			p,
+			_wrap.entity()->rect(),
+			st::historyPinnedBg->c,
+			st::windowCardRadius);
 	}, lifetime());
-	_wrap.setAttribute(Qt::WA_OpaquePaintEvent);
 
 	if (customEmojiPausedChanges) {
 		std::move(

@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/group_call_bar.h"
 
+#include "ui/chat/floating_bar.h"
 #include "ui/chat/group_call_userpics.h"
 #include "ui/widgets/shadow.h"
 #include "ui/widgets/buttons.h"
@@ -121,9 +122,13 @@ GroupCallBar::GroupCallBar(
 
 	_wrap.entity()->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
-		QPainter(_wrap.entity()).fillRect(clip, st::historyPinnedBg);
+		auto p = QPainter(_wrap.entity());
+		PaintFloatingRounded(
+			p,
+			_wrap.entity()->rect(),
+			st::historyPinnedBg->c,
+			st::windowCardRadius);
 	}, lifetime());
-	_wrap.setAttribute(Qt::WA_OpaquePaintEvent);
 
 	auto copy = std::move(
 		content
@@ -273,8 +278,6 @@ void GroupCallBar::setupRightButton(not_null<RoundButton*> button) {
 }
 
 void GroupCallBar::paint(Painter &p) {
-	p.fillRect(_inner->rect(), st::historyComposeAreaBg);
-
 	const auto narrow = (_inner->width() < st::columnMinimalWidthLeft / 2);
 	if (!narrow) {
 		paintTitleAndStatus(p);
@@ -363,10 +366,7 @@ void GroupCallBar::paintUserpics(Painter &p) {
 }
 
 void GroupCallBar::updateControlsGeometry(QRect wrapGeometry) {
-	const auto hidden = _wrap.isHidden() || !wrapGeometry.height();
-	if (_shadow->isHidden() != hidden) {
-		_shadow->setVisible(!hidden);
-	}
+	_shadow->hide();
 }
 
 void GroupCallBar::setShadowGeometryPostprocess(Fn<QRect(QRect)> postprocess) {
@@ -403,7 +403,6 @@ void GroupCallBar::show() {
 	_forceHidden = false;
 	if (_shouldBeShown) {
 		_wrap.show(anim::type::instant);
-		_shadow->show();
 	}
 }
 

@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_translate_bar.h"
 
+#include "ui/chat/floating_bar.h"
 #include "boxes/translate_box.h"
 #include "ui/boxes/about_cocoon_box.h"
 #include "chat_helpers/stickers_lottie.h"
@@ -248,14 +249,6 @@ TranslateBar::TranslateBar(
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();
 
-	_shadow->showOn(rpl::combine(
-		_wrap.shownValue(),
-		_wrap.heightValue(),
-		rpl::mappers::_1 && rpl::mappers::_2 > 0
-	) | rpl::filter([=](bool shown) {
-		return (shown == _shadow->isHidden());
-	}));
-
 	setup(history);
 }
 
@@ -292,11 +285,15 @@ void TranslateBar::setup(not_null<History*> history) {
 	};
 	const auto button = static_cast<Ui::AbstractButton*>(_wrap.entity());
 	button->resize(0, st::historyTranslateBarHeight);
-	button->setAttribute(Qt::WA_OpaquePaintEvent);
 
 	button->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
-		QPainter(button).fillRect(clip, st::historyComposeButtonBg);
+		auto p = QPainter(button);
+		Ui::PaintFloatingRounded(
+			p,
+			button->rect(),
+			st::historyComposeButtonBg->c,
+			st::windowCardRadius);
 	}, button->lifetime());
 
 	button->setClickedCallback([=] {

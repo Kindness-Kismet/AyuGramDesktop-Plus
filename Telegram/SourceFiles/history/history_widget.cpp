@@ -54,6 +54,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/spoiler_mess.h"
 #include "ui/image/image.h"
 #include "ui/painter.h"
+#include "ui/chat/floating_bar.h"
 #include "ui/rect.h"
 #include "ui/power_saving.h"
 #include "ui/controls/compose_ai_button_factory.h"
@@ -7608,13 +7609,15 @@ void HistoryWidget::moveFieldControls() {
 		bottom -= keyboardHeight;
 		_kbScroll->setGeometryToLeft(0, bottom, width(), keyboardHeight);
 	}
+	// 胶囊底部留边,键盘弹出时悬在键盘上方
+	bottom -= st::historyComposeCapsuleMargin;
 
 // (_botMenu.button) (_attachToggle|_replaceMedia) (_sendAs) ---- _inlineResults ------------------------------ _tabbedPanel ------ _fieldBarCancel
 // (_attachDocument|_attachPhoto) _field (_ttlInfo) (_scheduled) (_giftToUser) (_silent|_cmdStart|_kbShow) (_toggleSuggestPost) (_kbHide|_tabbedSelectorToggle) _send
 // (_botStart|_unblock|_joinChannel|_muteUnmute|_reportMessages)
 
 	auto buttonsBottom = bottom - _attachToggle->height();
-	auto left = st::historySendRight;
+	auto left = st::historyComposeCapsuleMargin + st::historyComposeCapsulePadding;
 	if (_botMenu.button) {
 		const auto skip = st::historyBotMenuSkip;
 		_botMenu.button->moveToLeft(left + skip, buttonsBottom + skip);
@@ -7639,7 +7642,7 @@ void HistoryWidget::moveFieldControls() {
 			left,
 			bottom - fieldHeight() - st::historySendPadding);
 	}
-	auto right = st::historySendRight;
+	auto right = st::historyComposeCapsuleMargin + st::historyComposeCapsulePadding;
 	_send->moveToRight(right, buttonsBottom); right += _send->width();
 	_voiceRecordBar->moveToLeft(0, bottom - _voiceRecordBar->height());
 	_tabbedSelectorToggle->moveToRight(right, buttonsBottom);
@@ -7675,7 +7678,7 @@ void HistoryWidget::moveFieldControls() {
 	updateDiscardRichDraftGeometry();
 
 	_fieldBarCancel->moveToRight(
-		0,
+		st::historyComposeCapsuleMargin + st::historyComposeCapsulePadding,
 		_field->y() - st::historySendPadding - _fieldBarCancel->height());
 	if (_inlineResults) {
 		_inlineResults->moveBottom(_field->y() - st::historySendPadding);
@@ -7711,7 +7714,7 @@ void HistoryWidget::updateFieldSize() {
 	const auto kbShowShown = _history && !_kbShown && _keyboard->hasMarkup();
 	auto fieldWidth = width()
 		- (settings.showAttachButtonInMessageField() ? _attachToggle->width() : 0)
-		- st::historySendRight
+		- 2 * (st::historyComposeCapsuleMargin + st::historyComposeCapsulePadding)
 		- _send->width()
 		- (settings.showEmojiButtonInMessageField() ? _tabbedSelectorToggle->width() : 0);
 	if (_botMenu.button) {
@@ -8314,70 +8317,77 @@ void HistoryWidget::resizeEvent(QResizeEvent *e) {
 void HistoryWidget::updateControlsGeometry() {
 	const auto width = this->width();
 
-	_topBar->resizeToWidth(width);
-	_topBar->moveToLeft(0, 0);
+	// 标题条和通知条内缩,和输入胶囊对齐,条与条之间留间隙
+	const auto margin = st::historyComposeCapsuleMargin;
+	const auto barGap = st::windowCardGap;
+	_topBar->resizeToWidth(std::max(0, width - 2 * margin));
+	_topBar->moveToLeft(margin, margin);
 
 	const auto tabsLeftSkip = _subsectionTabs
 		? _subsectionTabs->leftSkip()
 		: 0;
-	const auto innerWidth = width - tabsLeftSkip;
+	const auto innerWidth = std::max(0, width - tabsLeftSkip - 2 * margin);
 
 	_voiceRecordBar->resizeToWidth(width);
 
 	moveFieldControls();
 
-	_topBars->move(tabsLeftSkip, _topBar->bottomNoMargins()
-		+ (_subsectionTabs ? _subsectionTabs->topSkip() : 0));
-	const auto groupCallTop = 0;
+	_topBars->move(
+		tabsLeftSkip + margin,
+		_topBar->bottomNoMargins()
+			+ margin
+			+ (_subsectionTabs ? _subsectionTabs->topSkip() : 0));
+	auto stackY = 0;
+	const auto place = [&](int height) {
+		const auto top = stackY;
+		if (height > 0) {
+			stackY += height + barGap;
+		}
+		return top;
+	};
+	const auto groupCallTop = place(_groupCallBar ? _groupCallBar->height() : 0);
 	if (_groupCallBar) {
 		_groupCallBar->move(0, groupCallTop);
 		_groupCallBar->resizeToWidth(innerWidth);
 	}
-	const auto requestsTop = groupCallTop
-		+ (_groupCallBar ? _groupCallBar->height() : 0);
+	const auto requestsTop = place(_requestsBar ? _requestsBar->height() : 0);
 	if (_requestsBar) {
 		_requestsBar->move(0, requestsTop);
 		_requestsBar->resizeToWidth(innerWidth);
 	}
-	const auto pinnedBarTop = requestsTop
-		+ (_requestsBar ? _requestsBar->height() : 0);
+	const auto pinnedBarTop = place(_pinnedBar ? _pinnedBar->height() : 0);
 	if (_pinnedBar) {
 		_pinnedBar->move(0, pinnedBarTop);
 		_pinnedBar->resizeToWidth(innerWidth);
 	}
-	const auto sponsoredMessageBarTop = pinnedBarTop
-		+ (_pinnedBar ? _pinnedBar->height() : 0);
+	const auto sponsoredMessageBarTop = place(
+		_sponsoredMessageBar ? _sponsoredMessageBar->height() : 0);
 	if (_sponsoredMessageBar) {
 		_sponsoredMessageBar->move(0, sponsoredMessageBarTop);
 		_sponsoredMessageBar->resizeToWidth(innerWidth);
 	}
-	const auto translateTop = sponsoredMessageBarTop
-		+ (_sponsoredMessageBar ? _sponsoredMessageBar->height() : 0);
+	const auto translateTop = place(_translateBar ? _translateBar->height() : 0);
 	if (_translateBar) {
 		_translateBar->move(0, translateTop);
 		_translateBar->resizeToWidth(innerWidth);
 	}
-	const auto paysStatusTop = translateTop
-		+ (_translateBar ? _translateBar->height() : 0);
+	const auto paysStatusTop = place(
+		_paysStatus ? _paysStatus->bar().height() : 0);
 	if (_paysStatus) {
 		_paysStatus->bar().move(0, paysStatusTop);
 	}
-	const auto contactStatusTop = paysStatusTop
-		+ (_paysStatus ? _paysStatus->bar().height() : 0);
+	const auto contactStatusTop = place(
+		_contactStatus ? _contactStatus->bar().height() : 0);
 	if (_contactStatus) {
-		_contactStatus->bar().move(tabsLeftSkip, contactStatusTop);
+		_contactStatus->bar().move(0, contactStatusTop);
 	}
-	const auto businessBotTop = contactStatusTop
-		+ (_contactStatus ? _contactStatus->bar().height() : 0);
+	const auto businessBotTop = place(
+		_businessBotStatus ? _businessBotStatus->bar().height() : 0);
 	if (_businessBotStatus) {
-		_businessBotStatus->bar().move(tabsLeftSkip, businessBotTop);
+		_businessBotStatus->bar().move(0, businessBotTop);
 	}
-	const auto scrollAreaTop = _topBars->y()
-		+ businessBotTop
-		+ (_businessBotStatus ? _businessBotStatus->bar().height() : 0);
-	_topBars->resize(
-		innerWidth,
-		scrollAreaTop - _topBars->y() + st::lineWidth);
+	const auto scrollAreaTop = _topBars->y() + stackY;
+	_topBars->resize(innerWidth, stackY + st::lineWidth);
 	if (_scroll->y() != scrollAreaTop || _scroll->x() != tabsLeftSkip) {
 		_scroll->moveToLeft(tabsLeftSkip, scrollAreaTop);
 		if (_autocomplete) {
@@ -8410,11 +8420,12 @@ void HistoryWidget::updateControlsGeometry() {
 	const auto topShadowRight = (isThreeColumn && !_inGrab && _peer)
 		? st::lineWidth
 		: 0;
+	// 悬浮样式下隐藏顶部分隔线,高度置 0 避免各处 show 生效
 	_topShadow->setGeometryToLeft(
 		topShadowLeft,
 		_topBar->bottomNoMargins(),
 		width - topShadowLeft - topShadowRight,
-		st::lineWidth);
+		0);
 }
 
 void HistoryWidget::itemRemoved(not_null<const HistoryItem*> item) {
@@ -8675,7 +8686,10 @@ void HistoryWidget::updateHistoryGeometry(
 		newScrollHeight -= _unblock->height();
 	} else {
 		if (editingMessage() || _canSendMessages) {
-			newScrollHeight -= (fieldHeight() + 2 * st::historySendPadding);
+			// 上下各留一个 margin,消息列表与胶囊之间再抬一份
+			newScrollHeight -= (fieldHeight()
+				+ 2 * st::historySendPadding
+				+ 3 * st::historyComposeCapsuleMargin);
 		} else if (_sendRestriction) {
 			newScrollHeight -= _sendRestriction->height();
 		}
@@ -11396,7 +11410,40 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 	}
 	p.setInactive(
 		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
-	p.fillRect(myrtlrect(0, backy, width(), backh), st::historyReplyBg);
+	// 输入区背景改成圆角胶囊,四周留边悬浮在聊天背景上
+	const auto capsuleMargin = st::historyComposeCapsuleMargin;
+	const auto capsuleRadius = st::historyComposeCapsuleRadius;
+	const auto capsuleRect = myrtlrect(
+		capsuleMargin,
+		backy,
+		width() - 2 * capsuleMargin,
+		backh);
+	{
+		auto hq = PainterHighQualityEnabler(p);
+		// 胶囊底色比窗口底色略抬一点,避免和背景糊在一起
+		const auto base = st::windowBg->c;
+		const auto luminance = (base.red() * 299
+			+ base.green() * 587
+			+ base.blue() * 114) / 1000;
+		const auto capsuleBg = (luminance > 128)
+			? QColor(0xf4, 0xf5, 0xf7)
+			: QColor(
+				qBound(0, base.red() + 16, 255),
+				qBound(0, base.green() + 16, 255),
+				qBound(0, base.blue() + 16, 255));
+		p.setPen(Qt::NoPen);
+		p.setBrush(capsuleBg);
+		p.drawRoundedRect(capsuleRect, capsuleRadius, capsuleRadius);
+		p.setPen(QPen(Ui::FloatingBarBorder(), 2));
+		p.setBrush(Qt::NoBrush);
+		p.drawRoundedRect(
+			QRectF(capsuleRect).adjusted(1, 1, -1, -1),
+			capsuleRadius,
+			capsuleRadius);
+	}
+	// 回复/编辑/转发条的内容整体右移,落进胶囊内部
+	p.translate(capsuleMargin, 0);
+	const auto fullWidth = width() - 2 * capsuleMargin;
 
 	const auto media = (!_previewDrawPreview && drawMsgText)
 		? drawMsgText->media()
@@ -11436,7 +11483,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 		st::historyLinkIcon.paint(
 			p,
 			st::historyReplyIconPosition + QPoint(0, backy),
-			width());
+			fullWidth);
 		const auto textTop = backy + st::msgReplyPadding.top();
 		auto previewLeft = st::historyReplySkip;
 
@@ -11449,7 +11496,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 			previewLeft += st::historyReplyPreview + st::msgReplyBarSkip;
 		}
 		p.setPen(st::historyReplyNameFg);
-		const auto elidedWidth = width()
+		const auto elidedWidth = fullWidth
 			- previewLeft
 			- _fieldBarCancel->width()
 			- st::msgReplyPadding.right();
@@ -11471,7 +11518,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 		const auto pausedSpoiler = paused || On(PowerSaving::kChatSpoiler);
 		auto replyLeft = st::historyReplySkip;
 		if (_suggestOptions) {
-			_suggestOptions->paintIcon(p, 0, backy, width());
+			_suggestOptions->paintIcon(p, 0, backy, fullWidth);
 		} else {
 			(_editMsgId
 				? st::historyEditIcon
@@ -11480,7 +11527,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 				: st::historyReplyIcon).paint(
 					p,
 					st::historyReplyIconPosition + QPoint(0, backy),
-					width());
+					fullWidth);
 		}
 		if (drawMsgText) {
 			if (hasPreview) {
@@ -11521,7 +11568,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 				replyLeft += st::historyReplyPreview + st::msgReplyBarSkip;
 			}
 			if (_suggestOptions) {
-				_suggestOptions->paintLines(p, replyLeft, backy, width());
+				_suggestOptions->paintLines(p, replyLeft, backy, fullWidth);
 			} else {
 				p.setPen(st::historyReplyNameFg);
 				if (_editMsgId) {
@@ -11531,7 +11578,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 						p,
 						replyLeft,
 						backy + st::msgReplyPadding.top(),
-						width()
+						fullWidth
 							- replyLeft
 							- _fieldBarCancel->width()
 							- st::msgReplyPadding.right());
@@ -11543,7 +11590,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 						st::msgReplyPadding.top()
 							+ st::msgServiceNameFont->height
 							+ backy),
-					.availableWidth = width()
+					.availableWidth = fullWidth
 						- replyLeft
 						- _fieldBarCancel->width()
 						- st::msgReplyPadding.right(),
@@ -11565,7 +11612,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 					+ st::msgDateFont->ascent,
 				st::msgDateFont->elided(
 					tr::lng_profile_loading(tr::now),
-					width()
+					fullWidth
 						- replyLeft
 						- _fieldBarCancel->width()
 						- st::msgReplyPadding.right()));
@@ -11573,15 +11620,15 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 	} else if (hasForward) {
 		st::historyForwardIcon.paint(
 			p,
-			st::historyReplyIconPosition + QPoint(0, backy), width());
+			st::historyReplyIconPosition + QPoint(0, backy), fullWidth);
 		const auto x = st::historyReplySkip;
-		const auto available = width()
+		const auto available = fullWidth
 			- x
 			- _fieldBarCancel->width()
 			- st::msgReplyPadding.right();
-		_forwardPanel->paint(p, x, backy, available, width());
+		_forwardPanel->paint(p, x, backy, available, fullWidth);
 	} else if (_suggestOptions) {
-		_suggestOptions->paintBar(p, 0, backy, width());
+		_suggestOptions->paintBar(p, 0, backy, fullWidth);
 	}
 }
 

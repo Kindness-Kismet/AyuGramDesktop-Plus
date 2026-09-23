@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/requests_bar.h"
 
+#include "ui/chat/floating_bar.h"
 #include "ui/chat/group_call_userpics.h"
 #include "ui/widgets/shadow.h"
 #include "ui/text/text_options.h"
@@ -36,9 +37,13 @@ RequestsBar::RequestsBar(
 
 	_wrap.entity()->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
-		QPainter(_wrap.entity()).fillRect(clip, st::historyPinnedBg);
+		auto p = QPainter(_wrap.entity());
+		PaintFloatingRounded(
+			p,
+			_wrap.entity()->rect(),
+			st::historyPinnedBg->c,
+			st::windowCardRadius);
 	}, lifetime());
-	_wrap.setAttribute(Qt::WA_OpaquePaintEvent);
 
 	auto copy = std::move(
 		content
@@ -135,8 +140,6 @@ void RequestsBar::setupInner() {
 }
 
 void RequestsBar::paint(Painter &p) {
-	p.fillRect(_inner->rect(), st::historyComposeAreaBg);
-
 	const auto userpicsSize = st::historyRequestsUserpics.size;
 	const auto userpicsTop = st::lineWidth + (st::historyRequestsHeight
 		- st::lineWidth
@@ -165,10 +168,7 @@ void RequestsBar::paint(Painter &p) {
 }
 
 void RequestsBar::updateControlsGeometry(QRect wrapGeometry) {
-	const auto hidden = _wrap.isHidden() || !wrapGeometry.height();
-	if (_shadow->isHidden() != hidden) {
-		_shadow->setVisible(!hidden);
-	}
+	_shadow->hide();
 }
 
 void RequestsBar::setShadowGeometryPostprocess(Fn<QRect(QRect)> postprocess) {
@@ -194,7 +194,6 @@ void RequestsBar::show() {
 	_forceHidden = false;
 	if (_shouldBeShown) {
 		_wrap.show(anim::type::instant);
-		_shadow->show();
 	}
 }
 

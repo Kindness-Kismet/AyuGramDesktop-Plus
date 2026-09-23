@@ -1283,7 +1283,8 @@ historyComposeField: InputField(defaultInputField) {
 	textMargins: margins(0px, 0px, 0px, 0px);
 	textAlign: align(left);
 	textFg: historyComposeAreaFg;
-	textBg: historyComposeAreaBg;
+	// 透明底,融入外层胶囊,不再多一块白色矩形
+	textBg: transparent;
 	heightMin: 36px;
 	heightMax: 72px;
 	placeholderFg: placeholderFg;
@@ -1302,6 +1303,10 @@ historyComposeFieldMaxHeight: 224px;
 historyComposeFieldFadeHeight: 6px;
 historySendRight: 2px;
 historySendPadding: 9px;
+// 输入区胶囊:距窗口边缘间距、圆角半径、胶囊内侧边距
+historyComposeCapsuleMargin: 12px;
+historyComposeCapsuleRadius: 23px;
+historyComposeCapsulePadding: 8px;
 // historyMinHeight: 56px;
 
 historyAttach: IconButton(defaultIconButton) {
@@ -1386,7 +1391,8 @@ historyAttachEmojiInner: IconButton(historyAttach) {
 }
 historyAttachEmoji: EmojiButton {
 	inner: historyAttachEmojiInner;
-	bg: historyComposeAreaBg;
+	// 透明底,交给输入区胶囊自己画背景,否则按钮会盖掉胶囊底部描边。
+	bg: transparent;
 	lineFg: historyEmojiCircleFg;
 	lineFgOver: historyEmojiCircleFgOver;
 }

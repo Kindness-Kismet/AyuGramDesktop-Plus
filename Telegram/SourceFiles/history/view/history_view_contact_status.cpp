@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_contact_status.h"
 
+#include "ui/chat/floating_bar.h"
 #include "lang/lang_keys.h"
 #include "ui/controls/userpic_button.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
@@ -294,9 +295,12 @@ void ContactStatus::BgButton::onStateChanged(
 }
 
 void ContactStatus::BgButton::paintEvent(QPaintEvent *e) {
-	QPainter p(this);
-
-	p.fillRect(e->rect(), isOver() ? _st.overBgColor : _st.bgColor);
+	auto p = QPainter(this);
+	Ui::PaintFloatingRounded(
+		p,
+		rect(),
+		isOver() ? _st.overBgColor->c : _st.bgColor->c,
+		st::windowCardRadius);
 	paintRipple(p, 0, 0);
 }
 
@@ -1213,8 +1217,12 @@ void BusinessBotStatus::Bar::showMenu() {
 }
 
 void BusinessBotStatus::Bar::paintEvent(QPaintEvent *e) {
-	QPainter p(this);
-	p.fillRect(e->rect(), st::historyContactStatusButton.bgColor);
+	auto p = QPainter(this);
+	Ui::PaintFloatingRounded(
+		p,
+		rect(),
+		st::historyContactStatusButton.bgColor->c,
+		st::windowCardRadius);
 }
 
 int BusinessBotStatus::Bar::resizeGetHeight(int newWidth) {
@@ -1410,8 +1418,12 @@ rpl::producer<> PaysStatus::Bar::removeClicks() const {
 }
 
 void PaysStatus::Bar::paintEvent(QPaintEvent *e) {
-	QPainter p(this);
-	p.fillRect(e->rect(), st::historyContactStatusButton.bgColor);
+	auto p = QPainter(this);
+	Ui::PaintFloatingRounded(
+		p,
+		rect(),
+		st::historyContactStatusButton.bgColor->c,
+		st::windowCardRadius);
 }
 
 int PaysStatus::Bar::resizeGetHeight(int newWidth) {
