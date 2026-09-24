@@ -169,8 +169,7 @@ mediaPlayerMenuCheck: icon {{ "player/player_check", mediaPlayerActiveFg }};
 
 mediaPlayerSpeedMenuInner: Menu(menuWithIcons) {
 	separator: MenuSeparator(defaultMenuSeparator) {
-		padding: margins(0px, 4px, 0px, 4px);
-		width: 6px;
+		padding: margins(12px, 7px, 12px, 7px);
 	}
 	itemPadding: margins(54px, 7px, 54px, 9px);
 	itemFgDisabled: mediaPlayerActiveFg;

@@ -584,7 +584,7 @@ Chatbots::Chatbots(
 	QWidget *parent,
 	not_null<Window::SessionController*> controller)
 : Section(parent, controller)
-, _bottomSkipRounding(st::boxRadius, st::boxDividerBg) {
+, _bottomSkipRounding(st::boxRadius, st::windowBg) {
 	setupContent();
 }
 

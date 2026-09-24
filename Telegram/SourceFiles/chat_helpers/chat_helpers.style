@@ -808,8 +808,7 @@ defaultEmojiPan: EmojiPan {
 	menu: popupMenuWithIcons;
 	menuAttention: menuWithIconsAttention;
 	expandedSeparator: MenuSeparator(defaultMenuSeparator) {
-		padding: margins(0px, 4px, 0px, 4px);
-		width: 6px;
+		padding: margins(12px, 7px, 12px, 7px);
 	}
 	tabs: emojiTabs;
 	search: defaultTabbedSearch;

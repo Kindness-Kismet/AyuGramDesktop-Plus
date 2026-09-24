@@ -322,8 +322,8 @@ historyInfoToast: Toast(defaultToast) {
 }
 historyInfoToastIcon: icon {{ "toast/info", toastFg }};
 
-bubbleRadiusSmall: roundRadiusLarge;
-bubbleRadiusLarge: 16px;
+bubbleRadiusSmall: 8px;
+bubbleRadiusLarge: 12px;
 
 historyPhotoLeft: 14px;
 historyPhotoBubbleMinWidth: 200px;
@@ -374,7 +374,7 @@ HistoryFileLayout {
 	thumbSkip: pixels;
 }
 
-msgFileThumbRadiusSmall: 4px;
+msgFileThumbRadiusSmall: 8px;
 msgFileThumbRadiusLarge: 12px;
 msgFileLayout: HistoryFileLayout {
 	padding: margins(12px, 8px, 10px, 8px);
@@ -638,8 +638,7 @@ historyRevertItemAboutStyle: TextStyle(defaultTextStyle) {
 }
 
 expandedMenuSeparator: MenuSeparator(defaultMenuSeparator) {
-	padding: margins(0px, 4px, 0px, 4px);
-	width: 6px;
+	padding: margins(12px, 7px, 12px, 7px);
 }
 popupMenuExpandedSeparator: PopupMenu(popupMenuWithIcons) {
 	menu: Menu(menuWithIcons) {

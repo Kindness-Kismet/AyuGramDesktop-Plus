@@ -342,7 +342,9 @@ MainMenu::MainMenu(
 	object_ptr<Ui::VerticalLayout>(_inner.get()))))
 , _shadow(_inner->add(object_ptr<Ui::SlideWrap<Ui::PlainShadow>>(
 	_inner.get(),
-	object_ptr<Ui::PlainShadow>(_inner.get()))))
+	object_ptr<Ui::PlainShadow>(_inner.get(), st::windowDividerFg)),
+	{ st::defaultBoxDividerLabelPadding.left(), 0,
+		st::defaultBoxDividerLabelPadding.right(), 0 }))
 , _menu(_inner->add(
 	object_ptr<Ui::VerticalLayout>(_inner.get()),
 	{ 0, st::mainMenuSkip, 0, 0 }))
@@ -359,11 +361,15 @@ MainMenu::MainMenu(
 	setupArchive();
 	setupMenu();
 
-	const auto shadow = Ui::CreateChild<Ui::PlainShadow>(this);
+	const auto shadow = Ui::CreateChild<Ui::PlainShadow>(
+		this,
+		st::windowDividerFg);
 	widthValue(
 	) | rpl::on_next([=](int width) {
 		const auto line = st::lineWidth;
-		shadow->setGeometry(0, st::mainMenuCoverHeight - line, width, line);
+		const auto inset = st::defaultBoxDividerLabelPadding.left();
+		shadow->setGeometry(inset, st::mainMenuCoverHeight - line,
+			width - 2 * inset, line);
 	}, shadow->lifetime());
 
 	_nightThemeSwitch.setCallback([this] {
@@ -583,8 +589,9 @@ void MainMenu::setupArchive() {
 		st::mainMenuButton,
 		{ &st::menuIconArchiveOpen });
 	inner->add(
-		object_ptr<Ui::PlainShadow>(inner),
-		{ 0, st::mainMenuSkip, 0, st::mainMenuSkip });
+		object_ptr<Ui::PlainShadow>(inner, st::windowDividerFg),
+		{ st::defaultBoxDividerLabelPadding.left(), st::mainMenuSkip,
+			st::defaultBoxDividerLabelPadding.right(), st::mainMenuSkip });
 	button->setAcceptBoth(true);
 	button->clicks(
 	) | rpl::on_next([=](Qt::MouseButton which) {
@@ -750,8 +757,9 @@ void MainMenu::setupMenu() {
 
 		if (settings.showMyProfileInDrawer() || settings.showBotsInDrawer())
 		_menu->add(
-			object_ptr<Ui::PlainShadow>(_menu),
-			{ 0, st::mainMenuSkip, 0, st::mainMenuSkip });
+			object_ptr<Ui::PlainShadow>(_menu, st::windowDividerFg),
+			{ st::defaultBoxDividerLabelPadding.left(), st::mainMenuSkip,
+				st::defaultBoxDividerLabelPadding.right(), st::mainMenuSkip });
 
 		if (settings.showNewGroupInDrawer())
 		AddMyChannelsBox(addAction(

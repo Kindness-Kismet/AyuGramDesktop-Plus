@@ -115,7 +115,7 @@ mainMenuUserpic: UserpicButton(defaultUserpicButton) {
 	photoSize: 48px;
 }
 mainMenuButton: SettingsButton(defaultSettingsButton) {
-	style: semiboldTextStyle;
+	style: defaultTextStyle;
 	padding: margins(61px, 11px, 20px, 9px);
 	toggleSkip: 19px;
 	iconLeft: 21px;

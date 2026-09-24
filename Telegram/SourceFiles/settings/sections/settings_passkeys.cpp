@@ -145,7 +145,7 @@ Passkeys::Passkeys(
 	not_null<Window::SessionController*> controller)
 : Section(parent, controller)
 , _container(Ui::CreateChild<Ui::VerticalLayout>(this))
-, _bottomSkipRounding(st::boxRadius, st::boxDividerBg) {
+, _bottomSkipRounding(st::boxRadius, st::windowBg) {
 	setupContent();
 }
 

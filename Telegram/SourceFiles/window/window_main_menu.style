@@ -8,9 +8,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 using "window/window.style";
 
 mainMenuWidth: 274px;
-mainMenuCoverHeight: 134px;
+mainMenuCoverHeight: 120px;
 mainMenuUserpicLeft: 24px;
-mainMenuUserpicTop: 20px;
+mainMenuUserpicTop: 16px;
 mainMenuCloudButton: IconButton {
 	width: 48px;
 	height: 48px;
@@ -27,9 +27,9 @@ mainMenuResetScaleRight: 12px;
 mainMenuResetScaleTop: 2px;
 mainMenuResetScaleIconLeft: 5px;
 mainMenuCoverNameLeft: 26px;
-mainMenuCoverNameTop: 84px;
+mainMenuCoverNameTop: 74px;
 mainMenuCoverStatusLeft: mainMenuCoverNameLeft;
-mainMenuCoverStatusTop: 103px;
+mainMenuCoverStatusTop: 94px;
 mainMenuSkip: 6px;
 mainMenuFooterHeightMin: 80px;
 mainMenu: Menu(defaultMenu) {

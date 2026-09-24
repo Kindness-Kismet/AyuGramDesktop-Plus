@@ -86,7 +86,7 @@ Location::Location(
 	not_null<Window::SessionController*> controller)
 : Section(parent, controller)
 , _config(ResolveBusinessMapsConfig(&controller->session()))
-, _bottomSkipRounding(st::boxRadius, st::boxDividerBg) {
+, _bottomSkipRounding(st::boxRadius, st::windowBg) {
 	setupContent(controller);
 }
 

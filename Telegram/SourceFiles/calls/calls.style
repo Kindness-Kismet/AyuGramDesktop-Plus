@@ -649,7 +649,7 @@ groupCallMenu: Menu(defaultMenu) {
 	itemFgShortcutDisabled: groupCallMemberNotJoinedStatus;
 
 	separator: MenuSeparator(defaultMenuSeparator) {
-		padding: margins(0px, 4px, 0px, 4px);
+		padding: margins(12px, 6px, 12px, 6px);
 		fg: groupCallMenuBgOver;
 	}
 	arrow: icon {{ "menu/submenu_arrow", groupCallMemberNotJoinedStatus }};
@@ -1153,8 +1153,8 @@ groupCallLayerBox: Box(groupCallBox) {
 }
 groupCallDividerBar: DividerBar {
 	bg: groupCallBg;
-	top: icon {{ "box_divider_top", groupCallMemberNotJoinedStatus }};
-	bottom: icon {{ "box_divider_bottom", groupCallMemberNotJoinedStatus }};
+	top: icon {{ size(1px, 1px), groupCallMemberNotJoinedStatus }};
+	bottom: icon {{ size(1px, 1px), groupCallMemberNotJoinedStatus }};
 }
 groupCallDividerLabel: DividerLabel {
 	bar: groupCallDividerBar;
