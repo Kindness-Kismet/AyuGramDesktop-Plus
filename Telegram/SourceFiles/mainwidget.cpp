@@ -2594,8 +2594,10 @@ void MainWidget::paintCardOverlay(QRect clip) {
 		rounded.addRoundedRect(r, radius, radius);
 		p.save();
 		// 连接处不裁圆角，遮罩只覆盖面板外角。
-		if (_dialogs && r == _dialogs->geometry()
-			&& _controller->filtersWidth()) {
+		if (_controller->filtersWidth()
+			&& (isOneColumn()
+				|| (_dialogs && !_dialogs->isHidden()
+					&& r == _dialogs->geometry()))) {
 			p.setClipRect(QRect(r.center().x(), r.y(),
 				r.width(), r.height()), Qt::IntersectClip);
 		}
@@ -2773,23 +2775,28 @@ void MainWidget::updateControlsGeometry() {
 		? width()
 		: 0;
 	if (isOneColumn()) {
+		const auto gap = st::windowCardGap;
+		const auto left = _controller->filtersWidth() ? 0 : gap;
+		const auto contentWidth = width() - left - gap;
 		if (_callTopBar) {
-			_callTopBar->resizeToWidth(dialogsWidth);
-			_callTopBar->moveToLeft(0, 0);
+			_callTopBar->resizeToWidth(contentWidth);
+			_callTopBar->moveToLeft(left, gap);
 		}
 		if (_exportTopBar) {
-			_exportTopBar->resizeToWidth(dialogsWidth);
-			_exportTopBar->moveToLeft(0, _callTopBarHeight);
+			_exportTopBar->resizeToWidth(contentWidth);
+			_exportTopBar->moveToLeft(left, gap + _callTopBarHeight);
 		}
 		if (_player) {
-			_player->resizeToWidth(dialogsWidth);
-			_player->moveToLeft(0, _callTopBarHeight + _exportTopBarHeight);
+			_player->resizeToWidth(contentWidth);
+			_player->moveToLeft(
+				left,
+				gap + _callTopBarHeight + _exportTopBarHeight);
 		}
 		const auto mainSectionGeometry = QRect(
-			0,
-			mainSectionTop,
-			dialogsWidth,
-			height() - mainSectionTop);
+			left,
+			mainSectionTop + gap,
+			contentWidth,
+			height() - mainSectionTop - gap * 2);
 		if (_dialogs) {
 			_dialogs->setGeometryWithTopMoved(
 				mainSectionGeometry,
@@ -2798,7 +2805,9 @@ void MainWidget::updateControlsGeometry() {
 		_history->setGeometryWithTopMoved(
 			mainSectionGeometry,
 			_contentScrollAddToY);
-		if (_hider) _hider->setGeometry(0, 0, dialogsWidth, height());
+		if (_hider) {
+			_hider->setGeometry(left, gap, contentWidth, height() - gap * 2);
+		}
 	} else {
 		const auto gap = st::windowCardGap;
 		const auto half = st::windowColumnGap;
@@ -2883,20 +2892,18 @@ void MainWidget::updateControlsGeometry() {
 	updateMediaPlaylistPosition(_playerPlaylist->x());
 	_contentScrollAddToY = 0;
 
-	// 收集当前各栏矩形供遮罩层画圆角和描边;单栏模式铺满不画卡片
+	// 单栏与多栏共用卡片边界，隐藏页面不参与圆角绘制。
 	_cardRects.clear();
-	if (!isOneColumn()) {
-		if (_dialogs && !_dialogs->isHidden()) {
-			_cardRects.push_back(_dialogs->geometry());
-		}
-		if (_mainSection && !_mainSection->isHidden()) {
-			_cardRects.push_back(_mainSection->geometry());
-		} else if (!_history->isHidden()) {
-			_cardRects.push_back(_history->geometry());
-		}
-		if (_thirdSection && !_thirdSection->isHidden()) {
-			_cardRects.push_back(_thirdSection->geometry());
-		}
+	if (_dialogs && !_dialogs->isHidden()) {
+		_cardRects.push_back(_dialogs->geometry());
+	}
+	if (_mainSection && !_mainSection->isHidden()) {
+		_cardRects.push_back(_mainSection->geometry());
+	} else if (!_history->isHidden()) {
+		_cardRects.push_back(_history->geometry());
+	}
+	if (_thirdSection && !_thirdSection->isHidden()) {
+		_cardRects.push_back(_thirdSection->geometry());
 	}
 	if (_cardOverlay) {
 		_cardOverlay->setGeometry(rect());
