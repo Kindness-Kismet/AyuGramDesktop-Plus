@@ -47,8 +47,6 @@ private:
 
 	int _desiredHeight = 0;
 	bool _inResize = false;
-	bool _tillTop = false;
-	bool _tillBottom = false;
 
 };
 

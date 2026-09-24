@@ -257,8 +257,6 @@ infoTopBar: InfoTopBar {
 infoTopBarScale: 0.7;
 infoTopBarDuration: 150;
 
-infoLayerTopMinimal: 20px;
-infoLayerTopMaximal: 40px;
 infoLayerTopBarHeight: 56px;
 infoLayerTopBarBackIcon: icon {{ "info/info_back", boxTitleCloseFg }};
 infoLayerTopBarBackIconOver: icon {{ "info/info_back", boxTitleCloseFgOver }};

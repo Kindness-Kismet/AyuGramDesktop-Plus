@@ -89,6 +89,7 @@ void LayerWidget::floatPlayerDoubleClickEvent(
 
 void LayerWidget::setupHeightConsumers() {
 	Expects(_contentWrap != nullptr);
+	setObjectName(u"info.layer"_q);
 
 	_contentWrap->scrollTillBottomChanges(
 	) | rpl::filter([this] {
@@ -301,48 +302,22 @@ QRect LayerWidget::countGeometry(int newWidth) {
 	const auto windowWidth = parentSize.width();
 	const auto windowHeight = parentSize.height();
 	const auto newLeft = (windowWidth - newWidth) / 2;
-	const auto newTop = std::clamp(
-		windowHeight / 24,
-		st::infoLayerTopMinimal,
-		st::infoLayerTopMaximal);
-	const auto newBottom = newTop;
-
-	const auto bottomRadius = st::boxRadius;
-	const auto maxVisibleHeight = windowHeight - newTop;
-	// Top rounding is included in _contentWrapHeight.
-	auto desiredHeight = _contentWrapHeight + bottomRadius;
-	accumulate_min(desiredHeight, maxVisibleHeight - newBottom);
-
-	// First resize content to new width and get the new desired height.
-	const auto contentLeft = 0;
-	const auto contentTop = 0;
-	const auto contentBottom = bottomRadius;
-	const auto contentWidth = newWidth;
-	auto contentHeight = desiredHeight - contentTop - contentBottom;
-	const auto scrollTillBottom = _contentWrap->scrollTillBottom(
-		contentHeight);
-	auto additionalScroll = std::min(scrollTillBottom, newBottom);
-
-	const auto expanding = (_desiredHeight > _contentWrapHeight);
-
-	desiredHeight += additionalScroll;
-	contentHeight += additionalScroll;
-	_tillBottom = (desiredHeight >= maxVisibleHeight);
-	if (_tillBottom) {
-		additionalScroll += contentBottom;
-	}
-	_contentTillBottom = _tillBottom && !_contentWrap->scrollBottomSkip();
-	if (_contentTillBottom) {
-		contentHeight += contentBottom;
-	}
-	_contentWrap->updateGeometry({
-		contentLeft,
-		contentTop,
-		contentWidth,
-		contentHeight,
-	}, expanding, _contentTillBottom, additionalScroll, maxVisibleHeight);
-
-	return QRect(newLeft, newTop, newWidth, desiredHeight);
+	// 内容不足时收缩居中，长内容滚动不能占用上下各 10% 的留白。
+	const auto margin = (windowHeight + 5) / 10;
+	const auto maxHeight = windowHeight - 2 * margin;
+	const auto panelHeight = std::min(
+		_contentWrapHeight + st::boxRadius,
+		maxHeight);
+	const auto newTop = (windowHeight - panelHeight) / 2;
+	const auto expanding = (std::min(_desiredHeight + st::boxRadius, maxHeight)
+		> panelHeight);
+	_contentWrap->updateGeometry(
+		{ 0, 0, newWidth, panelHeight - st::boxRadius },
+		expanding,
+		false,
+		0,
+		maxHeight);
+	return QRect(newLeft, newTop, newWidth, panelHeight);
 }
 
 void LayerWidget::doSetInnerFocus() {
@@ -363,21 +338,15 @@ void LayerWidget::paintEvent(QPaintEvent *e) {
 	const auto clip = e->rect();
 	const auto radius = st::boxRadius;
 	const auto &corners = Ui::CachedCornerPixmaps(Ui::BoxCorners);
-	if (!_tillBottom) {
-		const auto bottom = QRect{ 0, height() - radius, width(), radius };
-		if (clip.intersects(bottom)) {
-			if (const auto rounding = _contentWrap->bottomSkipRounding()) {
-				rounding->paint(p, rect(), RectPart::FullBottom);
-			} else {
-				Ui::FillRoundRect(p, bottom, st::boxBg, {
-					.p = { QPixmap(), QPixmap(), corners.p[2], corners.p[3] }
-				});
-			}
+	const auto bottom = QRect{ 0, height() - radius, width(), radius };
+	if (clip.intersects(bottom)) {
+		if (const auto rounding = _contentWrap->bottomSkipRounding()) {
+			rounding->paint(p, rect(), RectPart::FullBottom);
+		} else {
+			Ui::FillRoundRect(p, bottom, st::boxBg, {
+				.p = { QPixmap(), QPixmap(), corners.p[2], corners.p[3] }
+			});
 		}
-	} else if (!_contentTillBottom) {
-		const auto rounding = _contentWrap->bottomSkipRounding();
-		const auto &color = rounding ? rounding->color() : st::boxBg;
-		p.fillRect(0, height() - radius, width(), radius, color);
 	}
 	if (_contentWrap->animatingShow()) {
 		const auto top = QRect{ 0, 0, width(), radius };

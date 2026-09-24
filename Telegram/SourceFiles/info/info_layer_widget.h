@@ -85,8 +85,6 @@ private:
 	bool _heightAnimated = false;
 	bool _inResize = false;
 	bool _pendingResize = false;
-	bool _tillBottom = false;
-	bool _contentTillBottom = false;
 
 	bool _floatPlayerDelegateRestored = false;
 

@@ -497,6 +497,7 @@ LayerWidget::LayerWidget(QWidget*, not_null<Window::Controller*> window)
 }
 
 void LayerWidget::setupHeightConsumers() {
+	setObjectName(u"settings.layer"_q);
 	_content->scrollTillBottomChanges(
 	) | rpl::filter([this] {
 		return !_inResize;
@@ -505,7 +506,7 @@ void LayerWidget::setupHeightConsumers() {
 	}, lifetime());
 	_content->desiredHeightValue(
 	) | rpl::on_next([this](int height) {
-		accumulate_max(_desiredHeight, height);
+		_desiredHeight = height;
 		if (_content && !_inResize) {
 			resizeToWidth(width());
 		}
@@ -542,48 +543,14 @@ int LayerWidget::resizeGetHeight(int newWidth) {
 	auto windowWidth = parentSize.width();
 	auto windowHeight = parentSize.height();
 	auto newLeft = (windowWidth - newWidth) / 2;
-	if (!newLeft) {
-		_content->updateGeometry({ 0, 0, windowWidth, windowHeight }, 0);
-		auto newGeometry = QRect(0, 0, windowWidth, windowHeight);
-		if (newGeometry != geometry()) {
-			_content->forceContentRepaint();
-		}
-		if (newGeometry.topLeft() != geometry().topLeft()) {
-			move(newGeometry.topLeft());
-		}
-		_tillTop = _tillBottom = true;
-		return windowHeight;
-	}
-	auto newTop = std::clamp(
-		windowHeight / 24,
-		st::infoLayerTopMinimal,
-		st::infoLayerTopMaximal);
-	auto newBottom = newTop;
-	auto desiredHeight = _desiredHeight + st::boxRadius;
-	accumulate_min(desiredHeight, windowHeight - newTop - newBottom);
-
-	// First resize content to new width and get the new desired height.
-	auto contentLeft = 0;
-	auto contentTop = 0;
-	auto contentBottom = st::boxRadius;
-	auto contentWidth = newWidth;
-	auto contentHeight = desiredHeight - contentTop - contentBottom;
-	auto scrollTillBottom = _content->scrollTillBottom(contentHeight);
-	auto additionalScroll = std::min(scrollTillBottom, newBottom);
-
-	desiredHeight += additionalScroll;
-	contentHeight += additionalScroll;
-	_tillTop = false;
-	_tillBottom = (newTop + desiredHeight >= windowHeight);
-	if (_tillBottom) {
-		contentHeight += contentBottom;
-		additionalScroll += contentBottom;
-	}
-	_content->updateGeometry({
-		contentLeft,
-		contentTop,
-		contentWidth,
-		contentHeight }, additionalScroll);
+	const auto margin = (windowHeight + 5) / 10;
+	const auto desiredHeight = std::min(
+		_desiredHeight + st::boxRadius,
+		windowHeight - 2 * margin);
+	const auto newTop = (windowHeight - desiredHeight) / 2;
+	_content->updateGeometry(
+		{ 0, 0, newWidth, desiredHeight - st::boxRadius },
+		0);
 
 	auto newGeometry = QRect(newLeft, newTop, newWidth, desiredHeight);
 	if (newGeometry != geometry()) {
@@ -606,18 +573,15 @@ void LayerWidget::paintEvent(QPaintEvent *e) {
 	auto clip = e->rect();
 	auto r = st::boxRadius;
 	const auto &pixmaps = Ui::CachedCornerPixmaps(Ui::BoxCorners);
-	if (!_tillTop && clip.intersects({ 0, 0, width(), r })) {
+	if (clip.intersects({ 0, 0, width(), r })) {
 		Ui::FillRoundRect(p, 0, 0, width(), r, st::boxBg, {
 			.p = { pixmaps.p[0], pixmaps.p[1], QPixmap(), QPixmap() },
 		});
 	}
-	if (!_tillBottom && clip.intersects({ 0, height() - r, width(), r })) {
+	if (clip.intersects({ 0, height() - r, width(), r })) {
 		Ui::FillRoundRect(p, 0, height() - r, width(), r, st::boxBg, {
 			.p = { QPixmap(), QPixmap(), pixmaps.p[2], pixmaps.p[3] },
 		});
-	}
-	if (_tillTop) {
-		p.fillRect(0, 0, width(), r, st::boxBg);
 	}
 }
 
