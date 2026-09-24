@@ -1787,7 +1787,7 @@ void ComposeControls::setFieldMaxHeight(int height) {
 	_field->setMaxHeight(height);
 	updateControlsGeometry(_wrap->size());
 	if (_field->height() != oldFieldHeight) {
-		updateControlsGeometry(_wrap->size());
+		updateHeight();
 	}
 }
 
