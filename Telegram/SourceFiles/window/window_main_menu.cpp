@@ -10,7 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "base/event_filter.h"
 #include "base/qt_signal_producer.h"
-#include "boxes/about_box.h"
+#include "boxes/about_box.h" // currentVersionShortText
 #include "core/update_channel.h"
 #include "boxes/peer_list_controllers.h"
 #include "boxes/premium_preview_box.h"
@@ -423,6 +423,7 @@ MainMenu::MainMenu(
 		controller->showToast(hint);
 	}));
 	// The canary version is too long for the "Version {version}" form.
+	// 「关于」入口已移至设置页，页脚只保留版本号链接。
 	_version->setMarkedText(
 		tr::link(
 			Core::BuildIsCanary
@@ -431,19 +432,10 @@ MainMenu::MainMenu(
 					tr::now,
 					lt_version,
 					currentVersionShortText()),
-			1) // Link 1.
-		.append(QChar(' '))
-		.append(QChar(8211))
-		.append(QChar(' '))
-		.append(tr::link(tr::lng_menu_about(tr::now), 2))); // Link 2.
+			1)); // Link 1.
 	_version->setLink(
 		1,
 		std::make_shared<UrlClickHandler>(Core::App().changelogLink()));
-	_version->setLink(
-		2,
-		std::make_shared<LambdaClickHandler>([=] {
-			controller->show(Box(AboutBox, controller));
-		}));
 
 	rpl::combine(
 		_toggleAccounts->rightSkipValue(),

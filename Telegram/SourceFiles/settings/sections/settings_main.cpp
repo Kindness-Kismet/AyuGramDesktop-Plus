@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "base/call_delayed.h"
 #include "base/platform/base_platform_info.h"
+#include "boxes/about_box.h"
 #include "boxes/language_box.h"
 #include "boxes/star_gift_box.h"
 #include "boxes/username_box.h"
@@ -637,6 +638,14 @@ void BuildHelpSection(SectionBuilder &builder) {
 		.icon = { &st::menuIconDiscussion },
 		.onClick = [=] { OpenAskQuestionConfirm(controller); },
 		.keywords = { u"contact"_q, u"feedback"_q },
+	});
+
+	builder.addButton({
+		.id = u"main/about"_q,
+		.title = tr::lng_menu_about(),
+		.icon = { &st::menuIconInfo },
+		.onClick = [=] { controller->show(Box(AboutBox, controller)); },
+		.keywords = { u"about"_q, u"version"_q },
 	});
 
 	builder.addSkip();
