@@ -737,8 +737,9 @@ void HistoryWidget::setupGiftToChannelButton() {
 		_muteUnmute.data(),
 		st::historyGiftToChannel);
 	_giftToChannel->setAccessibleName(tr::lng_gift_channel_title(tr::now));
-	widthValue() | rpl::on_next([=](int width) {
-		_giftToChannel->moveToRight(0, 0, width);
+	rpl::merge(_muteUnmute->widthValue(), _joinChannel->widthValue()
+	) | rpl::on_next([=] {
+		_giftToChannel->moveToRight(0, 0);
 	}, _giftToChannel->lifetime());
 	_giftToChannel->setClickedCallback([=] {
 		Ui::ShowStarGiftBox(controller(), _peer);
@@ -765,8 +766,9 @@ void HistoryWidget::setupDirectMessageButton() {
 		_muteUnmute.data(),
 		st::historyDirectMessage);
 		_directMessage->setAccessibleName(tr::lng_profile_direct_messages(tr::now));
-	widthValue() | rpl::on_next([=](int width) {
-		_directMessage->moveToLeft(0, 0, width);
+	rpl::merge(_muteUnmute->widthValue(), _joinChannel->widthValue()
+	) | rpl::on_next([=] {
+		_directMessage->moveToLeft(0, 0);
 	}, _directMessage->lifetime());
 	_directMessage->setClickedCallback([=] {
 		if (const auto channel = _peer ? _peer->asChannel() : nullptr) {

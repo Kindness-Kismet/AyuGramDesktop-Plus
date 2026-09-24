@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "ui/chat/floating_bar.h"
 
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
@@ -433,6 +434,16 @@ HistoryWidget::HistoryWidget(
 		}
 	});
 	_unblock->addClickHandler([=] { unblockUser(); });
+	for (const auto &[button, name] : {
+			std::pair{ _unblock.data(), u"chatAction.unblock"_q },
+			std::pair{ _botStart.data(), u"chatAction.start"_q },
+			std::pair{ _joinChannel.data(), u"chatAction.join"_q },
+			std::pair{ _muteUnmute.data(), u"chatAction.notify"_q },
+			std::pair{ _discuss.data(), u"chatAction.discuss"_q },
+			std::pair{ _reportMessages.data(), u"chatAction.report"_q } }) {
+		button->setObjectName(name);
+		Ui::ApplyChatControlSurface(button, st::historyComposeCapsuleRadius);
+	}
 	_botStart->setAcceptBoth(true);
 	_botStart->clicks() | rpl::on_next(
 		[=](Qt::MouseButton button)

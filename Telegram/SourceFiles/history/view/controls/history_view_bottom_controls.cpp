@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/controls/history_view_bottom_controls.h"
+#include "ui/chat/floating_bar.h"
 
 #include "apiwrap.h"
 #include "boxes/star_gift_box.h"
@@ -50,6 +51,14 @@ BottomControls::BottomControls(
 	setupButtons();
 	setupOpenChatButton();
 	setupAboutHiddenAuthor();
+	for (const auto widget : std::initializer_list<QWidget*>{
+			_unblock.get(), _botStart.get(), _joinChannel.get(), _joinGroup.get(),
+			_muteUnmute.get(), _reportMessages.get(), _openChatButton.get(),
+			_aboutHiddenAuthor.get() }) {
+		if (widget) {
+			Ui::ApplyChatControlSurface(widget, st::historyComposeCapsuleRadius);
+		}
+	}
 	setupPeerUpdates();
 }
 
@@ -327,11 +336,12 @@ void BottomControls::setupOverlayIconButton(
 		not_null<Ui::IconButton*> button,
 		bool alignRight,
 		Fn<void()> refresh) {
-	widthValue() | rpl::on_next([=](int width) {
+	rpl::merge(_muteUnmute->widthValue(), _joinChannel->widthValue()
+	) | rpl::on_next([=] {
 		if (alignRight) {
-			button->moveToRight(0, 0, width);
+			button->moveToRight(0, 0);
 		} else {
-			button->moveToLeft(0, 0, width);
+			button->moveToLeft(0, 0);
 		}
 	}, button->lifetime());
 	rpl::combine(
@@ -505,12 +515,15 @@ void BottomControls::refreshDirectMessageShown() {
 }
 
 void BottomControls::recomputeContentHeight() {
-	const auto h = _openChatButton
+	const auto innerHeight = _openChatButton
 		? _openChatButton->height()
 		: _aboutHiddenAuthor
 		? st::historyUnblock.height
 		: isButtonActive()
 		? st::historyComposeButton.height
+		: 0;
+	const auto h = innerHeight
+		? innerHeight + 2 * st::historyComposeCapsuleMargin
 		: 0;
 	resize(width(), h);
 	setVisible(h > 0);
@@ -584,15 +597,17 @@ bool BottomControls::isChoosingTheme() const {
 void BottomControls::resizeEvent(QResizeEvent *e) {
 	RpWidget::resizeEvent(e);
 	const auto w = width();
+	const auto margin = st::historyComposeCapsuleMargin;
+	const auto innerWidth = std::max(w - 2 * margin, 0);
 	if (_openChatButton) {
-		_openChatButton->setGeometry(0, 0, w, _openChatButton->height());
+		_openChatButton->setGeometry(margin, margin, innerWidth, _openChatButton->height());
 		return;
 	}
 	if (_aboutHiddenAuthor) {
-		_aboutHiddenAuthor->setGeometry(0, 0, w, st::historyUnblock.height);
+		_aboutHiddenAuthor->setGeometry(margin, margin, innerWidth, st::historyUnblock.height);
 		return;
 	}
-	const auto fullRect = QRect(0, 0, w, st::historyComposeButton.height);
+	const auto fullRect = QRect(margin, margin, innerWidth, st::historyComposeButton.height);
 	if (_botStart) {
 		_botStart->setGeometry(fullRect);
 	}

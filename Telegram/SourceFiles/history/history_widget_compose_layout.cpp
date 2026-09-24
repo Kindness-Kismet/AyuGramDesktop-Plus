@@ -916,19 +916,19 @@ void HistoryWidget::moveFieldControls() {
 			buttonsBottom - _attachBotsMenu->height());
 	}
 
-	const auto fullWidthButtonRect = myrtlrect(
-		0,
+	const auto actionButtonRect = myrtlrect(
+		st::historyComposeCapsuleMargin,
 		bottom - _botStart->height(),
-		width(),
+		width() - 2 * st::historyComposeCapsuleMargin,
 		_botStart->height());
-	_botStart->setGeometry(fullWidthButtonRect);
-	_unblock->setGeometry(fullWidthButtonRect);
-	_joinChannel->setGeometry(fullWidthButtonRect);
-	_muteUnmute->setGeometry(fullWidthButtonRect);
-	_discuss->setGeometry(fullWidthButtonRect);
-	_reportMessages->setGeometry(fullWidthButtonRect);
+	_botStart->setGeometry(actionButtonRect);
+	_unblock->setGeometry(actionButtonRect);
+	_joinChannel->setGeometry(actionButtonRect);
+	_muteUnmute->setGeometry(actionButtonRect);
+	_discuss->setGeometry(actionButtonRect);
+	_reportMessages->setGeometry(actionButtonRect);
 	if (_sendRestriction) {
-		_sendRestriction->setGeometry(fullWidthButtonRect);
+		_sendRestriction->setGeometry(actionButtonRect);
 	}
 }
 

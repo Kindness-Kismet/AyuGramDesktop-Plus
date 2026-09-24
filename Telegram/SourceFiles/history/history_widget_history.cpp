@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "ui/chat/floating_bar.h"
 
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
@@ -1279,6 +1280,9 @@ void HistoryWidget::updateSendRestriction() {
 		_sendRestriction = TextErrorSendRestriction(this, restriction.text);
 	}
 	if (_sendRestriction) {
+		_sendRestriction->setObjectName(u"chatAction.restriction"_q);
+		Ui::ApplyChatControlSurface(
+			_sendRestriction.get(), st::historyComposeCapsuleRadius);
 		_sendRestriction->show();
 		moveFieldControls();
 	}
@@ -1341,7 +1345,8 @@ void HistoryWidget::updateHistoryGeometry(
 			|| isJoinChannel()
 			|| isMuteUnmute()
 			|| isReportMessages())) {
-		newScrollHeight -= _unblock->height();
+		newScrollHeight -= _unblock->height()
+			+ 2 * st::historyComposeCapsuleMargin;
 	} else {
 		if (editingMessage() || _canSendMessages) {
 			// 消息列表与胶囊之间保留一份间距。
@@ -1349,7 +1354,8 @@ void HistoryWidget::updateHistoryGeometry(
 				+ 2 * st::historySendPadding
 				+ 2 * st::historyComposeCapsuleMargin);
 		} else if (_sendRestriction) {
-			newScrollHeight -= _sendRestriction->height();
+			newScrollHeight -= _sendRestriction->height()
+				+ 2 * st::historyComposeCapsuleMargin;
 		}
 		if (_editMsgId
 			|| replyTo()
