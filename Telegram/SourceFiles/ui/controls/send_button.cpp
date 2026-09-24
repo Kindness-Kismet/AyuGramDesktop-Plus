@@ -300,6 +300,11 @@ void SendButton::paintCancel(QPainter &p, bool over) {
 
 void SendButton::paintSend(QPainter &p, bool over) {
 	const auto &sendIcon = over ? _st.inner.iconOver : _st.inner.icon;
+	const auto filled = (_st.sendIconFillPadding > 0);
+	p.save();
+	if (filled && isDisabled()) {
+		p.setOpacity(p.opacity() * kForbiddenOpacity);
+	}
 	if (const auto padding = _st.sendIconFillPadding; padding > 0) {
 		const auto ellipse = sendEllipseRect();
 		{
@@ -308,12 +313,12 @@ void SendButton::paintSend(QPainter &p, bool over) {
 			if (_state.fillBgOverride.isValid()) {
 				p.setBrush(_state.fillBgOverride);
 			} else {
-				p.setBrush(st::windowBgActive);
+				p.setBrush(over ? st::activeButtonBgOver : st::windowBgActive);
 			}
 			p.drawEllipse(ellipse);
 		}
 		if (!isDisabled()) {
-			auto color = _st.sendIconFg->c;
+			auto color = st::windowFgActive->c;
 			color.setAlpha(25);
 			paintRipple(p, ellipse.topLeft(), &color);
 		}
@@ -326,12 +331,13 @@ void SendButton::paintSend(QPainter &p, bool over) {
 			_st.inner.rippleAreaPosition.y(),
 			&color);
 	}
-	if (isDisabled()) {
+	if (isDisabled() && !filled) {
 		const auto color = st::historyRecordVoiceFg->c;
 		sendIcon.paint(p, _st.sendIconPosition, width(), color);
 	} else {
 		sendIcon.paint(p, _st.sendIconPosition, width());
 	}
+	p.restore();
 }
 
 void SendButton::paintStop(QPainter &p, bool over) {

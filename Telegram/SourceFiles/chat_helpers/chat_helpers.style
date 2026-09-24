@@ -1500,7 +1500,7 @@ defaultRecordBar: RecordBar {
 }
 
 historySend: SendButton {
-	sendIconFillPadding: 3px;
+	sendIconFillPadding: 7px;
 	sendIconPosition: point(10px, 11px);
 	inner: IconButton(historyAttach) {
 		icon: icon {{ "chat/input_send", windowFgActive }};

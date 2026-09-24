@@ -11414,20 +11414,30 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 	}
 	p.setInactive(
 		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
-	// 输入区背景改成圆角胶囊,四周留边悬浮在聊天背景上
+	// 无壁纸时用独立底色区分输入区，四周保留悬浮间距。
+	const auto flatBackground = AyuSettings::getInstance().disableChatBackground();
 	const auto capsuleMargin = st::historyComposeCapsuleMargin;
-	const auto capsuleRadius = st::historyComposeCapsuleRadius;
 	const auto capsuleRect = myrtlrect(
 		capsuleMargin,
 		backy,
 		width() - 2 * capsuleMargin,
 		backh);
+	const auto halfStroke = st::lineWidth / 2.;
+	const auto capsuleOutline = QRectF(capsuleRect).adjusted(
+		halfStroke, halfStroke, -halfStroke, -halfStroke);
+	// 同步限制两个方向的半径，避免单行高度被截成椭圆弧。
+	const auto capsuleRadius = std::min(
+		qreal(st::historyComposeCapsuleRadius),
+		capsuleOutline.height() / 2.);
 	{
 		auto hq = PainterHighQualityEnabler(p);
-		p.setPen(QPen(st::windowDividerFg->c, st::lineWidth));
-		p.setBrush(st::historyComposeAreaBg);
-		p.drawRoundedRect(QRectF(capsuleRect).adjusted(0.5, 0.5, -0.5, -0.5),
-			capsuleRadius, capsuleRadius);
+		p.setPen(QPen((flatBackground
+			? st::filterInputBorderFg
+			: st::windowDividerFg)->c, st::lineWidth));
+		p.setBrush(flatBackground
+			? st::windowBgOver
+			: st::historyComposeAreaBg);
+		p.drawRoundedRect(capsuleOutline, capsuleRadius, capsuleRadius);
 	}
 	// 回复/编辑/转发条的内容整体右移,落进胶囊内部
 	p.translate(capsuleMargin, 0);
