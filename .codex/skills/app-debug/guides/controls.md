@@ -11,6 +11,16 @@
 设置可见且启用的按钮悬停状态，通过截图检查背景、圆角和文字，不触发点击、不移动系统光标。
 验证后用 `off` 恢复；只验证绘制状态，不代表真实鼠标命中验收。
 
+## `control.pointer <objectName | #序号> [x y]`
+
+按控件内坐标命中子控件并合成进入、移动事件，用于观察自绘消息的快速回复和回应按钮。
+不移动系统鼠标、不按下按钮；省略坐标时清除上一次合成悬停。真实鼠标操作可能覆盖这个状态。
+
+```bash
+python .codex/skills/app-debug/scripts/cli.py control.pointer historyScroll 160 240
+python .codex/skills/app-debug/scripts/cli.py control.pointer historyScroll
+```
+
 ## 点击命中检查
 
 `control.click <目标> --mouse` 从窗口开始命中测试，再发送鼠标事件。目标中心被遮挡时返回错误，

@@ -350,6 +350,57 @@ struct WidgetInfo {
 	return Result::Ok(Compact(json{ { "hovered", button->isOver() } }));
 }
 
+[[nodiscard]] Result controlPointer(const QStringList &args) {
+	if (args.size() != 1 && args.size() != 3) {
+		return Result::Err(u"usage: control.pointer <objectName | #index> [x y]"_q);
+	}
+	const auto target = findControl(args[0]);
+	if (!target || !target->isVisible() || !target->isEnabled()) {
+		return Result::Err(u"visible enabled control not found"_q);
+	}
+	// 只保留弱引用；合成事件不改变系统光标位置。
+	static auto pointed = QPointer<QWidget>();
+	if (args.size() == 1) {
+		if (pointed) {
+			auto leave = QEvent(QEvent::Leave);
+			QApplication::sendEvent(pointed, &leave);
+			pointed.clear();
+		}
+		return Result::Ok(u"left"_q);
+	}
+	auto xOk = false;
+	auto yOk = false;
+	const auto point = QPoint(args[1].toInt(&xOk), args[2].toInt(&yOk));
+	if (!xOk || !yOk || !target->rect().contains(point)) {
+		return Result::Err(u"expected coordinates inside the control"_q);
+	}
+	const auto global = target->mapToGlobal(point);
+	const auto root = target->window();
+	const auto receiver = root->childAt(root->mapFromGlobal(global));
+	if (!receiver || (receiver != target && !target->isAncestorOf(receiver))) {
+		return Result::Err(u"control is covered at the requested point"_q);
+	}
+	const auto local = receiver->mapFromGlobal(global);
+	if (pointed != receiver) {
+		if (pointed) {
+			auto leave = QEvent(QEvent::Leave);
+			QApplication::sendEvent(pointed, &leave);
+		}
+		pointed = receiver;
+		auto enter = QEnterEvent(local, root->mapFromGlobal(global), global);
+		QApplication::sendEvent(pointed, &enter);
+	}
+	if (pointed) {
+		auto move = QMouseEvent(QEvent::MouseMove, local, global,
+			Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+		QApplication::sendEvent(pointed, &move);
+	}
+	return Result::Ok(Compact(json{
+		{ "receiver", pointed ? pointed->metaObject()->className() : "" },
+		{ "point", json{ point.x(), point.y() } },
+	}));
+}
+
 [[nodiscard]] Result controlScroll(const QStringList &args) {
 	if (args.isEmpty() || args.size() > 2) {
 		return Result::Err(u"usage: control.scroll <objectName | #index> [top]"_q);
@@ -388,6 +439,7 @@ const HandlerMap &ControlHandlers() {
 		{ u"control.set-text"_q, &controlSetText },
 		{ u"control.scroll"_q, &controlScroll },
 		{ u"control.hover"_q, &controlHover },
+		{ u"control.pointer"_q, &controlPointer },
 	};
 	return result;
 }

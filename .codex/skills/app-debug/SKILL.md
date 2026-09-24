@@ -90,6 +90,7 @@ python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true + 
 | `control.set-text <objectName> <text\|--file path>` | 修改可见输入框，验证单行、多行和清空后的布局，不触发发送 |
 | `control.scroll <目标> [top]` | 读取或设置普通及弹性滚动区位置，支持默认控件序号，返回位置、最大值和可见高度 |
 | `control.hover <目标> <on\|off>` | 设置按钮悬停绘制状态，不触发点击 |
+| `control.pointer <目标> [x y]` | 向控件内部位置合成移动事件；省略坐标时离开，不移动系统鼠标 |
 | `control.click <目标> --mouse` | 从窗口命中测试后合成点击，检查按钮是否被遮挡 |
 
 服务端响应格式：成功 `OK [payload]`，失败 `ERR <reason>`；CLI 将 `ERR` 写入 stderr 并返回退出码 1。

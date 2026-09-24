@@ -167,6 +167,9 @@ def register_commands(sub) -> None:
     command = sub.add_parser("control.hover", help="设置按钮悬停绘制状态，不触发点击")
     command.add_argument("target", help="按钮名称或 control.list 默认模式的 #序号")
     command.add_argument("state", choices=("on", "off"), help="开启或关闭悬停状态")
+    command = sub.add_parser("control.pointer", help="向控件内部位置合成移动事件，不移动系统鼠标；省略坐标时离开")
+    command.add_argument("target", help="控件名称或 control.list 默认模式的 #序号")
+    command.add_argument("point", nargs="*", type=int, metavar="X Y", help="控件内的坐标，必须成对；省略则清除上一次合成悬停")
     command = sub.add_parser("control.set-text", help="修改可见输入框的文字，验证输入布局，不触发发送")
     command.add_argument("target", help="输入框的 objectName，如 messageInput")
     command.add_argument("text", nargs="?", help="待输入文字，空字符串用于清空")
@@ -246,6 +249,10 @@ def build_server_command(args: argparse.Namespace) -> str:
     command = args.command
     if command == "control.hover":
         return f"control.hover {quote_arg(args.target)} {args.state}"
+    if command == "control.pointer":
+        if len(args.point) not in (0, 2):
+            raise ValueError("control.pointer 的 x 与 y 必须成对给出")
+        return " ".join([command, quote_arg(args.target), *map(str, args.point)])
     if command == "control.scroll":
         return f"control.scroll {quote_arg(args.target)}" + (f" {args.top}" if args.top is not None else "")
     if command == "control.set-text":
