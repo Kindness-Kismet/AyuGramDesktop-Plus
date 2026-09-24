@@ -17,7 +17,9 @@ namespace Ui {
 
 class ChatControlSurface final : public QGraphicsEffect {
 public:
-	explicit ChatControlSurface(int radius) : _radius(radius) {
+	ChatControlSurface(int radius, bool outline)
+	: _radius(radius)
+	, _outline(outline) {
 	}
 
 protected:
@@ -41,23 +43,29 @@ protected:
 			painter.drawRoundedRect(rect, radius, radius);
 			painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
 			painter.drawPixmap(0, 0, source);
-			painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-			const auto halfStroke = st::lineWidth / 2.;
-			painter.setPen(QPen(st::windowDividerFg->c, st::lineWidth));
-			painter.setBrush(Qt::NoBrush);
-			painter.drawRoundedRect(rect.adjusted(
-				halfStroke, halfStroke, -halfStroke, -halfStroke),
-				radius - halfStroke, radius - halfStroke);
+			if (_outline) {
+				painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+				const auto halfStroke = st::lineWidth / 2.;
+				painter.setPen(QPen(st::windowDividerFg->c, st::lineWidth));
+				painter.setBrush(Qt::NoBrush);
+				painter.drawRoundedRect(rect.adjusted(
+					halfStroke, halfStroke, -halfStroke, -halfStroke),
+					radius - halfStroke, radius - halfStroke);
+			}
 		}
 		p->drawPixmap(offset, surface);
 	}
 
 private:
 	const int _radius;
+	const bool _outline;
 };
 
-inline void ApplyChatControlSurface(not_null<QWidget*> widget, int radius) {
-	widget->setGraphicsEffect(new ChatControlSurface(radius));
+inline void ApplyChatControlSurface(
+		not_null<QWidget*> widget,
+		int radius,
+		bool outline = true) {
+	widget->setGraphicsEffect(new ChatControlSurface(radius, outline));
 }
 
 // 通知条与聊天标题连续排列，仅在底边分隔。

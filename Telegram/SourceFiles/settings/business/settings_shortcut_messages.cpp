@@ -618,7 +618,7 @@ void ShortcutMessages::outerResized() {
 void ShortcutMessages::updateComposeControlsPosition() {
 	const auto bottom = _scroll->parentWidget()->height();
 	const auto controlsHeight = _composeControls->heightCurrent();
-	_composeControls->move(0, bottom - controlsHeight + st::boxRadius);
+	_composeControls->move(0, bottom - controlsHeight);
 	_composeControls->setAutocompleteBoundingRect(_scroll->geometry());
 }
 

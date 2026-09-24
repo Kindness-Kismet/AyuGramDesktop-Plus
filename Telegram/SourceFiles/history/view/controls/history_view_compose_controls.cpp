@@ -125,6 +125,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/controls/send_as_button.h"
 #include "ui/controls/silent_toggle.h"
 #include "ui/chat/choose_send_as.h"
+#include "ui/chat/floating_bar.h"
 #include "ui/effects/spoiler_mess.h"
 #include "ui/effects/reaction_fly_animation.h"
 #include "webrtc/webrtc_environment.h"
@@ -143,11 +144,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "data/data_ai_compose_tones.h"
 #include "ayu/ayu_settings.h"
-#include "history/history_item_components.h"
 
 
 namespace HistoryView {
 namespace {
+
+// 自带圆角的专用样式自行决定外部布局。
+[[nodiscard]] int ComposeOuterMargin(const style::ComposeControls &style) {
+	return style.radius ? 0 : st::historyComposeCapsuleMargin;
+}
 
 constexpr auto kSaveDraftTimeout = crl::time(1000);
 constexpr auto kSaveDraftAnywayTimeout = 5 * crl::time(1000);
@@ -418,7 +423,6 @@ void FieldHeader::init() {
 	) | rpl::on_next([=] {
 		Painter p(this);
 		p.setInactive(_show->paused(Window::GifPauseReason::Any));
-		p.fillRect(rect(), st::historyComposeAreaBg);
 
 		const auto position = st::historyReplyIconPosition;
 		if (_suggestOptions) {
@@ -1324,8 +1328,9 @@ ComposeControls::ComposeControls(
 	if (_attachToggle) {
 		_attachToggle->setObjectName(u"attachButton"_q);
 	}
-	if (_st.radius > 0) {
-		_backgroundRect.emplace(_st.radius, _st.bg);
+	if (ComposeOuterMargin(_st)) {
+		Ui::ApplyChatControlSurface(
+			_wrap.get(), st::historyComposeCapsuleRadius, false);
 	}
 	rpl::combine(
 		replyingToMessageValue(),
@@ -1730,13 +1735,15 @@ PeerData *ComposeControls::sendAsPeer() const {
 }
 
 void ComposeControls::move(int x, int y) {
-	_wrap->move(x, y);
+	const auto margin = ComposeOuterMargin(_st);
+	_wrap->move(x + margin, y + margin);
 	if (_writeRestricted) {
-		_writeRestricted->move(x, y);
+		_writeRestricted->move(_wrap->pos());
 	}
 }
 
 void ComposeControls::resizeToWidth(int width) {
+	width = std::max(width - 2 * ComposeOuterMargin(_st), 0);
 	_wrap->resizeToWidth(width);
 	if (_writeRestricted) {
 		_writeRestricted->resizeToWidth(width);
@@ -1757,13 +1764,14 @@ rpl::producer<int> ComposeControls::height() const {
 			_writeRestriction.value(),
 			_hidden.value()) | rpl::map(!_1 && !_2),
 		_wrap->heightValue(),
-		rpl::single(_st.attach.height));
+		rpl::single(_st.attach.height)
+	) | rpl::map(_1 + 2 * ComposeOuterMargin(_st));
 }
 
 int ComposeControls::heightCurrent() const {
-	return (_writeRestriction.current() || _hidden.current())
+	return ((_writeRestriction.current() || _hidden.current())
 		? _st.attach.height
-		: _wrap->height();
+		: _wrap->height()) + 2 * ComposeOuterMargin(_st);
 }
 
 int ComposeControls::fieldHeightCurrent() const {
@@ -4343,6 +4351,10 @@ void ComposeControls::initWriteRestriction() {
 		return;
 	}
 	_writeRestricted = std::make_unique<Ui::RpWidget>(_parent);
+	if (ComposeOuterMargin(_st)) {
+		Ui::ApplyChatControlSurface(
+			_writeRestricted.get(), st::historyComposeCapsuleRadius, false);
+	}
 	_writeRestricted->move(_wrap->pos());
 	_writeRestricted->resizeToWidth(_wrap->widthNoMargins());
 	_writeRestricted->sizeValue() | rpl::on_next([=] {
@@ -4966,13 +4978,19 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		&& !_commentsShown->isHidden();
 	const auto giftToUser = _giftToUser
 		&& !_giftToUser->isHidden();
+	const auto leftPadding = ComposeOuterMargin(_st)
+		? st::historyComposeCapsulePadding
+		: ((_attachToggle && settings.showAttachButtonInMessageField()) || _sendAs)
+		? _st.padding.left()
+		: _st.fieldLeft;
+	const auto rightPadding = ComposeOuterMargin(_st)
+		? st::historyComposeCapsulePadding
+		: _st.padding.right();
 	const auto fieldWidth = size.width()
 		- (commentsShown
 			? (_commentsShown->width() + _st.commentsSkip)
 			: 0)
-		- (((_attachToggle && settings.showAttachButtonInMessageField()) || _sendAs)
-			? _st.padding.left()
-			: _st.fieldLeft)
+		- leftPadding
 		- (_botMenu.button
 			? (st::historyBotMenuSkip + _botMenu.button->width())
 			: 0)
@@ -4980,7 +4998,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 			? _attachToggle->width()
 			: 0)
 		- (_sendAs ? _sendAs->width() : 0)
-		- _st.padding.right()
+		- rightPadding
 		- _send->width()
 		- (_editStars ? _editStars->width() : 0)
 		- (_tabbedSelectorToggle->isHidden()
@@ -5029,7 +5047,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		_commentsShown->moveToLeft(left, buttonsTop);
 		left += _commentsShown->width() + _st.commentsSkip;
 	}
-	left += (_attachToggle || _sendAs) ? _st.padding.left() : _st.fieldLeft;
+	left += leftPadding;
 	if (_botMenu.button) {
 		const auto skip = st::historyBotMenuSkip;
 		_botMenu.button->moveToLeft(left + skip, buttonsTop + skip);
@@ -5067,7 +5085,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		_starsReaction->moveToRight(right, buttonsTop);
 		right += _starsReaction->width() + _st.starsSkip;
 	}
-	right += _st.padding.right();
+	right += rightPadding;
 	_send->moveToRight(right, buttonsTop);
 	right += _send->width();
 	if (_editStars) {
@@ -5556,7 +5574,7 @@ void ComposeControls::updateOuterGeometry(QRect rect) {
 		_tabbedPanel->moveBottomRight(bottom, rect.x() + rect.width());
 	}
 	if (_attachBotsMenu) {
-		_attachBotsMenu->moveToLeft(0, bottom - _attachBotsMenu->height());
+		_attachBotsMenu->moveToLeft(rect.x(), bottom - _attachBotsMenu->height());
 	}
 }
 
@@ -5687,7 +5705,19 @@ void ComposeControls::updateAttachBotsMenu() {
 }
 
 void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
-	if (_backgroundRect) {
+	if (ComposeOuterMargin(_st)) {
+		const auto flat = AyuSettings::getInstance().disableChatBackground();
+		const auto halfStroke = st::lineWidth / 2.;
+		const auto outline = QRectF(full).adjusted(
+			halfStroke, halfStroke, -halfStroke, -halfStroke);
+		const auto radius = std::min(
+			qreal(st::historyComposeCapsuleRadius), outline.height() / 2.);
+		auto hq = PainterHighQualityEnabler(p);
+		p.setBrush(flat ? st::windowBgOver : _st.bg);
+		p.setPen(QPen((flat ? st::filterInputBorderFg : st::windowDividerFg)->c,
+			st::lineWidth));
+		p.drawRoundedRect(outline, radius, radius);
+	} else if (_st.radius > 0) {
 		auto hq = PainterHighQualityEnabler(p);
 		p.setBrush(_st.bg);
 		p.setPen(Qt::NoPen);
