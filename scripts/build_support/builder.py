@@ -6,6 +6,7 @@ import time
 import zipfile
 from pathlib import Path
 
+from build_support.build_tracking import recover_failed_compilations
 from build_support.cmake_patch import LIBS_LOC_OPTION, PYTHON_OPTION, ensure_libs_loc_override
 from build_support.console import format_bytes, header, print_summary, warn
 from build_support.paths import (
@@ -174,6 +175,10 @@ def configure(environment: dict[str, str], api_id: str, api_hash: str) -> None:
 
 
 def compile_target(environment: dict[str, str], cmake_config: str, jobs: int) -> None:
+    for project in recover_failed_compilations(
+        CMAKE_OUT_DIR, cmake_config, BUILD_DIR / "build-recovery"
+    ):
+        print(f"  Recompile after unsuccessful build: {project}", flush=True)
     command = [
         cmake_executable(environment),
         "--build",
