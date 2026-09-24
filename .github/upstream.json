@@ -444,6 +444,7 @@
       "Telegram/SourceFiles/ui/chat/chat_style_radius.h",
       "Telegram/SourceFiles/ui/chat/floating_bar.h",
       "Telegram/SourceFiles/ui/chat/group_call_bar.cpp",
+      "Telegram/SourceFiles/ui/chat/group_call_bar.h",
       "Telegram/SourceFiles/ui/chat/group_call_userpics.cpp",
       "Telegram/SourceFiles/ui/chat/message_bubble.cpp",
       "Telegram/SourceFiles/ui/chat/pinned_bar.cpp",

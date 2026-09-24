@@ -166,31 +166,12 @@ GroupCallBar::GroupCallBar(
 
 GroupCallBar::~GroupCallBar() = default;
 
-void GroupCallBar::refreshOpenBrush() {
-	Expects(_open != nullptr);
-
-	const auto width = _open->width();
-	if (_openBrushForWidth == width) {
-		return;
-	}
-	auto gradient = QLinearGradient(QPoint(width, 0), QPoint(0, 0));
-	gradient.setStops(QGradientStops{
-		{ 0.0, st::groupCallForceMutedBar1->c },
-		{ .7, st::groupCallForceMutedBar2->c },
-		{ 1.0, st::groupCallForceMutedBar3->c }
-	});
-	_openBrushOverride = QBrush(std::move(gradient));
-	_openBrushForWidth = width;
-	_open->setBrushOverride(_openBrushOverride);
-}
-
 void GroupCallBar::refreshScheduledProcess() {
 	const auto date = _content.scheduleDate;
 	if (!date) {
 		if (_scheduledProcess) {
 			_scheduledProcess = nullptr;
 			_open = nullptr;
-			_openBrushForWidth = 0;
 		}
 		if (!_join) {
 			_join = std::make_unique<RoundButton>(
@@ -208,10 +189,6 @@ void GroupCallBar::refreshScheduledProcess() {
 			st::groupCallTopBarOpen);
 		_open->setTextTransform(RoundButtonTextTransform::ToUpper);
 		setupRightButton(_open.get());
-		_open->widthValue(
-		) | rpl::on_next([=] {
-			refreshOpenBrush();
-		}, _open->lifetime());
 	} else {
 		_scheduledProcess->setDate(date);
 	}

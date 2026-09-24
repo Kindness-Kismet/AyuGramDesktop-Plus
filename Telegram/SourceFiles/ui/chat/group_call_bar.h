@@ -87,7 +87,6 @@ public:
 private:
 	using User = GroupCallUser;
 
-	void refreshOpenBrush();
 	void refreshScheduledProcess();
 	void updateShadowGeometry(QRect wrapGeometry);
 	void updateControlsGeometry(QRect wrapGeometry);
@@ -103,8 +102,6 @@ private:
 	std::unique_ptr<RoundButton> _join;
 	std::unique_ptr<RoundButton> _open;
 	rpl::event_stream<Qt::MouseButton> _joinClicks;
-	QBrush _openBrushOverride;
-	int _openBrushForWidth = 0;
 	std::unique_ptr<PlainShadow> _shadow;
 	rpl::event_stream<> _barClicks;
 	Fn<QRect(QRect)> _shadowGeometryPostprocess;
