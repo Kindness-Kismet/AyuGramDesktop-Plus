@@ -1185,6 +1185,60 @@ void BuildTagsSection(SectionBuilder &builder, not_null<FoldersState*> state) {
 
 void BuildViewSection(SectionBuilder &builder) {
 	builder.add([](const WidgetContext &ctx) {
+		const auto controller = ctx.controller;
+		const auto parent = ctx.container;
+
+		const auto wrap = parent->add(
+			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+				parent,
+				object_ptr<Ui::VerticalLayout>(parent)));
+		wrap->toggleOn(controller->enoughSpaceForFiltersValue());
+		const auto content = wrap->entity();
+
+		Ui::AddSkip(content);
+		const auto title = Ui::AddSubsectionTitle(
+			content,
+			tr::lng_filters_view_subtitle());
+		if (ctx.highlights) {
+			ctx.highlights->push_back({
+				u"folders/tab-view"_q,
+				{ title.get(), SubsectionTitleHighlight() },
+			});
+		}
+
+		const auto group = std::make_shared<Ui::RadioenumGroup<bool>>(
+			Core::App().settings().chatFiltersHorizontal());
+		const auto addSend = [&](bool value, const QString &text) {
+			const auto button = content->add(
+				object_ptr<Ui::Radioenum<bool>>(
+					content,
+					group,
+					value,
+					text,
+					st::settingsSendType),
+				st::settingsSendTypePadding);
+			button->setObjectName(value
+				? u"chatFolders.layout.horizontal"_q
+				: u"chatFolders.layout.vertical"_q);
+		};
+		addSend(false, tr::lng_filters_vertical(tr::now));
+		addSend(true, tr::lng_filters_horizontal(tr::now));
+
+		group->setChangedCallback([=](bool value) {
+			Core::App().settings().setChatFiltersHorizontal(value);
+			Core::App().saveSettingsDelayed();
+		});
+
+		return SectionBuilder::WidgetToAdd{};
+	}, [] {
+		return SearchEntry{
+			.id = u"folders/tab-view"_q,
+			.title = tr::lng_filters_view_subtitle(tr::now),
+			.keywords = { u"view"_q, u"layout"_q, u"tabs"_q },
+		};
+	});
+
+	builder.add([](const WidgetContext &ctx) {
 		const auto content = ctx.container;
 
 		Ui::AddSkip(content);
@@ -1196,7 +1250,7 @@ void BuildViewSection(SectionBuilder &builder) {
 		const auto modeGroup = std::make_shared<Ui::RadioenumGroup<Mode>>(
 			Core::App().settings().chatFiltersTabsMode());
 		const auto addMode = [&](Mode value, const QString &text) {
-			content->add(
+			const auto button = content->add(
 				object_ptr<Ui::Radioenum<Mode>>(
 					content,
 					modeGroup,
@@ -1204,6 +1258,7 @@ void BuildViewSection(SectionBuilder &builder) {
 					text,
 					st::settingsSendType),
 				st::settingsSendTypePadding);
+			button->setObjectName(u"chatFolders.mode.%1"_q.arg(int(value)));
 		};
 		addMode(Mode::Default, tr::lng_filters_tabs_default(tr::now));
 		addMode(Mode::TextOnly, tr::lng_filters_tabs_text(tr::now));

@@ -489,6 +489,7 @@ Widget::Widget(
 	+ st::defaultDialogRow.photoSize
 	+ st::defaultDialogRow.padding.left())
 , _searchControls(this)
+, _headingMenu(this, st::dialogsHeadingMenu)
 , _foldersSettings(_searchControls, st::dialogsFoldersSettings)
 , _mainMenu({
 	.toggle = object_ptr<Ui::IconButton>(
@@ -916,7 +917,9 @@ Widget::Widget(
 	}
 	setupSwipeBack();
 
-	if (session().settings().dialogsFiltersEnabled()) {
+	if (session().settings().dialogsFiltersEnabled()
+		&& (Core::App().settings().chatFiltersHorizontal()
+			|| !controller->enoughSpaceForFilters())) {
 		toggleFiltersMenu(true);
 	}
 
@@ -1786,6 +1789,10 @@ void Widget::setupSupportMode() {
 }
 
 void Widget::setupMainMenuToggle() {
+	_headingMenu->setObjectName(u"brandMenuButton"_q);
+	_headingMenu->setAccessibleName(tr::lng_main_menu(tr::now));
+	_headingMenu->setIsMenuButton(true);
+	_headingMenu->setClickedCallback([=] { showMainMenu(); });
 	_foldersSettings->setObjectName(u"chatFolders.settings"_q);
 	_foldersSettings->setAccessibleName(tr::lng_filters_setup(tr::now));
 	_foldersSettings->setClickedCallback([=] {
@@ -1803,10 +1810,6 @@ void Widget::setupMainMenuToggle() {
 	rpl::single(rpl::empty) | rpl::then(
 		controller()->filtersMenuChanged()
 	) | rpl::on_next([=] {
-		const auto filtersHidden = !controller()->filtersWidth();
-		_mainMenu.toggle->setVisible(filtersHidden);
-		_mainMenu.under->setVisible(filtersHidden);
-		_searchForNarrowLayout->setVisible(!filtersHidden);
 		updateControlsGeometry();
 	}, lifetime());
 
@@ -1825,6 +1828,12 @@ void Widget::setupMainMenuToggle() {
 		}
 
 		_mainMenu.toggle->setIconOverride(icon, icon);
+		const auto headingIcon = !state.count || settings.hideNotificationCounters()
+			? nullptr
+			: !state.allMuted
+			? &st::dialogsHeadingMenuUnread
+			: &st::dialogsHeadingMenuUnreadMuted;
+		_headingMenu->setIconOverride(headingIcon, headingIcon);
 	}, _mainMenu.toggle->lifetime());
 }
 
@@ -4702,6 +4711,13 @@ void Widget::updateControlsGeometry() {
 		return;
 	}
 	const auto filterAreaTop = listHeaderHeight();
+	const auto filtersHidden = !controller()->filtersWidth();
+	_headingMenu->setVisible(filtersHidden && filterAreaTop > 0);
+	_headingMenu->moveToLeft(st::dialogsHeadingLeft,
+		(filterAreaTop - _headingMenu->height()) / 2);
+	_mainMenu.toggle->setVisible(filtersHidden && !filterAreaTop);
+	_mainMenu.under->setVisible(filtersHidden && !filterAreaTop);
+	_searchForNarrowLayout->setVisible(!filtersHidden);
 
 	const auto ratiow = anim::interpolate(
 		width(),
@@ -4712,7 +4728,7 @@ void Widget::updateControlsGeometry() {
 		? ((smallw - ratiow) / float64(smallw - _narrowWidth))
 		: 0.;
 
-	auto filterLeft = (controller()->filtersWidth()
+	auto filterLeft = (controller()->filtersWidth() || filterAreaTop
 		? st::dialogsFilterSkip
 		: (st::dialogsFilterPadding.x() + _mainMenu.toggle->width()))
 		+ st::dialogsFilterPadding.x();
@@ -5082,7 +5098,11 @@ void Widget::paintEvent(QPaintEvent *e) {
 		if (const auto header = listHeaderHeight()) {
 			p.setFont(st::dialogsHeadingFont);
 			p.setPen(st::windowBoldFg);
-			p.drawTextLeft(st::dialogsHeadingLeft,
+			const auto left = st::dialogsHeadingLeft
+				+ (_headingMenu->isHidden()
+					? 0
+					: _headingMenu->width() + st::dialogsFilterSkip);
+			p.drawTextLeft(left,
 				(header - st::dialogsHeadingFont->height) / 2,
 				width(), u"AyuGram"_q);
 		}

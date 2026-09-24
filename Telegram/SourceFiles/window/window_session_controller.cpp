@@ -1663,9 +1663,16 @@ SessionController::SessionController(
 	}, lifetime());
 
 	const auto processFiltersMenu = [this] {
-		content()->toggleFiltersMenu(
-			SessionNavigation::session().data().chatsFilters().has());
-		toggleFiltersMenu(enoughSpaceForFilters());
+		if (SessionNavigation::session().data().chatsFilters().has()) {
+			const auto isHorizontal
+				= Core::App().settings().chatFiltersHorizontal()
+					|| !enoughSpaceForFilters();
+			content()->toggleFiltersMenu(isHorizontal);
+			toggleFiltersMenu(!isHorizontal);
+		} else {
+			content()->toggleFiltersMenu(false);
+			toggleFiltersMenu(false);
+		}
 	};
 	rpl::merge(
 		enoughSpaceForFiltersValue() | rpl::skip(1) | rpl::to_empty,

@@ -233,12 +233,16 @@ createThemeLink: InputField(defaultInputField) {
 
 windowFiltersWidth: 76px;
 windowFiltersButton: SideBarButton(defaultSideBarButton) {
+	textBg: windowBg;
+	textBgActive: windowBg;
+	accentWidth: 0px;
+	padding: margins(4px, 2px, 4px, 2px);
 	textTop: 40px;
 	textSkip: 6px;
 	minHeight: 62px;
 	minTextWidth: 48px;
 	style: TextStyle(defaultTextStyle) {
-		font: font(11px semibold);
+		font: font(11px);
 	}
 	badgeStyle: TextStyle(defaultTextStyle) {
 		font: font(12px semibold);
@@ -259,16 +263,16 @@ windowFiltersButtonIconsOnly: SideBarButton(windowFiltersButton) {
 	minHeight: 54px;
 }
 windowFiltersMainMenu: SideBarButton(windowFiltersButton) {
-	icon: icon {{ "dialogs/dialogs_menu", sideBarIconFg }};
+	icon: icon {{ "intro_qr_plane", windowBgActive }};
 	iconPosition: point(-1px, -1px);
 	minHeight: 54px;
 }
 windowFiltersMainMenuUnread: icon {
-	{ "dialogs/dialogs_menu_unread", sideBarIconFg },
+	{ "intro_qr_plane", windowBgActive },
 	{ "dialogs/dialogs_menu_unread_dot", sideBarBadgeBg },
 };
 windowFiltersMainMenuUnreadMuted: icon {
-	{ "dialogs/dialogs_menu_unread", sideBarIconFg },
+	{ "intro_qr_plane", windowBgActive },
 	{ "dialogs/dialogs_menu_unread_dot", sideBarBadgeBgMuted },
 };
 windowFilterSmallItem: PeerListItem(defaultPeerListItem) {
@@ -413,24 +417,3 @@ macCautionIconSize: 16;
 macWindowRoundRadius: 10;
 macWindowShadowTopLeft: icon {{ "mac_window_shadow_top_left", windowShadowFg }};
 macTrayIcon: icon {{ "mac_tray_icon", windowFg }};
-
-windowNavigationButton: SideBarButton(windowFiltersButton) {
-	minHeight: 68px;
-	textTop: 39px;
-	iconPosition: point(-1px, 10px);
-	textBg: windowBg;
-	textBgActive: windowBg;
-	accentWidth: 0px;
-	padding: margins(4px, 2px, 4px, 2px);
-	style: TextStyle(defaultTextStyle) {
-		font: font(11px);
-	}
-}
-windowNavigationLogo: icon {{ "intro_qr_plane", windowBgActive }};
-windowNavigationChats: icon {{ "folders/folders_all", sideBarIconFg }};
-windowNavigationChatsActive: icon {{ "folders/folders_all", sideBarIconFgActive }};
-windowNavigationContacts: icon {{ "menu/name_show", sideBarIconFg }};
-windowNavigationCalls: icon {{ "menu/phone", sideBarIconFg }};
-windowNavigationSaved: icon {{ "menu/saved_messages", sideBarIconFg }};
-windowNavigationSavedActive: icon {{ "menu/saved_messages", sideBarIconFgActive }};
-windowNavigationSettings: icon {{ "menu/settings", sideBarIconFg }};
