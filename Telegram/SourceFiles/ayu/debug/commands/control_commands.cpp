@@ -4,6 +4,7 @@
 #include "core/application.h"
 #include "ui/abstract_button.h"
 #include "ui/widgets/elastic_scroll.h"
+#include "ui/widgets/scroll_area.h"
 #include "ui/widgets/fields/input_field.h"
 #include "window/window_controller.h"
 
@@ -97,6 +98,10 @@ struct WidgetInfo {
 		return true;
 	}
 	const auto widget = info.widget.data();
+	if (filter == u"@scroll"_q) {
+		return dynamic_cast<Ui::ScrollArea*>(widget)
+			|| dynamic_cast<Ui::ElasticScroll*>(widget);
+	}
 	return widget->objectName().contains(filter, Qt::CaseInsensitive)
 		|| QString::fromLatin1(widget->metaObject()->className())
 			.contains(filter, Qt::CaseInsensitive)
@@ -319,16 +324,40 @@ struct WidgetInfo {
 	}));
 }
 
-[[nodiscard]] Result controlScroll(const QStringList &args) {
-	if (args.isEmpty() || args.size() > 2) {
-		return Result::Err(u"usage: control.scroll <objectName> [top]"_q);
+[[nodiscard]] QWidget *findControl(const QString &selector) {
+	if (selector.startsWith(u'#')) {
+		auto ok = false;
+		const auto index = selector.mid(1).toInt(&ok);
+		const auto widgets = CollectWidgets(false);
+		return (ok && index >= 0 && index < int(widgets.size()))
+			? widgets[index].widget.data()
+			: nullptr;
 	}
 	const auto window = Core::App().activeWindow();
-	const auto target = window
-		? window->widget()->findChild<QWidget*>(args.front())
-		: nullptr;
+	return window ? window->widget()->findChild<QWidget*>(selector) : nullptr;
+}
+
+[[nodiscard]] Result controlHover(const QStringList &args) {
+	if (args.size() != 2 || (args[1] != u"on"_q && args[1] != u"off"_q)) {
+		return Result::Err(u"usage: control.hover <objectName | #index> <on|off>"_q);
+	}
+	const auto button = dynamic_cast<Ui::AbstractButton*>(findControl(args[0]));
+	if (!button || !button->isVisible() || button->isDisabled()) {
+		return Result::Err(u"visible enabled button not found"_q);
+	}
+	// 仅设置绘制状态，不点击，也不移动系统光标。
+	button->setSynteticOver(args[1] == u"on"_q);
+	return Result::Ok(Compact(json{ { "hovered", button->isOver() } }));
+}
+
+[[nodiscard]] Result controlScroll(const QStringList &args) {
+	if (args.isEmpty() || args.size() > 2) {
+		return Result::Err(u"usage: control.scroll <objectName | #index> [top]"_q);
+	}
+	const auto target = findControl(args.front());
 	const auto scroll = dynamic_cast<Ui::ElasticScroll*>(target);
-	if (!scroll || !scroll->isVisible()) {
+	const auto area = dynamic_cast<Ui::ScrollArea*>(target);
+	if ((!scroll && !area) || !target->isVisible()) {
 		return Result::Err(u"visible scroll area not found"_q);
 	}
 	if (args.size() == 2) {
@@ -337,12 +366,16 @@ struct WidgetInfo {
 		if (!ok) {
 			return Result::Err(u"expected integer scroll position"_q);
 		}
-		scroll->scrollToY(top);
+		if (scroll) {
+			scroll->scrollToY(top);
+		} else {
+			area->scrollToY(top);
+		}
 	}
 	return Result::Ok(Compact(json{
-		{ "top", scroll->scrollTop() },
-		{ "maximum", scroll->scrollTopMax() },
-		{ "height", scroll->height() },
+		{ "top", scroll ? scroll->scrollTop() : area->scrollTop() },
+		{ "maximum", scroll ? scroll->scrollTopMax() : area->scrollTopMax() },
+		{ "height", target->height() },
 	}));
 }
 
@@ -354,6 +387,7 @@ const HandlerMap &ControlHandlers() {
 		{ u"control.click"_q, &ControlClick },
 		{ u"control.set-text"_q, &controlSetText },
 		{ u"control.scroll"_q, &controlScroll },
+		{ u"control.hover"_q, &controlHover },
 	};
 	return result;
 }

@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QPixmap>
+#include <QtWidgets/QApplication>
 
 namespace AyuDebug::Commands {
 namespace {
@@ -14,14 +15,18 @@ namespace {
 using json = nlohmann::json;
 
 [[nodiscard]] Result ScreenshotTake(const QStringList &args) {
-	if (args.size() != 1) {
-		return Result::Err(u"usage: screenshot.take <path>"_q);
+	if (args.size() != 1
+		&& (args.size() != 2 || args[1] != u"popup"_q)) {
+		return Result::Err(u"usage: screenshot.take <path> [popup]"_q);
 	}
+	const auto popup = (args.size() == 2);
 	const auto window = Core::App().activeWindow();
-	if (!window) {
-		return Result::Err(u"no active window"_q);
+	const auto widget = popup
+		? QApplication::activePopupWidget()
+		: window ? window->widget().get() : nullptr;
+	if (!widget) {
+		return Result::Err(popup ? u"no active popup"_q : u"no active window"_q);
 	}
-	const auto widget = window->widget();
 	const auto image = widget->grab();
 	if (image.isNull()) {
 		return Result::Err(u"grab returned an empty image"_q);

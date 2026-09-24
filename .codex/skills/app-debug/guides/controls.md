@@ -1,9 +1,15 @@
 # 控件树与合成交互
 
-## `control.scroll <objectName> [top]`
+## `control.scroll <objectName | #序号> [top]`
 
-读取弹性滚动区的位置；传入整数时滚动到该位置。用于验证历史消息列表及跳转按钮。
+读取普通或弹性滚动区的位置；传入整数时滚动到该位置，用于历史消息、设置页和菜单。
+先用 `control.list @scroll` 找到滚动区，再用默认模式的 `#序号` 定位；页面变化后重新列举。
 返回 `top`、`maximum` 和 `height`。主聊天滚动区名称为 `historyScroll`。
+
+## `control.hover <objectName | #序号> <on|off>`
+
+设置可见且启用的按钮悬停状态，通过截图检查背景、圆角和文字，不触发点击、不移动系统光标。
+验证后用 `off` 恢复；只验证绘制状态，不代表真实鼠标命中验收。
 
 ## 点击命中检查
 

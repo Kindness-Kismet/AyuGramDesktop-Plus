@@ -3,11 +3,11 @@
 ## `screenshot.take`
 
 截取活动窗口并保存为 JPG（质量 80）。CLI 自动生成路径 `build/screenshots/shot-<时间戳>.jpg`，
-不接受路径参数。
+时间戳包含微秒，连续截图不会因同秒命名而覆盖；不接受路径参数。
 
 ```bash
 python .claude/skills/app-debug/scripts/cli.py screenshot.take
-# {"height":938,"path":"<repo>/build/screenshots/shot-20260901-190750.jpg","width":1200}
+# {"height":938,"path":"<repo>/build/screenshots/shot-20260901-190750-123456.jpg","width":1200}
 ```
 
 **前提**：必须有活动窗口（`hasWindow: true`）。
@@ -17,3 +17,9 @@ python .claude/skills/app-debug/scripts/cli.py screenshot.take
 
 消息气泡等自绘内容不在控件树里，验证这类视觉效果只能靠截图，配合
 `control.list` / `control.click` 做前置导航。
+
+## `screenshot.take --popup`
+
+仅截取当前活动的浮动菜单（独立弹出窗口），用于检查菜单分隔、圆角和子菜单。
+先打开菜单并等待展开动画结束，再执行截图。没有活动菜单时报错，不会悄悄改截主窗口。
+默认不传 `--popup` 时仍截取主窗口，路径与图片格式不变。

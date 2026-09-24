@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -150,7 +151,8 @@ def register_commands(sub) -> None:
 
     sub.add_parser("storage.stats", help="读保存开关与数据库文件大小")
 
-    sub.add_parser("screenshot.take", help="截图当前活动窗口到 build/screenshots/")
+    command = sub.add_parser("screenshot.take", help="截图当前活动窗口到 build/screenshots/")
+    command.add_argument("--popup", action="store_true", help="改为截取活动浮动菜单")
 
     command = sub.add_parser("control.list", help="列出活动窗口的控件树：标识、类名、几何、可见性")
     command.add_argument("filter", nargs="?", help="子串过滤，匹配 objectName/类名/accessibleName/文本")
@@ -160,8 +162,11 @@ def register_commands(sub) -> None:
     command.add_argument("--all", action="store_true", help="#序号 按 control.list --all 的全顶层序号寻址")
     command.add_argument("--mouse", action="store_true", help="从窗口命中测试后投递鼠标事件，检查按钮是否被遮挡")
     command = sub.add_parser("control.scroll", help="读取或设置可见滚动区的位置")
-    command.add_argument("target", help="滚动区名称，如 historyScroll")
+    command.add_argument("target", help="滚动区名称或 control.list 默认模式的 #序号")
     command.add_argument("top", nargs="?", type=int, help="滚动位置，不传时只读取")
+    command = sub.add_parser("control.hover", help="设置按钮悬停绘制状态，不触发点击")
+    command.add_argument("target", help="按钮名称或 control.list 默认模式的 #序号")
+    command.add_argument("state", choices=("on", "off"), help="开启或关闭悬停状态")
     command = sub.add_parser("control.set-text", help="修改可见输入框的文字，验证输入布局，不触发发送")
     command.add_argument("target", help="输入框的 objectName，如 messageInput")
     command.add_argument("text", nargs="?", help="待输入文字，空字符串用于清空")
@@ -226,8 +231,9 @@ def execute_command(args: argparse.Namespace) -> None:
     if command == "screenshot.take":
         ensure_debug_app()
         SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
-        target = SCREENSHOT_DIR / time.strftime("shot-%Y%m%d-%H%M%S.jpg")
-        print(send_command(f"screenshot.take {quote_arg(str(target))}"))
+        target = SCREENSHOT_DIR / datetime.now().strftime("shot-%Y%m%d-%H%M%S-%f.jpg")
+        suffix = " popup" if args.popup else ""
+        print(send_command(f"screenshot.take {quote_arg(str(target))}{suffix}"))
         return
 
     ensure_debug_app()
@@ -238,6 +244,8 @@ def execute_command(args: argparse.Namespace) -> None:
 
 def build_server_command(args: argparse.Namespace) -> str:
     command = args.command
+    if command == "control.hover":
+        return f"control.hover {quote_arg(args.target)} {args.state}"
     if command == "control.scroll":
         return f"control.scroll {quote_arg(args.target)}" + (f" {args.top}" if args.top is not None else "")
     if command == "control.set-text":
