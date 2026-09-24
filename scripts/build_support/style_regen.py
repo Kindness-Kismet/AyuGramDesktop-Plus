@@ -1,6 +1,7 @@
 import glob
 import hashlib
 import os
+import shlex
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
@@ -44,8 +45,27 @@ def _extract_codegen_command(cmake_config: str) -> list[str] | None:
 
 
 def _split_command(line: str) -> list[str]:
-    """把命令行拆成参数;.style 路径含空格的情况在本仓库不存在,按空白切分。"""
-    return line.split()
+    """按平台解析引号，保留路径中的空格和反斜杠。"""
+    if os.name != "nt":
+        return shlex.split(line)
+
+    import ctypes
+    from ctypes import wintypes
+
+    parse = ctypes.windll.shell32.CommandLineToArgvW
+    parse.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(ctypes.c_int)]
+    parse.restype = ctypes.POINTER(wintypes.LPWSTR)
+    free = ctypes.windll.kernel32.LocalFree
+    free.argtypes = [wintypes.HLOCAL]
+    free.restype = wintypes.HLOCAL
+    count = ctypes.c_int()
+    args = parse(line, ctypes.byref(count))
+    if not args:
+        raise ctypes.WinError()
+    try:
+        return list(args[:count.value])
+    finally:
+        free(args)
 
 
 def _style_inputs(cmake_config: str) -> list[Path]:
