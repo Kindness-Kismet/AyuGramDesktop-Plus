@@ -27,6 +27,8 @@ PinnedBar::PinnedBar(
 : _wrap(parent, object_ptr<RpWidget>(parent))
 , _shadow(std::make_unique<PlainShadow>(_wrap.parentWidget()))
 , _customEmojiPaused(std::move(customEmojiPaused)) {
+	ApplyChatControlSurface(_wrap.entity(), st::windowCardRadius);
+	_wrap.entity()->setObjectName(u"chatBar.pinned"_q);
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();
 

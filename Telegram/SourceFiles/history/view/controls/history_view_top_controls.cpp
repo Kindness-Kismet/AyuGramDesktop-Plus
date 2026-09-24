@@ -39,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
 #include "ui/chat/group_call_bar.h"
+#include "ui/chat/floating_bar.h"
 #include "ui/chat/pinned_bar.h"
 #include "ui/chat/requests_bar.h"
 #include "ui/chat/sponsored_message_bar.h"
@@ -1132,60 +1133,53 @@ void TopControls::rebuildModeSensitiveBars() {
 }
 
 void TopControls::updateLayout() {
-	auto top = 0;
+	const auto margin = st::historyComposeCapsuleMargin;
+	const auto innerWidth = std::max(_width - 2 * margin, 0);
+	auto stack = Ui::ChatBarStack();
 	const auto pinnedBar = _pinnedBar
 		? _pinnedBar.get()
 		: _hidingPinnedBar.get();
-	_topBars->move(0, 0);
+	_topBars->move(margin, 0);
 	if (_repliesRootView) {
-		_repliesRootView->move(0, top);
-		_repliesRootView->resizeToWidth(_width);
-		top += _repliesRootViewHeight;
+		_repliesRootView->move(0, stack.add(_repliesRootViewHeight));
+		_repliesRootView->resizeToWidth(innerWidth);
 	}
 	if (_groupCallBar) {
-		_groupCallBar->move(0, top);
-		_groupCallBar->resizeToWidth(_width);
-		top += _groupCallBarHeight;
+		_groupCallBar->move(0, stack.add(_groupCallBarHeight));
+		_groupCallBar->resizeToWidth(innerWidth);
 	}
 	if (_requestsBar) {
-		_requestsBar->move(0, top);
-		_requestsBar->resizeToWidth(_width);
-		top += _requestsBarHeight;
+		_requestsBar->move(0, stack.add(_requestsBarHeight));
+		_requestsBar->resizeToWidth(innerWidth);
 	}
 	if (pinnedBar) {
-		pinnedBar->move(0, top);
-		pinnedBar->resizeToWidth(_width);
-		top += _pinnedBarHeight;
+		pinnedBar->move(0, stack.add(_pinnedBarHeight));
+		pinnedBar->resizeToWidth(innerWidth);
 	}
 	if (_sponsoredMessageBar) {
-		_sponsoredMessageBar->move(0, top);
-		_sponsoredMessageBar->resizeToWidth(_width);
-		top += _sponsoredMessageBarHeight;
+		_sponsoredMessageBar->move(0, stack.add(_sponsoredMessageBarHeight));
+		_sponsoredMessageBar->resizeToWidth(innerWidth);
 	}
 	if (_topicReopenBar) {
-		_topicReopenBar->bar().move(0, top);
-		top += _topicReopenBarHeight;
+		_topicReopenBar->bar().move(0, stack.add(_topicReopenBarHeight));
 	}
 	if (_translateBar) {
-		_translateBar->move(0, top);
-		_translateBar->resizeToWidth(_width);
-		top += _translateBarHeight;
+		_translateBar->move(0, stack.add(_translateBarHeight));
+		_translateBar->resizeToWidth(innerWidth);
 	}
 	if (_paysStatus) {
-		_paysStatus->bar().move(0, top);
-		top += _paysStatusHeight;
+		_paysStatus->bar().move(0, stack.add(_paysStatusHeight));
 	}
 	if (_contactStatus) {
-		_contactStatus->bar().move(0, top);
-		top += _contactStatusHeight;
+		_contactStatus->bar().move(0, stack.add(_contactStatusHeight));
 	}
 	if (_businessBotStatus) {
-		_businessBotStatus->bar().move(0, top);
-		top += _businessBotStatusHeight;
+		_businessBotStatus->bar().move(0, stack.add(_businessBotStatusHeight));
 	}
-	_topBars->resize(_width, top + st::lineWidth);
-	_wrap->resize(_width, top + st::lineWidth);
-	_height = top;
+	const auto height = stack.height();
+	_topBars->resize(innerWidth, height);
+	_wrap->resize(_width, height);
+	_height = height;
 }
 
 void TopControls::updateZOrder() {

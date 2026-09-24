@@ -15,6 +15,25 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Ui {
 
+class ChatBarStack final {
+public:
+	int add(int contentHeight) {
+		if (!contentHeight) {
+			return _height;
+		}
+		const auto top = _height + st::windowCardGap / 2;
+		_height = top + contentHeight;
+		return top;
+	}
+
+	[[nodiscard]] int height() const {
+		return _height ? (_height + st::windowCardGap / 2) : 0;
+	}
+
+private:
+	int _height = 0;
+};
+
 class ChatControlSurface final : public QGraphicsEffect {
 public:
 	ChatControlSurface(int radius, bool outline)
@@ -68,7 +87,7 @@ inline void ApplyChatControlSurface(
 	widget->setGraphicsEffect(new ChatControlSurface(radius, outline));
 }
 
-// 通知条与聊天标题连续排列，仅在底边分隔。
+// 背景和子控件统一由圆角表面裁切。
 inline void PaintChatBar(
 		QPainter &p,
 		const QRect &rect,
@@ -77,8 +96,6 @@ inline void PaintChatBar(
 		return;
 	}
 	p.fillRect(rect, fill);
-	p.fillRect(rect.x(), rect.bottom(), rect.width(), st::lineWidth,
-		st::windowDividerFg);
 }
 
 } // namespace Ui

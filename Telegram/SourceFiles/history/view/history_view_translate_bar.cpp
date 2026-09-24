@@ -246,6 +246,8 @@ TranslateBar::TranslateBar(
 , _history(history)
 , _wrap(parent, object_ptr<Ui::AbstractButton>(parent))
 , _shadow(std::make_unique<Ui::PlainShadow>(parent)) {
+	Ui::ApplyChatControlSurface(_wrap.entity(), st::windowCardRadius);
+	_wrap.entity()->setObjectName(u"chatBar.translate"_q);
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();
 

@@ -681,11 +681,11 @@ void ContactStatus::Bar::emojiStatusRepaint() {
 SlidingBar::SlidingBar(
 	not_null<Ui::RpWidget*> parent,
 	object_ptr<Ui::RpWidget> wrapped)
-: _wrapped(parent, std::move(wrapped))
-, _shadow(parent) {
+: _wrapped(parent, std::move(wrapped)) {
+	Ui::ApplyChatControlSurface(_wrapped.entity(), st::windowCardRadius);
+	_wrapped.entity()->setObjectName(u"chatBar.status"_q);
 	setup(parent);
 	_wrapped.hide(anim::type::instant);
-	_shadow.hide();
 }
 
 void SlidingBar::setup(not_null<Ui::RpWidget*> parent) {
@@ -694,22 +694,6 @@ void SlidingBar::setup(not_null<Ui::RpWidget*> parent) {
 		_wrapped.resizeToWidth(width);
 	}, _wrapped.lifetime());
 
-	_wrapped.geometryValue(
-	) | rpl::on_next([=](QRect geometry) {
-		_shadow.setGeometry(
-			geometry.x(),
-			geometry.y() + geometry.height(),
-			geometry.width(),
-			st::lineWidth);
-	}, _shadow.lifetime());
-
-	_shadow.showOn(rpl::combine(
-		_wrapped.shownValue(),
-		_wrapped.heightValue(),
-		rpl::mappers::_1 && rpl::mappers::_2 > 0
-	) | rpl::filter([=](bool shown) {
-		return (shown == _shadow.isHidden());
-	}));
 }
 
 void SlidingBar::toggleContent(bool visible) {
@@ -721,7 +705,6 @@ void SlidingBar::toggleContent(bool visible) {
 
 void SlidingBar::raise() {
 	_wrapped.raise();
-	_shadow.raise();
 }
 
 void SlidingBar::setVisible(bool visible) {
@@ -737,7 +720,6 @@ void SlidingBar::setVisible(bool visible) {
 
 void SlidingBar::move(int x, int y) {
 	_wrapped.move(x, y);
-	_shadow.move(x, y + _wrapped.height());
 }
 
 int SlidingBar::height() const {

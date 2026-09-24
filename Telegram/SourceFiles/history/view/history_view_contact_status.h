@@ -9,7 +9,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ui/rp_widget.h"
 #include "ui/wrap/slide_wrap.h"
-#include "ui/widgets/shadow.h"
 
 namespace Data {
 class ForumTopic;
@@ -56,7 +55,6 @@ private:
 	void setup(not_null<Ui::RpWidget*> parent);
 
 	Ui::SlideWrap<Ui::RpWidget> _wrapped;
-	Ui::PlainShadow _shadow;
 	bool _shown = false;
 	bool _contentShown = false;
 

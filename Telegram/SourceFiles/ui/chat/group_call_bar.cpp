@@ -117,6 +117,8 @@ GroupCallBar::GroupCallBar(
 		st::historyGroupCallUserpics,
 		std::move(hideBlobs),
 		[=] { updateUserpics(); })) {
+	ApplyChatControlSurface(_wrap.entity(), st::windowCardRadius);
+	_wrap.entity()->setObjectName(u"chatBar.call"_q);
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();
 

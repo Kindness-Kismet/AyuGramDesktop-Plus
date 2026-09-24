@@ -32,6 +32,8 @@ RequestsBar::RequestsBar(
 		st::historyRequestsUserpics,
 		rpl::single(false),
 		[=] { _inner->update(); })) {
+	ApplyChatControlSurface(_wrap.entity(), st::windowCardRadius);
+	_wrap.entity()->setObjectName(u"chatBar.requests"_q);
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();
 

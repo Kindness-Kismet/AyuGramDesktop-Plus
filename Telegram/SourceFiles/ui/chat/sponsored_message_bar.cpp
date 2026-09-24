@@ -161,6 +161,8 @@ void FillSponsoredMessageBar(
 		FullMsgId fullId,
 		Data::SponsoredFrom from,
 		const TextWithEntities &textWithEntities) {
+	ApplyChatControlSurface(container, st::windowCardRadius);
+	container->setObjectName(u"chatBar.sponsored"_q);
 	const auto widget = CreateSimpleRectButton(
 		container,
 		st::defaultRippleAnimationBgOver);

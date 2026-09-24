@@ -977,8 +977,7 @@ void HistoryWidget::resizeEvent(QResizeEvent *e) {
 void HistoryWidget::updateControlsGeometry() {
 	const auto width = this->width();
 
-	const auto margin = 0;
-	const auto barGap = 0;
+	const auto margin = st::historyComposeCapsuleMargin;
 	_topBar->resizeToWidth(width);
 	_topBar->moveToLeft(0, 0);
 
@@ -994,16 +993,9 @@ void HistoryWidget::updateControlsGeometry() {
 	_topBars->move(
 		tabsLeftSkip + margin,
 		_topBar->bottomNoMargins()
-			+ margin
 			+ (_subsectionTabs ? _subsectionTabs->topSkip() : 0));
-	auto stackY = 0;
-	const auto place = [&](int height) {
-		const auto top = stackY;
-		if (height > 0) {
-			stackY += height + barGap;
-		}
-		return top;
-	};
+	auto stack = Ui::ChatBarStack();
+	const auto place = [&](int height) { return stack.add(height); };
 	const auto groupCallTop = place(_groupCallBar ? _groupCallBar->height() : 0);
 	if (_groupCallBar) {
 		_groupCallBar->move(0, groupCallTop);
@@ -1045,8 +1037,8 @@ void HistoryWidget::updateControlsGeometry() {
 	if (_businessBotStatus) {
 		_businessBotStatus->bar().move(0, businessBotTop);
 	}
-	const auto scrollAreaTop = _topBars->y() + stackY;
-	_topBars->resize(innerWidth, stackY + st::lineWidth);
+	const auto scrollAreaTop = _topBars->y() + stack.height();
+	_topBars->resize(innerWidth, stack.height());
 	if (_scroll->y() != scrollAreaTop || _scroll->x() != tabsLeftSkip) {
 		_scroll->moveToLeft(tabsLeftSkip, scrollAreaTop);
 		if (_autocomplete) {
@@ -1312,30 +1304,16 @@ void HistoryWidget::updateHistoryGeometry(
 		- subsectionTabsTop
 		- (_subsectionTabs ? _subsectionTabs->topSkip() : 0)
 		- (_subsectionTabs ? _subsectionTabs->bottomSkip() : 0);
-	if (_translateBar) {
-		newScrollHeight -= _translateBar->height();
-	}
-	if (_sponsoredMessageBar) {
-		newScrollHeight -= _sponsoredMessageBar->height();
-	}
-	if (_pinnedBar) {
-		newScrollHeight -= _pinnedBar->height();
-	}
-	if (_groupCallBar) {
-		newScrollHeight -= _groupCallBar->height();
-	}
-	if (_requestsBar) {
-		newScrollHeight -= _requestsBar->height();
-	}
-	if (_paysStatus) {
-		newScrollHeight -= _paysStatus->bar().height();
-	}
-	if (_contactStatus) {
-		newScrollHeight -= _contactStatus->bar().height();
-	}
-	if (_businessBotStatus) {
-		newScrollHeight -= _businessBotStatus->bar().height();
-	}
+	auto bars = Ui::ChatBarStack();
+	bars.add(_groupCallBar ? _groupCallBar->height() : 0);
+	bars.add(_requestsBar ? _requestsBar->height() : 0);
+	bars.add(_pinnedBar ? _pinnedBar->height() : 0);
+	bars.add(_sponsoredMessageBar ? _sponsoredMessageBar->height() : 0);
+	bars.add(_translateBar ? _translateBar->height() : 0);
+	bars.add(_paysStatus ? _paysStatus->bar().height() : 0);
+	bars.add(_contactStatus ? _contactStatus->bar().height() : 0);
+	bars.add(_businessBotStatus ? _businessBotStatus->bar().height() : 0);
+	newScrollHeight -= bars.height();
 	if (isChoosingTheme()) {
 		newScrollHeight -= _chooseTheme->height();
 	} else if (!editingMessage()
