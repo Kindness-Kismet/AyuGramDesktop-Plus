@@ -190,8 +190,8 @@ void OverlayWidget::RendererSW::paintControlsFade(
 				top.fill(*_p, topShadow);
 			} else if (flip) {
 				if (_topShadowCache.isNull()
-					|| _topShadowColor != st::windowShadowFg->c) {
-					_topShadowColor = st::windowShadowFg->c;
+					|| _topShadowColor != st::imageBg->c) {
+					_topShadowColor = st::imageBg->c;
 					_topShadowCache = top.instance(
 						_topShadowColor).mirrored(true, false);
 				}

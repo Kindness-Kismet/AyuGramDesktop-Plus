@@ -112,11 +112,11 @@ mediaviewVolumeToggle: IconButton(mediaviewControlsButton) {
 mediaviewVolumeSkip: 3px;
 
 mediaviewLeft: icon {
-	{ "mediaview/next_shadow-flip_horizontal", windowShadowFg }
+	{ "mediaview/next_shadow-flip_horizontal", imageBg }
 	{ "mediaview/next-flip_horizontal", mediaviewControlFg }
 };
 mediaviewRight: icon {
-	{ "mediaview/next_shadow", windowShadowFg }
+	{ "mediaview/next_shadow", imageBg }
 	{ "mediaview/next", mediaviewControlFg }
 };
 mediaviewSave: icon {{ "mediaview/download", mediaviewControlFg }};
@@ -303,19 +303,19 @@ mediaviewDefaultWidth: 800px;
 mediaviewDefaultHeight: 600px;
 
 mediaviewTitleMinimize: icon{
-	{ "mediaview/title_viewer_shadow_minimize", windowShadowFg },
+	{ "mediaview/title_viewer_shadow_minimize", imageBg },
 	{ "mediaview/title_viewer_button_minimize", mediaviewControlFg },
 };
 mediaviewTitleMaximize: icon{
-	{ "mediaview/title_viewer_shadow_maximize", windowShadowFg },
+	{ "mediaview/title_viewer_shadow_maximize", imageBg },
 	{ "mediaview/title_viewer_button_maximize", mediaviewControlFg },
 };
 mediaviewTitleRestore: icon{
-	{ "mediaview/title_viewer_shadow_restore", windowShadowFg },
+	{ "mediaview/title_viewer_shadow_restore", imageBg },
 	{ "mediaview/title_viewer_button_restore", mediaviewControlFg },
 };
 mediaviewTitleClose: icon{
-	{ "mediaview/title_viewer_shadow_close", windowShadowFg },
+	{ "mediaview/title_viewer_shadow_close", imageBg },
 	{ "mediaview/title_viewer_button_close", mediaviewControlFg },
 };
 mediaviewTitleButton: IconButton(windowTitleButton) {
@@ -353,7 +353,7 @@ mediaviewTitle: WindowTitle(defaultWindowTitle) {
 }
 
 mediaviewTitleButtonMac: icon{
-	{ "mediaview/title_button_shadow_mac", windowShadowFg },
+	{ "mediaview/title_button_shadow_mac", imageBg },
 	{ "mediaview/title_button_mac", mediaviewControlFg },
 };
 mediaviewTitleMinimizeMac: icon {{ "mediaview/title_button_minimize_mac", mediaviewBg }};
@@ -364,8 +364,8 @@ mediaviewTitleCloseMacPadding: margins(8px, 4px, 0px, 4px);
 mediaviewTitleMinimizeMacPadding: margins(0px, 4px, 0px, 4px);
 mediaviewTitleMaximizeMacPadding: margins(0px, 4px, 8px, 4px);
 
-mediaviewShadowTop: icon{{ "mediaview/shadow_top", windowShadowFg }};
-mediaviewShadowBottom: icon{{ "mediaview/shadow_bottom", windowShadowFg }};
+mediaviewShadowTop: icon{{ "mediaview/shadow_top", imageBg }};
+mediaviewShadowBottom: icon{{ "mediaview/shadow_bottom", imageBg }};
 mediaviewWideMenuSeparator: MenuSeparator(mediaviewMenuSeparator) {
 	padding: margins(0px, 4px, 0px, 4px);
 	width: 6px;
@@ -508,7 +508,7 @@ storiesHeaderDate: FlatLabel(defaultFlatLabel) {
 }
 storiesHeaderDatePosition: point(50px, 17px);
 storiesHeaderRepostWidthMin: 40px;
-storiesShadowTop: icon{{ "mediaview/shadow_bottom-flip_vertical", windowShadowFg }};
+storiesShadowTop: icon{{ "mediaview/shadow_bottom-flip_vertical", imageBg }};
 storiesShadowBottom: mediaviewShadowBottom;
 storiesControlsMinWidth: 280px;
 storiesControlsExtend: 4px;

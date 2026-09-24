@@ -631,11 +631,11 @@ void Manager::paintButton(
 	}
 	const auto q = expanded ? &layeredPainter.emplace(&_expandedBuffer) : &p;
 	const auto shadow = context.st->shadowFg()->c;
-	const auto background = context.st->windowBg()->c;
+	const auto background = context.st->historyToDownBg()->c;
 	_cachedRound.setShadowColor(shadow);
 	_cachedRound.setBackgroundColor(background);
 	if (expanded) {
-		q->fillRect(QRect(QPoint(), size), context.st->windowBg());
+		q->fillRect(QRect(QPoint(), size), background);
 	} else {
 		const auto radius = AyuUserpic::ComputeRadiusF(_inner.height());
 		const auto frame = _cachedRound.validateFrame(

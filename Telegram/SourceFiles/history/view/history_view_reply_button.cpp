@@ -273,7 +273,7 @@ void Manager::paintButton(
 		p.setOpacity(opacity);
 	}
 	const auto shadow = context.st->shadowFg()->c;
-	const auto background = context.st->windowBg()->c;
+	const auto background = context.st->historyToDownBg()->c;
 	_cachedRound.setShadowColor(shadow);
 	_cachedRound.setBackgroundColor(background);
 	const auto radius = _inner.height() / 2.;
@@ -284,7 +284,7 @@ void Manager::paintButton(
 	p.drawImage(position, *frame.image, frame.rect);
 
 	if (_ripple && !_ripple->empty() && _button && button == _button.get()) {
-		const auto color = context.st->windowBgOver()->c;
+		const auto color = context.st->historyToDownBgRipple()->c;
 		_ripple->paint(
 			p,
 			position.x() + _inner.x(),
@@ -302,8 +302,7 @@ void Manager::paintButton(
 	const auto textTop = position.y()
 		+ _inner.y()
 		+ (_inner.height() - st::msgDateTextStyle.font->height) / 2;
-	const auto &incomingStyle = context.st->messageStyle(false, false);
-	p.setPen(incomingStyle.msgDateFg);
+	p.setPen(context.st->historyToDownFg());
 	p.setFont(st::msgDateTextStyle.font);
 	_text.draw(p, {
 		.position = QPoint(textLeft, textTop),

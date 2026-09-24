@@ -520,42 +520,42 @@ callBarSignalBars: CallSignalBars(callPanelSignalBars) {
 
 callTitleButton: windowTitleButton;
 callTitleMinimizeIcon: icon {
-	{ "title_shadow_minimize", windowShadowFg },
+	{ "title_shadow_minimize", imageBg },
 	{ "title_button_minimize", callNameFg },
 };
 callTitleMinimizeIconOver: icon {
 	{ windowTitleButtonSize, callBgButton },
 	{ windowTitleButtonSize, callMuteRipple },
-	{ "title_shadow_minimize", windowShadowFg },
+	{ "title_shadow_minimize", imageBg },
 	{ "title_button_minimize", callNameFg },
 };
 callTitleMaximizeIcon: icon {
-	{ "title_shadow_maximize", windowShadowFg },
+	{ "title_shadow_maximize", imageBg },
 	{ "title_button_maximize", callNameFg },
 };
 callTitleMaximizeIconOver: icon {
 	{ windowTitleButtonSize, callBgButton },
 	{ windowTitleButtonSize, callMuteRipple },
-	{ "title_shadow_maximize", windowShadowFg },
+	{ "title_shadow_maximize", imageBg },
 	{ "title_button_maximize", callNameFg },
 };
 callTitleRestoreIcon: icon {
-	{ "title_shadow_restore", windowShadowFg },
+	{ "title_shadow_restore", imageBg },
 	{ "title_button_restore", callNameFg },
 };
 callTitleRestoreIconOver: icon {
 	{ windowTitleButtonSize, callBgButton },
 	{ windowTitleButtonSize, callMuteRipple },
-	{ "title_shadow_restore", windowShadowFg },
+	{ "title_shadow_restore", imageBg },
 	{ "title_button_restore", callNameFg },
 };
 callTitleCloseIcon: icon {
-	{ "title_shadow_close", windowShadowFg },
+	{ "title_shadow_close", imageBg },
 	{ "title_button_close", callNameFg },
 };
 callTitleCloseIconOver: icon {
 	{ windowTitleButtonSize, titleButtonCloseBgOver },
-	{ "title_shadow_close", windowShadowFg },
+	{ "title_shadow_close", imageBg },
 	{ "title_button_close", titleButtonCloseFgOver },
 };
 callTitle: WindowTitle(defaultWindowTitle) {
@@ -588,8 +588,8 @@ callTitle: WindowTitle(defaultWindowTitle) {
 	closeIconActive: callTitleCloseIcon;
 	closeIconActiveOver: callTitleCloseIconOver;
 }
-callTitleShadowRight: icon {{ "calls/calls_shadow_controls", windowShadowFg }};
-callTitleShadowLeft: icon {{ "calls/calls_shadow_controls-flip_horizontal", windowShadowFg }};
+callTitleShadowRight: icon {{ "calls/calls_shadow_controls", imageBg }};
+callTitleShadowLeft: icon {{ "calls/calls_shadow_controls-flip_horizontal", imageBg }};
 
 callPinnedOnTopIcon: icon {{ "calls/navbar_pin_filled", callNameFg }};
 callPinOnTop: IconButton {
