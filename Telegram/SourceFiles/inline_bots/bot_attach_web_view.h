@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mtproto/sender.h"
 #include "ui/chat/attach/attach_bot_webview.h"
 #include "ui/rp_widget.h"
+#include "ui/style/style_core_types.h"
 
 namespace Data {
 class Thread;
@@ -515,6 +516,10 @@ public:
 	MenuBotIcon(
 		QWidget *parent,
 		std::shared_ptr<Data::DocumentMedia> media);
+	// 官方钱包机器人下发的图标与菜单其它图标风格不一，改用内置图标
+	MenuBotIcon(
+		QWidget *parent,
+		const style::icon *icon);
 
 private:
 	void paintEvent(QPaintEvent *e) override;
@@ -522,6 +527,7 @@ private:
 	void validate();
 
 	std::shared_ptr<Data::DocumentMedia> _media;
+	const style::icon *_icon = nullptr;
 	QImage _image;
 	QImage _mask;
 

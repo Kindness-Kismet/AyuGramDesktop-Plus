@@ -862,7 +862,28 @@ MenuBotIcon::MenuBotIcon(
 	show();
 }
 
+MenuBotIcon::MenuBotIcon(
+	QWidget *parent,
+	const style::icon *icon)
+: RpWidget(parent)
+, _icon(icon) {
+	style::PaletteChanged(
+	) | rpl::on_next([=] {
+		_image = QImage();
+		update();
+	}, lifetime());
+
+	setAttribute(Qt::WA_TransparentForMouseEvents);
+	resize(icon->size());
+	show();
+}
+
 void MenuBotIcon::paintEvent(QPaintEvent *e) {
+	if (_icon) {
+		auto p = QPainter(this);
+		_icon->paint(p, 0, 0, width());
+		return;
+	}
 	validate();
 	if (!_image.isNull()) {
 		QPainter(this).drawImage(0, 0, _image);

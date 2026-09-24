@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/ui_utility.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
+#include "styles/style_ayu_icons.h"
 #include "styles/style_chat.h"
 #include "styles/style_info.h"
 #include "styles/style_menu_icons.h"
@@ -320,9 +321,15 @@ void SetupMenuBots(
 			const auto menu = button->lifetime().make_state<
 				base::unique_qptr<Ui::PopupMenu>
 			>();
-			const auto icon = Ui::CreateChild<InlineBots::MenuBotIcon>(
-				button,
-				bot.media);
+			// 官方钱包机器人（@wallet）下发的图标与菜单其余图标风格不同，用内置图标替代
+			const auto walletBot = (user->username() == u"wallet"_q);
+			const auto icon = walletBot
+				? Ui::CreateChild<InlineBots::MenuBotIcon>(
+					button,
+					&st::ayuWalletBotIcon)
+				: Ui::CreateChild<InlineBots::MenuBotIcon>(
+					button,
+					bot.media);
 			button->heightValue(
 			) | rpl::on_next([=](int height) {
 				icon->move(
