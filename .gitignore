@@ -91,6 +91,7 @@ __pycache__/
 
 # 本地文档与生成页面
 /docs/
+/.github/docs/
 
 # Project specific
 Telegram/SourceFiles/_other/packer_private.h

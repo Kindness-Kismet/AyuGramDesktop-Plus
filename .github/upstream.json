@@ -16,6 +16,7 @@
     "synced_at": "2026-09-19",
     "merge_commit": "e6f741d82fc68723670cf03ee432c48e21777990",
     "customised_paths": [
+      ".gitignore",
       ".gitmodules",
       "AGENTS.md",
       "CMakeLists.txt",
