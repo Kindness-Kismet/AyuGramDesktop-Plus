@@ -54,6 +54,20 @@ PRIVATE
     iv/editor/iv_editor_structure_menu.cpp
     iv/editor/iv_editor_structure_menu.h
     iv/editor/iv_editor_state.cpp
+    iv/editor/iv_editor_state_boundaries.cpp
+    iv/editor/iv_editor_state_buttons.cpp
+    iv/editor/iv_editor_state_drag.cpp
+    iv/editor/iv_editor_state_helpers.cpp
+    iv/editor/iv_editor_state_insertion.cpp
+    iv/editor/iv_editor_state_internal.h
+    iv/editor/iv_editor_state_lists.cpp
+    iv/editor/iv_editor_state_media.cpp
+    iv/editor/iv_editor_state_navigation.cpp
+    iv/editor/iv_editor_state_selection.cpp
+    iv/editor/iv_editor_state_structure.cpp
+    iv/editor/iv_editor_state_tables.cpp
+    iv/editor/iv_editor_state_text.cpp
+    iv/editor/iv_editor_state_tree.cpp
     iv/editor/iv_editor_state.h
     iv/editor/iv_editor_text_entities.cpp
     iv/editor/iv_editor_text_entities.h
