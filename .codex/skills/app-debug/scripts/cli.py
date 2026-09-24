@@ -158,8 +158,9 @@ def register_commands(sub) -> None:
     command.add_argument("filter", nargs="?")
     command = sub.add_parser("debug.send-message", help="真实发送文本消息到指定对话，需已登录，仅限本人测试群")
     command.add_argument("peerId")
-    command.add_argument("text", help="消息文本，多个参数以空格拼接")
+    command.add_argument("text", nargs="?", help="消息文本，多个参数以空格拼接")
     command.add_argument("extraText", nargs="*", help=argparse.SUPPRESS)
+    command.add_argument("--file", dest="text_file", help="发送 UTF-8 文件内容，保留换行与引号")
     command = sub.add_parser("debug.history-stats", help="报告 Saved Messages 里指定 id 消息的存在/隐藏/视图状态，诊断断点")
     command.add_argument("msgIds", nargs="+", metavar="MSG_ID")
     command = sub.add_parser("debug.window-size", help="读或设窗口尺寸（Qt 逻辑像素）；最大化的窗口先还原再设尺寸")
@@ -333,6 +334,13 @@ def build_server_command(args: argparse.Namespace) -> str:
         return ("debug.chats" if args.filter is None
                 else f"debug.chats {quote_arg(args.filter)}")
     if command == "debug.send-message":
+        if args.text_file is not None:
+            if args.text is not None or args.extraText:
+                raise ValueError("文字和 --file 只能提供一项")
+            path = Path(args.text_file).resolve()
+            return f"debug.send-message {args.peerId} --file {quote_arg(str(path))}"
+        if args.text is None:
+            raise ValueError("请提供消息文字或 --file")
         text = " ".join([args.text, *args.extraText])
         return f"debug.send-message {args.peerId} {quote_arg(text)}"
     if command == "debug.history-stats":

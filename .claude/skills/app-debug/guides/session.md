@@ -40,12 +40,13 @@
 peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -100 拼接格式），
 原样传入即可。结果覆盖已加载的对话；其它对话先打开再查询。
 
-## `debug.send-message <peerId> <text>`
+## `debug.send-message <peerId> <text|--file path>`
 
 真实发送文本消息，走官方发送链路（`session->api().sendMessage`），发送侧钩子
 （如 auto_space）均生效。需要已登录的真实会话，与 fake-session 不兼容。
 仅向自己掌控的测试对话发送，避免打扰真实联系人。
 
+- `--file` 按 UTF-8 发送文件原文，保留换行与引号；相对路径从 CLI 当前目录解析。
 - 返回只表示请求已提交，服务器确认是异步的，验证效果稍等片刻再 `screenshot.take`。
 - 不清除目标对话的草稿，不影响输入框。
 
