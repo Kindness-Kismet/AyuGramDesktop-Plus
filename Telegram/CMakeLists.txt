@@ -1370,6 +1370,18 @@ PRIVATE
     history/history_view_swipe_back_session.cpp
     history/history_view_swipe_back_session.h
     history/history_widget.cpp
+    history/history_widget_bars.cpp
+    history/history_widget_compose.cpp
+    history/history_widget_compose_layout.cpp
+    history/history_widget_drafts.cpp
+    history/history_widget_history.cpp
+    history/history_widget_interaction.cpp
+    history/history_widget_internal.h
+    history/history_widget_navigation.cpp
+    history/history_widget_paint.cpp
+    history/history_widget_reply.cpp
+    history/history_widget_sending.cpp
+    history/history_widget_view.cpp
     history/history_widget.h
     info/bot/earn/info_bot_earn_list.cpp
     info/bot/earn/info_bot_earn_list.h
