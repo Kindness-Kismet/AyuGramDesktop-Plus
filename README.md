@@ -24,8 +24,8 @@ The whole point of this fork is making the client look and behave the way *you*
 want. Corner radii, switch styles, bubble shapes, which buttons appear in the
 compose area, which entries live in the side drawer, how emoji are rendered,
 how Chinese and English text sit next to each other — all of it is a toggle
-away, and the night theme has been rebuilt around one flat surface colour so
-nothing fights for attention.
+away. The night theme uses flat surface colours with distinct panels, controls
+and borders.
 
 It is also built to be worked on quickly. The repository carries a specification
 written for AI coding assistants, a debug server inside Debug builds, and build
@@ -70,7 +70,7 @@ receive) offer to restart for you. No config file editing either way.
 | Avatar corners | Free slider from circle to square, applied everywhere avatars appear |
 | Message bubbles | Corner radius, tail on/off, sticker scale |
 | Switch style | The MD3 switch style, or the stock one |
-| Night theme | Rebuilt on a single flat grey surface, with dividers and scrollbars that are actually visible |
+| Night theme | Flat surfaces with distinct panel, control and border colours |
 | Chat background | Turn custom backgrounds off for a flat, uniform chat area |
 | App icon | Twelve icons to choose from for the desktop and taskbar |
 | Monospace font | Pick the font used for code blocks and monospace text |
@@ -200,9 +200,9 @@ Worth knowing:
   `Telegram/build/version` change. Day-to-day edits just run `build.py`.
 - Builds use the public test API credentials by default. Pass
   `--api-id` / `--api-hash` to use your own.
-- Each MSVC process maps its own ~0.5 GB precompiled header. The default of 32
-  jobs suits a 32 GB machine; use `--jobs 8` on a 16 GB one, or you will hit
-  commit-memory errors.
+- The build defaults to 32 parallel jobs and accepts `--jobs 1` through
+  `--jobs 128`. Memory use depends on the files being compiled, other running
+  applications and available commit memory; lower the job count when needed.
 - The `cmake` submodule is upstream `desktop-app/cmake_helpers`; local patches
   are applied at configure time by `scripts/build_support/cmake_patch.py`, so
   git reporting "modified content" on that submodule is expected.
@@ -301,17 +301,19 @@ that Claude Code, Codex CLI and similar harnesses pick up automatically:
 |---|---|
 | `app-debug` | Drives a running Debug build: read and write settings, send real messages, take screenshots, click widgets, inject a local session |
 | `upstream-diff` | Tracks official Telegram Desktop updates, generates adaptation material, records the adapted baseline |
-| `version-bump` | Checks the version numbers across all five files and keeps `upstream.json` in sync |
+| `version-bump` | Updates release versions and notes, checks version consistency, and separately verifies the recorded upstream baseline |
 | `commit` | Atomic, scoped commits with path-by-path staging |
 | `pull-request` | PR structure, review checklist, scope control |
 
 ### A debug server inside Debug builds
 
 Debug builds (guarded by `_DEBUG`, absent from Release binaries) listen on
-`127.0.0.1:20100` and answer one-line JSON commands over TCP:
+`127.0.0.1:20100` and accept one-line text commands over TCP. Each connection
+handles one command and replies with `OK` plus an optional payload, or `ERR`
+plus a reason. Structured payloads use JSON.
 
 - **Lifecycle** — start, restart and stop the app from the command line. The
-  build script stops running instances by absolute path before linking.
+  build script stops matching project executables before collecting output.
 - **Settings** — list keys, dump everything, read and write any value through
   the same code path the settings UI uses.
 - **Observation** — screenshot the active window, dump the widget tree,
