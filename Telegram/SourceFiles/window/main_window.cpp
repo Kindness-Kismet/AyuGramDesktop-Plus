@@ -57,6 +57,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QWindow>
 #include <QtGui/QScreen>
 #include <QtGui/QDrag>
+#include <QtSvg/QSvgRenderer>
 
 #include <kurlmimedata.h>
 
@@ -149,7 +150,16 @@ QImage LogoNoMargin() {
 }
 
 const QImage &LogoTelegramDefault() {
-	static const auto result = QImage(u":/gui/art/logo_256_no_margin.png"_q);
+	static const auto result = [] {
+		auto image = QImage(256, 256, QImage::Format_RGB32);
+		image.fill(QColor(0x2a, 0xab, 0xee));
+		{
+			auto painter = QPainter(&image);
+			auto plane = QSvgRenderer(u":/gui/plane_white.svg"_q);
+			plane.render(&painter, QRectF(image.rect()));
+		}
+		return image;
+	}();
 	return result;
 }
 

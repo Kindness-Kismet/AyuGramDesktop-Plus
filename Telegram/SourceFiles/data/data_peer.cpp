@@ -411,14 +411,15 @@ QImage *PeerData::userpicCloudImage(Ui::PeerUserpicView &view) const {
 		}
 		view.cached = QImage();
 	}
-	if (const auto image = view.cloud.get(); image && !image->isNull()) {
-		_userpicEmpty = nullptr;
-		return image;
-	} else if (isNotificationsUser()) {
+	if (isNotificationsUser()) {
 		static auto result = Window::LogoTelegramDefault().scaledToWidth(
 			kUserpicSize,
 			Qt::SmoothTransformation).convertToFormat(QImage::Format_RGB32);
 		return &result;
+	}
+	if (const auto image = view.cloud.get(); image && !image->isNull()) {
+		_userpicEmpty = nullptr;
+		return image;
 	}
 	return nullptr;
 }

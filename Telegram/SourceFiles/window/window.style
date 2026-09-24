@@ -426,7 +426,7 @@ windowNavigationButton: SideBarButton(windowFiltersButton) {
 		font: font(11px);
 	}
 }
-windowNavigationLogo: icon {{ "chat/input_send", windowBgActive }};
+windowNavigationLogo: icon {{ "intro_qr_plane", windowBgActive }};
 windowNavigationChats: icon {{ "folders/folders_all", sideBarIconFg }};
 windowNavigationChatsActive: icon {{ "folders/folders_all", sideBarIconFgActive }};
 windowNavigationContacts: icon {{ "menu/name_show", sideBarIconFg }};
