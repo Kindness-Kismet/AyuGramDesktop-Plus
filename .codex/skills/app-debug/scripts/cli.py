@@ -2,9 +2,11 @@
 """app-debug CLI，用 domain.action 指令控制正在运行的 AyuGram Debug 构建。"""
 import argparse
 import base64
+import json
 import os
 import re
 import shlex
+import signal
 import socket
 import subprocess
 import sys
@@ -29,6 +31,15 @@ COMMAND_SEPARATOR = "+"
 BOOLEAN_CHOICES = ("true", "false")
 
 VERSION_FILE = ROOT / "Telegram" / "build" / "version"
+
+
+def working_dir() -> Path:
+    profile = os.environ.get("AYUGRAM_DEBUG_PROFILE", "")
+    if not profile:
+        return debug_dir()
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,47}", profile):
+        raise ValueError("调试配置名须为 1 至 48 个小写字母、数字、下划线或连字符")
+    return ROOT / "build" / "debug-profiles" / profile
 
 
 def read_app_version() -> str:
@@ -332,7 +343,13 @@ def quote_arg(value: str) -> str:
 
 
 def ensure_debug_app() -> None:
-    if port_owner_pid() is not None:
+    if (pid := port_owner_pid()) is not None:
+        if not is_expected_process(pid):
+            raise RuntimeError(f"端口 {PORT} 属于其它应用，PID 为 {pid}")
+        info = json.loads(send_command("app.info"))
+        actual = Path(info["workingDir"]).resolve()
+        if actual != working_dir().resolve():
+            raise RuntimeError(f"当前数据目录为 {actual}，目标为 {working_dir()}。请先用 app.stop 退出当前调试应用。")
         return
     if not app_exe().is_file():
         raise SystemExit(
@@ -341,14 +358,17 @@ def ensure_debug_app() -> None:
         )
     launch_app()
     wait_for_port()
+    ensure_debug_app()
 
 
 def launch_app() -> None:
+    directory = working_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    command = [str(app_exe()), "-workdir", str(directory)]
     if sys.platform == "win32":
-        import subprocess
-        subprocess.Popen([str(app_exe())], cwd=debug_dir(), creationflags=subprocess.DETACHED_PROCESS)
+        subprocess.Popen(command, cwd=directory, creationflags=subprocess.DETACHED_PROCESS)
     else:
-        os.spawnl(os.P_NOWAIT, app_exe())
+        subprocess.Popen(command, cwd=directory, start_new_session=True)
     print(f"已启动 {app_exe().name}，等待调试端口就绪...", flush=True)
 
 
@@ -356,6 +376,7 @@ def restart_debug_app() -> None:
     stop_debug_app_if_running()
     launch_app()
     wait_for_port()
+    ensure_debug_app()
 
 
 def stop_debug_app_if_running() -> None:
@@ -431,7 +452,7 @@ def debug_app_pids() -> list[int]:
             continue
         process_path = Path(executable)
         if not process_path.is_absolute():
-            process_path = PACKAGE_DIR / process_path
+            process_path = debug_dir() / process_path
         if process_path.resolve() == expected_path:
             pids.append(int(parts[0]))
     return pids

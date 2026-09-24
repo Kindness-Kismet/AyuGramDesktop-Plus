@@ -42,6 +42,10 @@ python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true + 
 
 验证其它工作树时设置 `AYUGRAM_DEBUG_ROOT` 为对应项目根目录，进程校验和产物路径会随之切换。
 
+固定假会话使用独立配置目录：设置环境变量 `AYUGRAM_DEBUG_PROFILE=scenarios` 后，
+CLI 使用 `build/debug-profiles/scenarios/`。配置名限小写字母、数字、下划线和连字符。
+切换前先 `app.stop`；CLI 会核对现有进程的路径和工作目录。清除变量后回到原调试数据目录。
+
 所有指令必须串行；CLI 通过 `build/app-debug-cli.lock` 自动排队，手动编排也要保持顺序。
 
 ## 先读哪份指引

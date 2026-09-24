@@ -60,3 +60,18 @@ cat build/AyuGram-v*-win-x64-dev/crash.log                     # 读调用栈定
 ```
 
 复现崩溃后先查看 crash.log 的栈帧，直接给到文件与行号，不要靠猜。
+
+## 独立数据目录
+
+先退出当前调试应用，再设置 `AYUGRAM_DEBUG_PROFILE=scenarios`。
+之后所有 CLI 调用都带上此环境变量，数据保存至 `build/debug-profiles/scenarios/`。
+
+```bash
+python .codex/skills/app-debug/scripts/cli.py app.stop
+AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py app.ensure
+AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py debug.fake-session
+```
+
+配置名允许 1 至 48 个小写字母、数字、下划线或连字符，首位为字母或数字。
+端口已有进程时，CLI 核对可执行路径和工作目录；目录不符会报告并停止执行。
+恢复原账号：先 `app.stop`，再清除变量并 `app.ensure`。
