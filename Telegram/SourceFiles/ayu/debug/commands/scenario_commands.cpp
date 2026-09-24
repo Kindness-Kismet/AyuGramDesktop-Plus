@@ -12,6 +12,8 @@
 #include "dialogs/dialogs_key.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "history/view/history_view_chat_section.h"
+#include "history/view/history_view_scheduled_section.h"
 #include "main/main_session.h"
 #include "spellcheck/spellcheck_types.h"
 #include "window/window_session_controller.h"
@@ -280,8 +282,12 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 }
 
 [[nodiscard]] Result openScenario(const QStringList &args) {
-	if (args.size() != 1) {
-		return Result::Err(u"usage: scenario.open <key>"_q);
+	if (args.size() != 1 && (args.size() != 3 || args[1] != u"--view"_q)) {
+		return Result::Err(u"usage: scenario.open <key> [--view main|alternate|scheduled]"_q);
+	}
+	const auto view = (args.size() == 3) ? args[2] : u"main"_q;
+	if (view != u"main"_q && view != u"alternate"_q && view != u"scheduled"_q) {
+		return Result::Err(u"unknown view"_q);
 	}
 	const auto session = ActiveSession();
 	if (!session || SeededSession.get() != session) {
@@ -296,7 +302,16 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 			continue;
 		}
 		const auto peer = session->data().peer(scenarioPeerId(i));
-		if (kScenarios[i].kind == Kind::Topic) {
+		const auto history = session->data().history(peer);
+		if (view == u"scheduled"_q) {
+			controller->showSection(
+				std::make_shared<HistoryView::ScheduledMemento>(history),
+				Window::SectionShow::Way::ClearStack);
+		} else if (view == u"alternate"_q) {
+			controller->showSection(std::make_shared<HistoryView::ChatMemento>(
+				HistoryView::ChatViewId{ .history = history }),
+				Window::SectionShow::Way::ClearStack);
+		} else if (kScenarios[i].kind == Kind::Topic) {
 			controller->showTopic(peer->forum()->topicFor(kTopicRootId),
 				ShowAtTheEndMsgId, Window::SectionShow::Way::ClearStack);
 		} else {
@@ -304,7 +319,7 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 				Window::SectionShow::Way::ClearStack, ShowAtTheEndMsgId);
 		}
 		return Result::Ok(Compact({ { "key", kScenarios[i].key },
-			{ "peerId", peer->id.value } }));
+			{ "peerId", peer->id.value }, { "view", view.toStdString() } }));
 	}
 	return Result::Err(u"unknown scenario, use scenario.list"_q);
 }
