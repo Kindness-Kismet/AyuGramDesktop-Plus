@@ -10,8 +10,8 @@
 | `app.update-info` | 空 | 报告更新源前缀：`tdata/prefix` 的内容与内存里解析出的地址。 |
 | `app.help` | 空 | 列出服务端已注册的全部指令名。 |
 | `app.quit` | 空 | 让应用走正常退出流程；退出动作排在事件循环尾部，确保 `OK` 写完 socket 再退。 |
-| `debug.window-size` | `[width height]` | 报告窗口尺寸与最大化状态；给出尺寸时按逻辑像素调整窗口。 |
-| `debug.window-maximize` | `true\|false` | 最大化或还原窗口。 |
+| `window.resize` | `[width height]` | 报告窗口尺寸与最大化状态；给出尺寸时按逻辑像素调整窗口。 |
+| `window.maximize` | `true\|false` | 最大化或还原窗口。 |
 
 `app.quit` 一般不直接调，`app.stop` 内部先发它。
 
@@ -23,13 +23,13 @@
 `app.update-info` 用来定位更新检查会打到哪个地址：`tdata/prefix` 里写的内容与
 `resolvedPrefix` 不一致时，说明前缀在运行时被固定值覆写过，改文件不会生效。
 
-`debug.window-size` 与 `debug.window-maximize` 用来把窗口摆到指定状态，验证依赖窗口
+`window.resize` 与 `window.maximize` 用来把窗口摆到指定状态，验证依赖窗口
 宽度的行为（宽屏布局、栏位折叠）。尺寸是 Qt 逻辑像素，与 `control.list` 的几何同一
 坐标系；最大化状态下 `resize` 不生效，指令会先还原窗口再设尺寸。
 
 ```bash
-python .claude/skills/app-debug/scripts/cli.py debug.window-size 1300 900 + screenshot.take
-python .claude/skills/app-debug/scripts/cli.py debug.window-maximize true + screenshot.take
+python .claude/skills/app-debug/scripts/cli.py window.resize 1300 900 + screenshot.take
+python .claude/skills/app-debug/scripts/cli.py window.maximize true + screenshot.take
 ```
 
 ## CLI 本地指令
@@ -55,7 +55,7 @@ Debug 构建装了未处理异常过滤器：进程崩溃时把异常码与符�
 工作目录 `crash.log`（工作目录见 `app.info` 的 workingDir）。
 
 ```bash
-python .claude/skills/app-debug/scripts/cli.py settings.open ayu   # 复现操作
+python .claude/skills/app-debug/scripts/cli.py page.open ayu   # 复现操作
 cat build/AyuGram-v*-win-x64-dev/crash.log                     # 读调用栈定位
 ```
 
@@ -69,7 +69,7 @@ cat build/AyuGram-v*-win-x64-dev/crash.log                     # 读调用栈定
 ```bash
 python .codex/skills/app-debug/scripts/cli.py app.stop
 AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py app.ensure
-AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py debug.fake-session
+AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py session.fake
 ```
 
 配置名允许 1 至 48 个小写字母、数字、下划线或连字符，首位为字母或数字。

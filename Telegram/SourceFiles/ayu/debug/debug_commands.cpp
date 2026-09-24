@@ -15,7 +15,7 @@ Main::Session *ActiveSession() {
 namespace AyuDebug {
 namespace {
 
-// 合并八个域的注册表；各域内部 static，这里只做拼接。
+// 各领域持有自己的注册表，统一汇总指令入口。
 [[nodiscard]] const Commands::HandlerMap &Handlers() {
 	static const auto result = [] {
 		auto all = Commands::HandlerMap{};

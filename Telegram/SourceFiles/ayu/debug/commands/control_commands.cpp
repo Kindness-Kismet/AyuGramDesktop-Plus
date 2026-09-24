@@ -299,9 +299,9 @@ struct WidgetInfo {
 }
 
 // 直接修改输入控件，供多行布局验证使用，不触发发送动作。
-[[nodiscard]] Result controlSetText(const QStringList &args) {
+[[nodiscard]] Result controlInput(const QStringList &args) {
 	if (args.size() != 2 || !args[1].startsWith(u"b64:"_q)) {
-		return Result::Err(u"usage: control.set-text <objectName> <base64>"_q);
+		return Result::Err(u"usage: control.input <objectName> <base64>"_q);
 	}
 	const auto target = findControl(args.front());
 	const auto field = dynamic_cast<Ui::InputField*>(target);
@@ -445,7 +445,7 @@ const HandlerMap &ControlHandlers() {
 	static const auto result = HandlerMap{
 		{ u"control.list"_q, &ControlList },
 		{ u"control.click"_q, &ControlClick },
-		{ u"control.set-text"_q, &controlSetText },
+		{ u"control.input"_q, &controlInput },
 		{ u"control.scroll"_q, &controlScroll },
 		{ u"control.hover"_q, &controlHover },
 		{ u"control.pointer"_q, &controlPointer },

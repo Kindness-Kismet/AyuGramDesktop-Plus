@@ -109,9 +109,9 @@ void ApplySettingsJson(const json &patched) {
 	return Result::Ok(Compact(SettingsJson().at(key)));
 }
 
-[[nodiscard]] Result SettingsOpen(const QStringList &args) {
+[[nodiscard]] Result openPage(const QStringList &args) {
 	if (args.size() != 1) {
-		return Result::Err(u"usage: settings.open <main|ayu|search>"_q);
+		return Result::Err(u"usage: page.open <settings|ayu|search>"_q);
 	}
 	const auto window = Core::App().activeWindow();
 	if (!window) {
@@ -122,7 +122,7 @@ void ApplySettingsJson(const json &patched) {
 		return Result::Err(u"no session"_q);
 	}
 	const auto section = args.front();
-	const auto type = (section == u"main"_q)
+	const auto type = (section == u"settings"_q)
 		? ::Settings::MainId()
 		: (section == u"ayu"_q)
 		? ::Settings::AyuMainId()
@@ -150,20 +150,20 @@ void ApplySettingsJson(const json &patched) {
 	}));
 }
 
-[[nodiscard]] Result ThemeNight(const QStringList &args) {
-	if (args.size() != 1 || (args.front() != u"on"_q && args.front() != u"off"_q)) {
-		return Result::Err(u"usage: debug.theme-night <on|off>"_q);
+[[nodiscard]] Result setTheme(const QStringList &args) {
+	if (args.size() != 1 || (args.front() != u"dark"_q && args.front() != u"light"_q)) {
+		return Result::Err(u"usage: theme.set <dark|light>"_q);
 	}
-	// 跟随系统暗色时切换会被拒绝，先解除跟随（与主菜单确认框的行为一致）
+	// 手动选择主题时解除跟随系统，与主菜单行为一致。
 	Core::App().settings().setSystemDarkModeEnabled(false);
 	Core::App().saveSettingsDelayed();
-	// SetNightModeValue 只写值不刷新界面，必须走 Toggle 的完整切换链
-	if (Window::Theme::IsNightMode() != (args.front() == u"on"_q)) {
+	// 通过主题切换流程同时更新颜色与界面。
+	if (Window::Theme::IsNightMode() != (args.front() == u"dark"_q)) {
 		Window::Theme::ToggleNightMode();
-		// Toggle 只做 testing 应用，_nightMode 与落盘都在 Keep 里提交
+		// 保存已应用的主题。
 		Window::Theme::KeepApplied();
 	}
-	return Result::Ok(Window::Theme::IsNightMode() ? u"night"_q : u"day"_q);
+	return Result::Ok(Window::Theme::IsNightMode() ? u"dark"_q : u"light"_q);
 }
 
 } // namespace
@@ -174,9 +174,9 @@ const HandlerMap &SettingsHandlers() {
 		{ u"settings.dump"_q, &SettingsDump },
 		{ u"settings.get"_q, &SettingsGet },
 		{ u"settings.set"_q, &SettingsSet },
-		{ u"settings.open"_q, &SettingsOpen },
-		{ u"debug.reset-background"_q, &ResetBackground },
-		{ u"debug.theme-night"_q, &ThemeNight },
+		{ u"page.open"_q, &openPage },
+		{ u"theme.reset-background"_q, &ResetBackground },
+		{ u"theme.set"_q, &setTheme },
 	};
 	return result;
 }

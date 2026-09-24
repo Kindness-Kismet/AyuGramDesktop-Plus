@@ -26,7 +26,7 @@ using json = nlohmann::json;
 // 无参报告当前尺寸，有参按逻辑像素调整。
 [[nodiscard]] Result WindowSize(const QStringList &args) {
 	if (args.size() != 0 && args.size() != 2) {
-		return Result::Err(u"usage: debug.window-size [<width> <height>]"_q);
+		return Result::Err(u"usage: window.resize [<width> <height>]"_q);
 	}
 	const auto window = ActiveWindow();
 	if (!window) {
@@ -54,7 +54,7 @@ using json = nlohmann::json;
 
 [[nodiscard]] Result WindowMaximize(const QStringList &args) {
 	if (args.size() != 1) {
-		return Result::Err(u"usage: debug.window-maximize <true|false>"_q);
+		return Result::Err(u"usage: window.maximize <true|false>"_q);
 	}
 	const auto text = args.front().trimmed();
 	if (text != u"true"_q && text != u"false"_q) {
@@ -76,8 +76,8 @@ using json = nlohmann::json;
 
 const HandlerMap &WindowHandlers() {
 	static const auto result = HandlerMap{
-		{ u"debug.window-size"_q, &WindowSize },
-		{ u"debug.window-maximize"_q, &WindowMaximize },
+		{ u"window.resize"_q, &WindowSize },
+		{ u"window.maximize"_q, &WindowMaximize },
 	};
 	return result;
 }

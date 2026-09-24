@@ -83,7 +83,12 @@ PORT_WAIT_SECONDS = 60
 
 COMMAND_CATEGORY_LABELS = {
     "app": "应用生命周期",
-    "debug": "登录绕过、环境与消息",
+    "session": "会话与测试环境",
+    "chat": "会话导航与消息统计",
+    "message": "消息样本与发送",
+    "window": "窗口尺寸与状态",
+    "theme": "主题与聊天背景",
+    "page": "页面导航",
     "settings": "设置读写",
     "ghost": "幽灵模式",
     "storage": "已删除消息与编辑历史",
@@ -116,56 +121,56 @@ def register_commands(sub) -> None:
     sub.add_parser("app.restart", help="重启 Debug 应用")
     sub.add_parser("app.stop", help="停止 Debug 应用，只认端口 PID 或本仓库 dev 产物路径")
     sub.add_parser("app.ping", help="探活，返回 pong")
-    sub.add_parser("app.info", help="读版本、配置、工作目录、会话与窗口状态")
+    sub.add_parser("app.info", help="查询版本、配置目录、会话和窗口状态")
     sub.add_parser("app.check-update", help="触发一次更新检查，结果看 tupdates 目录与日志")
-    sub.add_parser("app.update-info", help="读更新源前缀：文件内容与内存里解析出的地址")
+    sub.add_parser("app.update-info", help="查询更新源前缀：文件内容与内存里解析出的地址")
     sub.add_parser("app.help", help="列出服务端已注册的全部指令名")
 
     sub.add_parser("settings.keys", help="列出全部设置键名")
     sub.add_parser("settings.dump", help="导出全部设置为 JSON")
-    command = sub.add_parser("settings.get", help="读单个设置键")
+    command = sub.add_parser("settings.get", help="查询单个设置值")
     command.add_argument("key")
-    command = sub.add_parser("settings.set", help="写单个设置键，按键的既有类型解释取值")
+    command = sub.add_parser("settings.set", help="修改设置，按当前类型解析取值")
     command.add_argument("key")
     command.add_argument("value")
-    command = sub.add_parser("settings.open", help="打开设置页：main / ayu / search")
+    command = sub.add_parser("page.open", help="打开设置页：settings / ayu / search")
     command.add_argument("section")
-    sub.add_parser("debug.reset-background", help="重置聊天背景到默认壁纸")
-    command = sub.add_parser("debug.theme-night", help="切换夜模式主题")
-    command.add_argument("state", choices=["on", "off"])
+    sub.add_parser("theme.reset-background", help="重置聊天背景到默认壁纸")
+    command = sub.add_parser("theme.set", help="切换浅色或暗色主题")
+    command.add_argument("state", choices=["dark", "light"])
 
-    command = sub.add_parser("debug.fake-session", help="造本地假会话绕过登录，直接进主界面")
+    command = sub.add_parser("session.fake", help="造本地假会话绕过登录，直接进主界面")
     command.add_argument("userId", nargs="?")
-    sub.add_parser("debug.testmode", help="在生产环境与官方测试数据中心之间切换")
+    sub.add_parser("session.test-mode", help="在生产环境与官方测试数据中心之间切换")
 
     sub.add_parser("scenario.seed", help="在当前假会话中创建固定场景列表，可重复调用")
     sub.add_parser("scenario.list", help="列出固定场景的名称、键名与会话编号")
     command = sub.add_parser("scenario.open", help="打开固定场景，先执行 scenario.seed")
     command.add_argument("key")
-    command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts"), default="main", help="主聊天、另一套聊天组件或计划消息")
+    command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts"), default="main", help="主聊天、另一套聊天、计划消息或快捷回复")
 
     command.add_argument("--input", choices=("keep", "empty", "reply", "edit"), default="keep", help="保留、清空、回复或编辑输入状态，仅用于普通私聊和话题")
 
-    command = sub.add_parser("debug.fake-message", help="往假会话的 Saved Messages 塞本地文本消息，验证渲染与隐藏逻辑")
+    command = sub.add_parser("message.fake", help="往假会话的 Saved Messages 塞本地文本消息，验证渲染与隐藏逻辑")
     command.add_argument("text", help="消息文本")
     command.add_argument("--from", dest="from_user", metavar="USER_ID", help="指定另一个假用户作为发送者")
     command.add_argument("--blocked", action="store_true", help="把发送者标记为已拉黑（真拉黑）")
     command.add_argument("--shadow-ban", action="store_true", help="把发送者加入 AyuGram 影子拉黑名单")
-    command = sub.add_parser("debug.open-chat", help="打开指定对话并清空导航栈；参数取 debug.chats 的 peerId，正数兼容旧 userId，缺省 Saved Messages")
+    command = sub.add_parser("chat.open", help="打开指定对话并清空导航栈；参数取 chat.list 的 peerId，正数兼容旧 userId，缺省 Saved Messages")
     command.add_argument("peerId", nargs="?")
-    command = sub.add_parser("debug.open-archive", help="直接打开归档文件夹，不走抽屉入口")
-    command = sub.add_parser("debug.chats", help="列出已加载对话的 peerId 与名称，filter 为名称子串")
+    command = sub.add_parser("chat.open-archive", help="打开归档文件夹")
+    command = sub.add_parser("chat.list", help="列出已加载对话的 peerId 与名称，filter 为名称子串")
     command.add_argument("filter", nargs="?")
-    command = sub.add_parser("debug.send-message", help="真实发送文本消息到指定对话，需已登录，仅限本人测试群")
+    command = sub.add_parser("message.send", help="真实发送文本消息到指定对话，需已登录，仅限本人测试群")
     command.add_argument("peerId")
     command.add_argument("text", nargs="?", help="消息文本，多个参数以空格拼接")
     command.add_argument("extraText", nargs="*", help=argparse.SUPPRESS)
     command.add_argument("--file", dest="text_file", help="发送 UTF-8 文件内容，保留换行与引号")
-    command = sub.add_parser("debug.history-stats", help="报告 Saved Messages 里指定 id 消息的存在/隐藏/视图状态，诊断断点")
+    command = sub.add_parser("chat.history-stats", help="报告 Saved Messages 里指定 id 消息的存在/隐藏/视图状态，诊断断点")
     command.add_argument("msgIds", nargs="+", metavar="MSG_ID")
-    command = sub.add_parser("debug.window-size", help="读或设窗口尺寸（Qt 逻辑像素）；最大化的窗口先还原再设尺寸")
+    command = sub.add_parser("window.resize", help="读或设窗口尺寸（Qt 逻辑像素）；最大化的窗口先还原再设尺寸")
     command.add_argument("size", nargs="*", type=int, metavar="WIDTH HEIGHT", help="省略则只报告当前尺寸，给出时须成对")
-    command = sub.add_parser("debug.window-maximize", help="最大化或还原窗口")
+    command = sub.add_parser("window.maximize", help="最大化或还原窗口")
     command.add_argument("maximized", choices=["true", "false"], help="true 最大化，false 还原")
 
     sub.add_parser("ghost.status", help="读全局与当前账号的幽灵模式状态")
@@ -194,7 +199,7 @@ def register_commands(sub) -> None:
     command = sub.add_parser("control.pointer", help="向控件内部位置合成移动事件，不移动系统鼠标；省略坐标时离开")
     command.add_argument("target", help="控件名称或 control.list 默认模式的 #序号")
     command.add_argument("point", nargs="*", type=int, metavar="X Y", help="控件内的坐标，必须成对；省略则清除上一次合成悬停")
-    command = sub.add_parser("control.set-text", help="修改可见输入框的文字，验证输入布局，不触发发送")
+    command = sub.add_parser("control.input", help="修改可见输入框的文字，验证输入布局，不触发发送")
     command.add_argument("target", help="输入框的 objectName，如 messageInput")
     command.add_argument("text", nargs="?", help="待输入文字，空字符串用于清空")
     command.add_argument("--file", dest="text_file", help="按 UTF-8 读取文字，保留换行和引号")
@@ -283,22 +288,22 @@ def build_server_command(args: argparse.Namespace) -> str:
         return " ".join([command, quote_arg(args.target), *map(str, args.point)])
     if command == "control.scroll":
         return f"control.scroll {quote_arg(args.target)}" + (f" {args.top}" if args.top is not None else "")
-    if command == "control.set-text":
+    if command == "control.input":
         if (args.text is None) == (args.text_file is None):
             raise SystemExit("文字和 --file 必须且只能提供一项")
         value = Path(args.text_file).read_text(encoding="utf-8") if args.text_file is not None else args.text
         encoded = base64.b64encode(value.encode("utf-8")).decode("ascii")
-        return f"control.set-text {quote_arg(args.target)} b64:{encoded}"
+        return f"control.input {quote_arg(args.target)} b64:{encoded}"
     if command == "settings.get":
         return f"settings.get {quote_arg(args.key)}"
     if command == "settings.set":
         return f"settings.set {quote_arg(args.key)} {quote_arg(args.value)}"
-    if command == "settings.open":
-        return f"settings.open {quote_arg(args.section)}"
-    if command == "debug.reset-background":
-        return "debug.reset-background"
-    if command == "debug.theme-night":
-        return f"debug.theme-night {quote_arg(args.state)}"
+    if command == "page.open":
+        return f"page.open {quote_arg(args.section)}"
+    if command == "theme.reset-background":
+        return "theme.reset-background"
+    if command == "theme.set":
+        return f"theme.set {quote_arg(args.state)}"
     if command == "control.list":
         parts = ["control.list"]
         if args.filter:
@@ -313,11 +318,11 @@ def build_server_command(args: argparse.Namespace) -> str:
         if args.mouse:
             parts.append("--mouse")
         return " ".join(parts)
-    if command == "debug.fake-session":
-        return ("debug.fake-session" if args.userId is None
-                else f"debug.fake-session {quote_arg(args.userId)}")
-    if command == "debug.fake-message":
-        parts = ["debug.fake-message", quote_arg(args.text)]
+    if command == "session.fake":
+        return ("session.fake" if args.userId is None
+                else f"session.fake {quote_arg(args.userId)}")
+    if command == "message.fake":
+        parts = ["message.fake", quote_arg(args.text)]
         if args.from_user:
             parts.extend(["--from", args.from_user])
         if args.blocked:
@@ -325,34 +330,34 @@ def build_server_command(args: argparse.Namespace) -> str:
         if args.shadow_ban:
             parts.append("--shadow-ban")
         return " ".join(parts)
-    if command == "debug.open-chat":
-        return ("debug.open-chat" if args.peerId is None
-                else f"debug.open-chat {quote_arg(args.peerId)}")
-    if command == "debug.open-archive":
-        return "debug.open-archive"
-    if command == "debug.chats":
-        return ("debug.chats" if args.filter is None
-                else f"debug.chats {quote_arg(args.filter)}")
-    if command == "debug.send-message":
+    if command == "chat.open":
+        return ("chat.open" if args.peerId is None
+                else f"chat.open {quote_arg(args.peerId)}")
+    if command == "chat.open-archive":
+        return "chat.open-archive"
+    if command == "chat.list":
+        return ("chat.list" if args.filter is None
+                else f"chat.list {quote_arg(args.filter)}")
+    if command == "message.send":
         if args.text_file is not None:
             if args.text is not None or args.extraText:
                 raise ValueError("文字和 --file 只能提供一项")
             path = Path(args.text_file).resolve()
-            return f"debug.send-message {args.peerId} --file {quote_arg(str(path))}"
+            return f"message.send {args.peerId} --file {quote_arg(str(path))}"
         if args.text is None:
             raise ValueError("请提供消息文字或 --file")
         text = " ".join([args.text, *args.extraText])
-        return f"debug.send-message {args.peerId} {quote_arg(text)}"
-    if command == "debug.history-stats":
-        return "debug.history-stats " + " ".join(args.msgIds)
-    if command == "debug.window-size":
+        return f"message.send {args.peerId} {quote_arg(text)}"
+    if command == "chat.history-stats":
+        return "chat.history-stats " + " ".join(args.msgIds)
+    if command == "window.resize":
         if not args.size:
-            return "debug.window-size"
+            return "window.resize"
         if len(args.size) != 2:
-            raise ValueError("debug.window-size 的 width 与 height 必须成对给出")
-        return f"debug.window-size {args.size[0]} {args.size[1]}"
-    if command == "debug.window-maximize":
-        return f"debug.window-maximize {args.maximized}"
+            raise ValueError("window.resize 的 width 与 height 必须成对给出")
+        return f"window.resize {args.size[0]} {args.size[1]}"
+    if command == "window.maximize":
+        return f"window.maximize {args.maximized}"
     # 其余都是无参指令，名字与服务端一一对应。
     return command
 

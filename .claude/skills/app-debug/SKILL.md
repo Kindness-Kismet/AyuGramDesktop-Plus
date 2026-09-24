@@ -69,7 +69,7 @@ C++ 修改后先 `app.stop`，再运行 `python scripts/build.py --dev --jobs 32
 产物位于 `build/AyuGram-v<版本>-win-x64-dev/`，包括程序和符号文件。
 构建成功后 `app.ensure` 启动已有产物，最多等待 60 秒；单条服务端指令超时为 180 秒。
 
-假会话在重启后消失，重新执行 `debug.fake-session` 和 `scenario.seed` 即可恢复固定场景。
+假会话在重启后消失，重新执行 `session.fake` 和 `scenario.seed` 即可恢复固定场景。
 崩溃时先查看当前工作目录的 `crash.log`，结合调用栈定位文件与行号。
 
 ## 维护

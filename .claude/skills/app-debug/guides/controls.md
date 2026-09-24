@@ -31,7 +31,7 @@ python .codex/skills/app-debug/scripts/cli.py control.pointer historyScroll
 `control.click <目标> --mouse` 从窗口开始命中测试，再发送鼠标事件。目标中心被遮挡时返回错误，
 用于检查遮罩、层级与点击回调；不等同于人工鼠标验收，依赖真实光标的行为仍需人工确认。
 
-## `control.set-text <objectName | #序号> <text|--file path>`
+## `control.input <objectName | #序号> <text|--file path>`
 
 修改活动窗口中可见且启用的输入框，用于验证单行、多行和清空后的布局。不会触发发送，
 但正常草稿保存仍会执行，因此只在本地假会话或自己掌控的测试对话中使用。
@@ -40,7 +40,7 @@ python .codex/skills/app-debug/scripts/cli.py control.pointer historyScroll
 验证前保存原文字，完成后恢复。协议使用编码后的文字，命令行负责转换。
 
 ```bash
-python .claude/skills/app-debug/scripts/cli.py control.set-text messageInput --file build/compose-test.txt
+python .claude/skills/app-debug/scripts/cli.py control.input messageInput --file build/compose-test.txt
 ```
 
 ## `control.list [filter] [--all]`

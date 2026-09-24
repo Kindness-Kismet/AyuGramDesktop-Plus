@@ -2,7 +2,7 @@
 
 ## `settings.keys`
 
-列出所有设置键（96 个）的 JSON 数组。
+列出所有设置键的 JSON 数组。
 
 ```bash
 python .claude/skills/app-debug/scripts/cli.py settings.keys
@@ -49,3 +49,9 @@ python .claude/skills/app-debug/scripts/cli.py settings.set messageBubbleRadius 
 
 **注意**：`validate()` 会夹紧越界值，例如半径上限是 23，设为 50 会实际变成 23。写入走
 `from_json`，与设置页 setter 的通知路径一致，界面会同步刷新。
+
+## 主题与页面
+
+- `theme.set <dark|light>`：手动切换主题并保存，解除跟随系统。
+- `theme.reset-background`：恢复默认聊天壁纸。
+- `page.open <settings|ayu|search>`：打开设置主页、AyuGram 偏好或设置搜索。

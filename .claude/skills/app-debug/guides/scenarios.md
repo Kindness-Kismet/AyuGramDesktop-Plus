@@ -3,7 +3,7 @@
 先在独立配置中创建假会话，再生成固定列表：
 
 ```bash
-AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py app.ensure + debug.fake-session + scenario.seed
+AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py app.ensure + session.fake + scenario.seed
 AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py scenario.open discussion + screenshot.take
 ```
 

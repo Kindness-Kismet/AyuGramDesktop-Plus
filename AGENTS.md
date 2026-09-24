@@ -266,25 +266,25 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 
 ## 调试（app-debug skill）
 
-Debug 构建会在 `AyuInfra::init()` 里启动 `QTcpServer`，监听 `127.0.0.1:20100`。服务端 23 条指令，命令行工具另有 3 条本地指令：
+Debug 构建会在 `AyuInfra::init()` 里启动 `QTcpServer`，监听 `127.0.0.1:20100`。服务端指令通过 `app.help` 查询，命令行工具另有应用生命周期指令：
 
 | 指令 | 说明 |
 |---|---|
 | `app.ping` / `app.info` / `app.help` | 探活、应用信息、指令清单 |
 | `app.quit` | 走 `Core::Quit()` 正常退出（`app.stop` 内部先用它） |
 | `crash.log` | 读取崩溃日志 |
-| `debug.fake-session [userId]` | 构造本地假会话绕过登录，默认 999999999 |
-| `debug.fake-message <text> [--from <userId>] [--blocked] [--shadow-ban]` | 往 Saved Messages 插入本地文本消息，用于验证渲染与隐藏逻辑 |
-| `debug.chats [filter]` | 列出会话的 peerId 与名称，供 send-message / open-chat 定位目标 |
-| `debug.send-message <peerId> <text\|--file path>` | 真实发送文本到指定对话（`--file` 按 UTF-8 读文件原样发送），走官方发送链路，仅发往自己掌控的测试对话 |
-| `debug.open-chat [userId]` | 打开指定聊天，缺省为 Saved Messages |
-| `debug.testmode` | 切换到官方测试数据中心（+99966 号段，验证码 22222） |
-| `debug.history-stats` | 当前会话的消息计数与可见性统计 |
-| `debug.theme-night` | 切换夜间主题 |
-| `debug.reset-background` | 重置聊天背景 |
+| `session.fake [userId]` | 构造本地假会话绕过登录，默认 999999999 |
+| `message.fake <text> [--from <userId>] [--blocked] [--shadow-ban]` | 往 Saved Messages 插入本地文本消息，用于验证渲染与隐藏逻辑 |
+| `chat.list [filter]` | 列出会话的 peerId 与名称，供 message.send / chat.open 定位目标 |
+| `message.send <peerId> <text\|--file path>` | 真实发送文本到指定对话（`--file` 按 UTF-8 读文件原样发送），走官方发送链路，仅发往自己掌控的测试对话 |
+| `chat.open [peerId]` | 打开指定聊天，缺省为 Saved Messages |
+| `session.test-mode` | 切换到官方测试数据中心（+99966 号段，验证码 22222） |
+| `chat.history-stats <msgId>...` | 查询收藏夹中指定消息的存在、隐藏与视图状态 |
+| `theme.set <dark|light>` | 切换暗色或浅色主题 |
+| `theme.reset-background` | 重置聊天背景 |
 | `settings.keys` / `settings.dump` | 设置键名清单、全量 JSON 导出 |
 | `settings.get <key>` / `settings.set <key> <value>` | 读写单个设置 |
-| `settings.open <section>` | 打开指定设置页 |
+| `page.open <section>` | 打开指定设置页 |
 | `ghost.status` | 幽灵模式状态（需要已登录） |
 | `storage.stats` | 留档数据库的路径与大小 |
 | `screenshot.take` | 截取活动窗口，保存到 `build/screenshots/` |

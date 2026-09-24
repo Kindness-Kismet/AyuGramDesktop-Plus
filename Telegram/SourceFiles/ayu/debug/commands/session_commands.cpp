@@ -21,10 +21,10 @@ using json = nlohmann::json;
 // window_controller.cpp:175 收到非空会话就建 SessionController 并 setupMain。
 //
 // 代价是这个会话没有任何服务端数据，聊天列表是空的，任何联网操作都会失败。
-// 只适合验证界面、设置项和入口可达性，测消息级功能要用 debug.testmode 走测试服。
+// 只适合验证界面、设置项和入口可达性，测消息级功能要用 session.test-mode 走测试服。
 [[nodiscard]] Result FakeSession(const QStringList &args) {
 	if (args.size() > 1) {
-		return Result::Err(u"usage: debug.fake-session [userId]"_q);
+		return Result::Err(u"usage: session.fake [userId]"_q);
 	}
 	auto userId = int64(999999999);
 	if (args.size() == 1) {
@@ -68,8 +68,8 @@ using json = nlohmann::json;
 
 const HandlerMap &SessionHandlers() {
 	static const auto result = HandlerMap{
-		{ u"debug.fake-session"_q, &FakeSession },
-		{ u"debug.testmode"_q, &TestMode },
+		{ u"session.fake"_q, &FakeSession },
+		{ u"session.test-mode"_q, &TestMode },
 	};
 	return result;
 }

@@ -35,7 +35,7 @@ using json = nlohmann::json;
 	return counter++;
 }
 
-// 与 debug.fake-session 同源的假用户构造，塞进 data() 供 from_id 引用。
+// 与 session.fake 同源的假用户构造，塞进 data() 供 from_id 引用。
 [[nodiscard]] not_null<UserData*> FakeUser(
 		not_null<Main::Session*> session,
 		int64 userId) {
@@ -93,13 +93,13 @@ using json = nlohmann::json;
 			text = arg;
 		} else {
 			return Result::Err(
-				u"usage: debug.fake-message <text> "
+				u"usage: message.fake <text> "
 				u"[--from <userId>] [--blocked] [--shadow-ban]"_q);
 		}
 	}
 	if (text.isEmpty()) {
 		return Result::Err(
-			u"usage: debug.fake-message <text> "
+			u"usage: message.fake <text> "
 			u"[--from <userId>] [--blocked] [--shadow-ban]"_q);
 	}
 
@@ -188,7 +188,7 @@ using json = nlohmann::json;
 // send-message / open-chat 的 peerId 均以本指令输出为准。
 [[nodiscard]] Result Chats(const QStringList &args) {
 	if (args.size() > 1) {
-		return Result::Err(u"usage: debug.chats [filter]"_q);
+		return Result::Err(u"usage: chat.list [filter]"_q);
 	}
 	const auto session = ActiveSession();
 	if (!session) {
@@ -218,7 +218,7 @@ using json = nlohmann::json;
 }
 
 // 会话列表里的频道与群只带最小信息，完整数据没加载时 peerLoaded 返回空。
-// 所以再按 peerId 在会话列表里找一遍，保证 debug.chats 输出的 id 一定可用。
+// 所以再按 peerId 在会话列表里找一遍，保证 chat.list 输出的 id 一定可用。
 [[nodiscard]] PeerData *ResolvePeer(
 		not_null<Main::Session*> session,
 		int64 idValue) {
@@ -246,13 +246,13 @@ using json = nlohmann::json;
 // 仅限本人测试群使用。
 [[nodiscard]] Result SendTextMessage(const QStringList &args) {
 	if (args.size() < 2) {
-		return Result::Err(u"usage: debug.send-message <peerId> <text"
+		return Result::Err(u"usage: message.send <peerId> <text"
 			u" | --file path>"_q);
 	}
 	auto ok = false;
 	const auto peerIdValue = args.front().toLongLong(&ok);
 	if (!ok || peerIdValue == 0) {
-		return Result::Err(u"expected numeric peerId, run debug.chats"_q);
+		return Result::Err(u"expected numeric peerId, run chat.list"_q);
 	}
 	auto text = QString();
 	if (args.size() >= 3 && args[1] == u"--file"_q) {
@@ -274,7 +274,7 @@ using json = nlohmann::json;
 	}
 	const auto peer = ResolvePeer(session, peerIdValue);
 	if (!peer) {
-		return Result::Err(u"peer not found, run debug.chats first"_q);
+		return Result::Err(u"peer not found, run chat.list first"_q);
 	}
 	auto action = Api::SendAction(session->data().history(peer));
 	action.clearDraft = false;
@@ -293,11 +293,11 @@ using json = nlohmann::json;
 	return Result::Ok(Compact(result));
 }
 
-// 打开对话并清空导航栈；参数取 debug.chats 输出的 peerId，
+// 打开对话并清空导航栈；参数取 chat.list 输出的 peerId，
 // 正数也兼容旧 userId 写法，缺省 self 即 Saved Messages。
 [[nodiscard]] Result OpenChat(const QStringList &args) {
 	if (args.size() > 1) {
-		return Result::Err(u"usage: debug.open-chat [peerId|userId]"_q);
+		return Result::Err(u"usage: chat.open [peerId|userId]"_q);
 	}
 	auto idValue = int64(0);
 	if (args.size() == 1) {
@@ -309,7 +309,7 @@ using json = nlohmann::json;
 	}
 	const auto session = ActiveSession();
 	if (!session) {
-		return Result::Err(u"no active session, run debug.fake-session first"_q);
+		return Result::Err(u"no active session, run session.fake first"_q);
 	}
 	const auto controller = session->tryResolveWindow();
 	if (!controller) {
@@ -317,7 +317,7 @@ using json = nlohmann::json;
 	}
 	const auto peer = ResolvePeer(session, idValue);
 	if (!peer) {
-		return Result::Err(u"peer not found, run debug.chats first"_q);
+		return Result::Err(u"peer not found, run chat.list first"_q);
 	}
 	controller->showPeerHistory(
 		peer,
@@ -333,11 +333,11 @@ using json = nlohmann::json;
 // 直接打开归档文件夹，不走抽屉入口，用于单独验证归档页行为。
 [[nodiscard]] Result OpenArchive(const QStringList &args) {
 	if (!args.isEmpty()) {
-		return Result::Err(u"usage: debug.open-archive"_q);
+		return Result::Err(u"usage: chat.open-archive"_q);
 	}
 	const auto session = ActiveSession();
 	if (!session) {
-		return Result::Err(u"no active session, run debug.fake-session first"_q);
+		return Result::Err(u"no active session, run session.fake first"_q);
 	}
 	const auto controller = session->tryResolveWindow();
 	if (!controller) {
@@ -353,7 +353,7 @@ using json = nlohmann::json;
 // 是否一致（exists/regular/hidden/mainView 四元组足以定位断点）。
 [[nodiscard]] Result HistoryStats(const QStringList &args) {
 	if (args.isEmpty()) {
-		return Result::Err(u"usage: debug.history-stats <msgId> [<msgId>...]"_q);
+		return Result::Err(u"usage: chat.history-stats <msgId> [<msgId>...]"_q);
 	}
 	const auto session = ActiveSession();
 	if (!session) {
@@ -390,12 +390,12 @@ using json = nlohmann::json;
 
 const HandlerMap &MessageHandlers() {
 	static const auto result = HandlerMap{
-		{ u"debug.fake-message"_q, &FakeMessage },
-		{ u"debug.chats"_q, &Chats },
-		{ u"debug.send-message"_q, &SendTextMessage },
-		{ u"debug.open-chat"_q, &OpenChat },
-		{ u"debug.open-archive"_q, &OpenArchive },
-		{ u"debug.history-stats"_q, &HistoryStats },
+		{ u"message.fake"_q, &FakeMessage },
+		{ u"chat.list"_q, &Chats },
+		{ u"message.send"_q, &SendTextMessage },
+		{ u"chat.open"_q, &OpenChat },
+		{ u"chat.open-archive"_q, &OpenArchive },
+		{ u"chat.history-stats"_q, &HistoryStats },
 	};
 	return result;
 }
