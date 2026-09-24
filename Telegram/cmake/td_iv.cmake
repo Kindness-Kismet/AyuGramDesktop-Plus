@@ -60,6 +60,20 @@ PRIVATE
     iv/editor/iv_editor_toolbar_pill.cpp
     iv/editor/iv_editor_toolbar_pill.h
     iv/editor/iv_editor_widget.cpp
+    iv/editor/iv_editor_widget_clipboard.cpp
+    iv/editor/iv_editor_widget_editing.cpp
+    iv/editor/iv_editor_widget_events.cpp
+    iv/editor/iv_editor_widget_field.cpp
+    iv/editor/iv_editor_widget_formatting.cpp
+    iv/editor/iv_editor_widget_helpers.cpp
+    iv/editor/iv_editor_widget_history.cpp
+    iv/editor/iv_editor_widget_insertion.cpp
+    iv/editor/iv_editor_widget_internal.h
+    iv/editor/iv_editor_widget_keyboard.cpp
+    iv/editor/iv_editor_widget_layout.cpp
+    iv/editor/iv_editor_widget_media.cpp
+    iv/editor/iv_editor_widget_menus.cpp
+    iv/editor/iv_editor_widget_selection.cpp
     iv/editor/iv_editor_widget.h
     iv/editor/iv_editor_window.cpp
     iv/editor/iv_editor_window.h
