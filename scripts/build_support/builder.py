@@ -36,9 +36,8 @@ _CONFIGURATIONS = {"dev": "Debug", "release": "Release"}
 # 和闭源 alpha 支持。该标记同时决定 AUTOUPDATE 的默认值。
 _SPECIAL_TARGET = TARGET_SPECIAL_TARGET
 
-# 每个编译进程都要映射一份 PCH，8 路约占 4 GB 提交量，对 32 GB 内存 + 6 GB
-# 页面文件的机器留有余量；调高需同步扩大页面文件。
-_DEFAULT_CL_JOBS = 8
+DEFAULT_BUILD_JOBS = 32
+MAX_BUILD_JOBS = 128
 
 
 def output_dir(profile: str) -> Path:
@@ -81,7 +80,7 @@ def zip_output(profile: str) -> Path:
     return archive
 
 
-def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bool, jobs: int | None, pack: bool = False, clean_pack: bool = False) -> None:
+def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bool, jobs: int, pack: bool = False, clean_pack: bool = False) -> None:
     environment = msvc_environment()
     # cmake/external/qt 靠 %QT% 定位 Qt-<版本> 目录，缺失会直接 FATAL_ERROR
     environment["QT"] = qt_version(TARGET)
@@ -174,7 +173,7 @@ def configure(environment: dict[str, str], api_id: str, api_hash: str) -> None:
     run(command, ROOT, environment, "CMake configure")
 
 
-def compile_target(environment: dict[str, str], cmake_config: str, jobs: int | None) -> None:
+def compile_target(environment: dict[str, str], cmake_config: str, jobs: int) -> None:
     command = [
         cmake_executable(environment),
         "--build",
@@ -184,15 +183,8 @@ def compile_target(environment: dict[str, str], cmake_config: str, jobs: int | N
         "--target",
         "Telegram",
     ]
-    if jobs:
-        command.extend(["--parallel", str(jobs)])
-    # /MP 会让每个 cl.exe 再自行开满逻辑核，绕过 --parallel。Telegram 的 PCH 约
-    # 514 MB 且每个进程各映射一份，撞上提交上限就是 C3859/C1076，故显式限流。
-    msbuild_args = [f"/p:CL_MPCount={jobs or _DEFAULT_CL_JOBS}"]
-    # /m 与 /MP 相乘才是真实并发，云端 16 GB 内存会僵死 runner
-    if os.environ.get("AYUGRAM_SINGLE_PROJECT_BUILD") == "1":
-        msbuild_args.insert(0, "/m:1")
-    command.extend(["--"] + msbuild_args)
+    # 项目串行、源文件并行，避免两级并发相乘突破指定上限。
+    command.extend(["--parallel", "1", "--", f"/p:CL_MPCount={jobs}"])
     run(command, ROOT, environment, f"Build {cmake_config}")
 
 

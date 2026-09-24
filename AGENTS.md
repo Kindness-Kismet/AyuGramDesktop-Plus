@@ -240,7 +240,7 @@ python scripts/prebuild.py --clean    # 清空依赖缓存
 python scripts/build.py               # Release，默认
 python scripts/build.py --dev         # Debug（同时收集 AyuGram.pdb）
 python scripts/build.py --all         # 两个配置都构建
-python scripts/build.py --jobs 16     # 并行编译数，默认 32
+python scripts/build.py --jobs 64     # 优先使用 64；默认 32，上限 128
 python scripts/build.py --reconfigure # 丢弃 CMake 缓存重新配置
 python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 ```
@@ -249,13 +249,10 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 - 脚本自己完成配置和构建两步，**不要手动执行 cmake**
 - 收集产物前会自动停止占用目标可执行文件的进程（按绝对路径匹配，不按进程名）
 
-### 并发与内存
+### 编译并发
 
-- 本机当前协作后续使用 `--jobs 64`，已完成调试构建验证；2026-09-24 采样峰值为 31 个编译进程、提交内存使用率 97%，不等于满 64 个编译进程的压力验证。
-- MSVC 预编译头约 514 MB，每个 `cl.exe` 进程各映射一份
-- `--jobs 8` 约占 4 GB 提交内存（峰值约 10 GB）；32 GB 物理内存加 16 GB 页面文件足够
-- 默认 32 是按 32 GB 内存定的；16 GB 物理内存的机器必须显式 `--jobs 8`，否则提交内存耗尽会触发 C3859 / C1076
-- CI 运行环境只有 16 GB，用 `--jobs 4`
+- 构建脚本默认 32 并发，`--jobs` 接受 1 至 128，超过上限或非正数直接报错。
+- 协作时优先使用 `python scripts/build.py --dev --jobs 64`；未指定参数时仍使用脚本默认值 32。
 
 ### 增量编译时长（经验值）
 

@@ -14,7 +14,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from build_support.builder import build, cmake_executable, output_dir
+from build_support.builder import (
+    DEFAULT_BUILD_JOBS,
+    MAX_BUILD_JOBS,
+    build,
+    cmake_executable,
+    output_dir,
+)
 from build_support.console import header, utf8_output
 from build_support.help import MultilineHelpFormatter
 from build_support.paths import (
@@ -52,6 +58,7 @@ def print_environment(args: argparse.Namespace, environment: dict[str, str]) -> 
     print(f"  Platform       Windows {TARGET_SUFFIX}")
     print(f"  Toolset        {describe_toolset(environment)}")
     print(f"  Configuration  {configurations}")
+    print(f"  Compile jobs   {args.jobs} (maximum: {MAX_BUILD_JOBS})")
     print(f"  CMake          {get_tool_version([cmake_executable(environment), '--version'])}")
     print(f"  Dependencies   {describe_dependencies()}")
     print(f"  Output         {outputs}")
@@ -93,8 +100,8 @@ def parse_args() -> argparse.Namespace:
         "--jobs",
         metavar="N",
         type=int,
-        default=32,
-        help="Parallel compile jobs (default: 32)",
+        default=DEFAULT_BUILD_JOBS,
+        help=f"Parallel compile jobs, 1-{MAX_BUILD_JOBS} (default: {DEFAULT_BUILD_JOBS})",
     )
     parser.add_argument(
         "--pack",
@@ -107,6 +114,8 @@ def parse_args() -> argparse.Namespace:
         help="Remove runtime leftovers from the output directory before packaging",
     )
     args = parser.parse_args()
+    if not 1 <= args.jobs <= MAX_BUILD_JOBS:
+        parser.error(f"--jobs must be between 1 and {MAX_BUILD_JOBS}")
     args.configurations = resolve_configurations(args)
     return args
 
