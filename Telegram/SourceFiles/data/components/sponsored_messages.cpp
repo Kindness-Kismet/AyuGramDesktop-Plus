@@ -29,6 +29,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 
+#ifdef _DEBUG
+#include "ayu/debug/debug_login.h"
+#endif
+
 
 namespace Data {
 namespace {
@@ -306,6 +310,11 @@ HistoryItem *SponsoredMessages::injectItem(
 }
 
 bool SponsoredMessages::canHaveFor(not_null<History*> history) const {
+#ifdef _DEBUG
+	if (AyuDebug::isFakeSession(_session) && _data.contains(history)) {
+		return true;
+	}
+#endif
 	const auto &settings = AyuSettings::getInstance();
 	if (settings.disableAds()) {
 		return false;
@@ -330,23 +339,46 @@ bool SponsoredMessages::canHaveFor(not_null<HistoryItem*> item) const {
 }
 
 bool SponsoredMessages::isTopBarFor(not_null<History*> history) const {
-	const auto &settings = AyuSettings::getInstance();
-	if (settings.disableAds()) {
-		return false;
-	}
-
-	if (peerIsUser(history->peer->id)) {
-		if (const auto user = history->peer->asUser()) {
-			return user->isBot();
-		}
-	}
-	return false;
+	const auto user = history->peer->asUser();
+	return user && user->isBot() && canHaveFor(history);
 }
+
+#ifdef _DEBUG
+void SponsoredMessages::setLocalForDebug(not_null<History*> history) {
+	Expects(AyuDebug::isFakeSession(_session));
+	auto &list = _data[history];
+	list.entries.clear();
+	list.state = State::AppendToTopBar;
+	list.received = crl::now();
+	list.entries.push_back(Entry{
+		.itemFullId = FullMsgId(history->peer->id, _session->data().nextLocalMessageId()),
+		.sponsored = {
+			.randomId = QByteArray("local-layout"),
+			.from = {
+				.title = u"本地广告样本"_q,
+				.link = u"https://example.invalid/ayu-layout"_q,
+				.buttonText = u"查看"_q,
+			},
+			.textWithEntities = { u"用于检查顶部广告条的布局与换行。"_q },
+			.history = history,
+			.link = u"https://example.invalid/ayu-layout"_q,
+		},
+	});
+}
+#endif
 
 void SponsoredMessages::request(not_null<History*> history, Fn<void()> done) {
 	if (!canHaveFor(history)) {
 		return;
 	}
+#ifdef _DEBUG
+	if (AyuDebug::isFakeSession(_session)) {
+		if (done) {
+			crl::on_main(_session, std::move(done));
+		}
+		return;
+	}
+#endif
 	auto &request = _requests[history];
 	if (request.requestId || TooEarlyForRequest(request.lastReceived)) {
 		return;

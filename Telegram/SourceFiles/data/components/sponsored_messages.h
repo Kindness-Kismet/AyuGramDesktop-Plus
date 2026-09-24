@@ -186,6 +186,10 @@ public:
 
 	void clear();
 
+#ifdef _DEBUG
+	void setLocalForDebug(not_null<History*> history);
+#endif
+
 private:
 	using OwnedItem = std::unique_ptr<HistoryItem, HistoryItem::Destroyer>;
 	struct Entry {

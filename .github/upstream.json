@@ -147,6 +147,7 @@
       "Telegram/SourceFiles/data/components/ephemeral_messages.cpp",
       "Telegram/SourceFiles/data/components/promo_suggestions.cpp",
       "Telegram/SourceFiles/data/components/sponsored_messages.cpp",
+      "Telegram/SourceFiles/data/components/sponsored_messages.h",
       "Telegram/SourceFiles/data/data_audio_msg_id.cpp",
       "Telegram/SourceFiles/data/data_auto_download.cpp",
       "Telegram/SourceFiles/data/data_channel.cpp",

@@ -5,6 +5,7 @@
 #include "base/unixtime.h"
 #include "data/data_channel.h"
 #include "data/business/data_shortcut_messages.h"
+#include "data/components/sponsored_messages.h"
 #include "data/data_drafts.h"
 #include "data/data_forum.h"
 #include "data/data_forum_topic.h"
@@ -41,6 +42,8 @@ enum class Kind {
 	Call,
 	Business,
 	Paid,
+	Keyboard,
+	Sponsored,
 };
 
 struct Scenario {
@@ -64,6 +67,8 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "call", u"12 通话与申请堆叠", Kind::Call },
 	Scenario{ "business", u"13 商业机器人提示", Kind::Business },
 	Scenario{ "paid", u"14 付费消息提示", Kind::Paid },
+	Scenario{ "keyboard", u"15 机器人键盘", Kind::Keyboard },
+	Scenario{ "sponsored", u"16 顶部广告样本", Kind::Sponsored },
 };
 
 constexpr auto kFirstPeerId = uint64(810000001);
@@ -77,7 +82,9 @@ base::weak_ptr<Main::Session> SeededSession;
 		|| kind == Kind::Blocked
 		|| kind == Kind::Bot
 		|| kind == Kind::Business
-		|| kind == Kind::Paid;
+		|| kind == Kind::Paid
+		|| kind == Kind::Keyboard
+		|| kind == Kind::Sponsored;
 }
 
 [[nodiscard]] PeerId scenarioPeerId(int index) {
@@ -116,7 +123,8 @@ void initialiseUser(
 		const QString &text,
 		bool pinned,
 		bool topic,
-		int shortcutId = 0) {
+		int shortcutId = 0,
+		bool keyboard = false) {
 	using Flag = MTPDmessage::Flag;
 	using ReplyFlag = MTPDmessageReplyHeader::Flag;
 	const auto reply = topic ? MTP_messageReplyHeader(
@@ -125,18 +133,33 @@ void initialiseUser(
 		MTPPeer(), MTPMessageFwdHeader(), MTPMessageMedia(),
 		MTPint(), MTPstring(), MTPVector<MTPMessageEntity>(),
 		MTPint(), MTPint(), MTPstring()) : MTPMessageReplyHeader();
+	const auto button = [](const QString &text) {
+		return MTP_keyboardButton(MTP_flags(0), MTPKeyboardButtonStyle(),
+			MTP_string(text), MTP_buttonTypeDefault());
+	};
+	const auto markup = keyboard ? MTP_replyKeyboardMarkup(
+		MTP_flags(MTPDreplyKeyboardMarkup::Flag::f_resize),
+		MTP_vector<MTPKeyboardButtonRow>({
+			MTP_keyboardButtonRow(MTP_vector<MTPKeyboardButton>({
+				button(u"菜单一"_q), button(u"菜单二"_q),
+			})),
+			MTP_keyboardButtonRow(MTP_vector<MTPKeyboardButton>({
+				button(u"较长的按钮文字布局样本"_q),
+			})),
+		}), MTPstring()) : MTPReplyMarkup();
 	return MTP_message(
 		MTP_flags(Flag::f_from_id
 			| ((sender == peer->session().userPeerId()) ? Flag::f_out : Flag())
 			| (pinned ? Flag::f_pinned : Flag())
 			| (topic ? Flag::f_reply_to : Flag())
 			| (shortcutId ? Flag::f_quick_reply_shortcut_id : Flag())
+			| (keyboard ? Flag::f_reply_markup : Flag())
 			| (peer->isBroadcast() ? Flag::f_post : Flag())),
 		MTP_int(id), peerToMTP(sender), MTPint(), MTPstring(),
 		peerToMTP(peer->id), MTPPeer(), MTPMessageFwdHeader(),
 		MTPlong(), MTPlong(), MTPPeer(), reply,
 		MTP_int(base::unixtime::now() - 300 + (id % 100)),
-		MTP_string(text), MTPMessageMedia(), MTPReplyMarkup(),
+		MTP_string(text), MTPMessageMedia(), markup,
 		MTPVector<MTPMessageEntity>(), MTPint(), MTPint(),
 		MTPMessageReplies(), MTPint(), MTPstring(), MTPlong(),
 		MTPMessageReactions(), MTPVector<MTPRestrictionReason>(),
@@ -164,7 +187,8 @@ void fillHistory(
 		messages.push_back(makeMessage(peer, session->userPeerId(),
 			kTopicRootId, u"话题开始：检查独立输入区。"_q, false, false));
 	}
-	const auto messageCount = translating ? 5 : 6;
+	const auto messageCount = translating ? 5
+		: kScenarios[index].kind == Kind::Sponsored ? 24 : 6;
 	for (auto i = 0; i != messageCount; ++i) {
 		const auto text = translating
 			? u"Bonjour, voici un exemple de conversation pour vérifier la traduction et la disposition des messages. %1"_q.arg(i + 1)
@@ -176,11 +200,18 @@ void fillHistory(
 			&& (topic || kScenarios[index].kind == Kind::Private);
 		messages.prepend(makeMessage(peer,
 			outgoing ? session->userPeerId() : sender, id,
-			text, pinned && i == 0, topic));
+			text, pinned && i == 0, topic, 0,
+			kScenarios[index].kind == Kind::Keyboard && i == messageCount - 1));
 		replyIds.push_back(id);
 	}
 	history->addNewerSlice(messages);
 	history->addNewerSlice({});
+	if (kScenarios[index].kind == Kind::Keyboard) {
+		history->setLastKeyboard(kFirstMessageId + 100 * index + messageCount - 1,
+			peer->id);
+	} else if (kScenarios[index].kind == Kind::Sponsored) {
+		session->sponsoredMessages().setLocalForDebug(history);
+	}
 	if (topic) {
 		peer->forum()->topicFor(kTopicRootId)->replies()
 			->setLocalMessagesForDebug(std::move(replyIds));
@@ -205,9 +236,11 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 				| PeerBarSetting::BlockContact);
 		} else if (spec.kind == Kind::Blocked) {
 			user->setIsBlocked(true);
-		} else if (spec.kind == Kind::Bot) {
+		} else if (spec.kind == Kind::Bot || spec.kind == Kind::Keyboard
+			|| spec.kind == Kind::Sponsored) {
 			user->setBotInfoVersion(1);
-			user->botInfo->startToken = u"layout"_q;
+			user->botInfo->startToken = (spec.kind == Kind::Bot)
+				? u"layout"_q : QString();
 			user->botInfo->inited = true;
 		} else if (spec.kind == Kind::Business || spec.kind == Kind::Paid) {
 			using Flag = MTPDpeerSettings::Flag;
