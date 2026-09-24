@@ -217,11 +217,7 @@ PaintRoundImageCallback GenerateCreditsPaintUserpicCallback(
 		return [=](Painter &p, int x, int y, int, int size) mutable {
 			const auto hq = PainterHighQualityEnabler(p);
 			p.setPen(Qt::NoPen);
-			{
-				auto gradient = QLinearGradient(x + size, y + size, x, y);
-				gradient.setStops(Ui::Premium::ButtonGradientStops());
-				p.setBrush(gradient);
-			}
+			p.setBrush(st::premiumButtonBg2);
 			p.drawEllipse(x, y, size, size);
 			svg->render(&p, QRectF(x, y, size, size) - Margins(size / 5.));
 		};

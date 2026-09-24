@@ -26,7 +26,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/peer_qr_box.h"
 #include "ui/controls/invite_link_buttons.h"
 #include "ui/controls/invite_link_label.h"
-#include "ui/effects/premium_graphics.h"
 #include "ui/layers/generic_box.h"
 #include "ui/painter.h"
 #include "ui/text/format_values.h"
@@ -63,14 +62,9 @@ enum class SpecialRowType {
 [[nodiscard]] PaintRoundImageCallback GeneratePremiumsUserpicCallback(
 		bool forceRound) {
 	return [=](QPainter &p, int x, int y, int outerWidth, int size) {
-		auto gradient = QLinearGradient(
-			QPointF(x, y),
-			QPointF(x + size, y + size));
-		gradient.setStops(Ui::Premium::ButtonGradientStops());
-
 		auto hq = PainterHighQualityEnabler(p);
 		p.setPen(Qt::NoPen);
-		p.setBrush(gradient);
+		p.setBrush(st::premiumButtonBg2);
 		if (forceRound) {
 			p.drawEllipse(x, y, size, size);
 		} else {
@@ -84,15 +78,9 @@ enum class SpecialRowType {
 [[nodiscard]] PaintRoundImageCallback GenerateMiniAppsUserpicCallback(
 		bool forceRound) {
 	return [=](QPainter &p, int x, int y, int outerWidth, int size) {
-		const auto &color1 = st::historyPeer6UserpicBg;
-		const auto &color2 = st::historyPeer6UserpicBg2;
-
 		auto hq = PainterHighQualityEnabler(p);
-		auto gradient = QLinearGradient(x, y, x, y + size);
-		gradient.setStops({ { 0., color1->c }, { 1., color2->c } });
-
 		p.setPen(Qt::NoPen);
-		p.setBrush(gradient);
+		p.setBrush(st::historyPeer6UserpicBg);
 		if (forceRound) {
 			p.drawEllipse(x, y, size, size);
 		} else {

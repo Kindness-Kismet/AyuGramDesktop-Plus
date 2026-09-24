@@ -314,14 +314,7 @@ void VenuesController::rowPaintIcon(
 			EmptyUserpic::ColorIndex(UniqueRowIdFromString(icon)));
 		auto p = QPainter(&image);
 		auto hq = PainterHighQualityEnabler(p);
-		{
-			auto gradient = QLinearGradient(0, 0, 0, size);
-			gradient.setStops({
-				{ 0., bg.color1->c },
-				{ 1., bg.color2->c }
-			});
-			p.setBrush(gradient);
-		}
+		p.setBrush(bg.color1);
 		p.setPen(Qt::NoPen);
 		p.drawEllipse(QRect(0, 0, size, size));
 		if (!data.icon.isNull()) {

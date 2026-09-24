@@ -52,8 +52,7 @@ struct Timestamp {
 
 struct PrivacyBadge {
 	const style::icon *icon = nullptr;
-	const style::color *bg1 = nullptr;
-	const style::color *bg2 = nullptr;
+	const style::color *bg = nullptr;
 };
 
 class UserpicBadge final : public Ui::RpWidget {
@@ -82,17 +81,14 @@ private:
 		{ StoryPrivacy::CloseFriends, PrivacyBadge{
 			&st::storiesBadgeCloseFriends,
 			&st::historyPeer2UserpicBg,
-			&st::historyPeer2UserpicBg2,
 		} },
 		{ StoryPrivacy::Contacts, PrivacyBadge{
 			&st::storiesBadgeContacts,
 			&st::historyPeer5UserpicBg,
-			&st::historyPeer5UserpicBg2,
 		} },
 		{ StoryPrivacy::SelectedContacts, PrivacyBadge{
 			&st::storiesBadgeSelectedContacts,
 			&st::historyPeer8UserpicBg,
-			&st::historyPeer8UserpicBg2,
 		} },
 	};
 	if (const auto i = badges.find(privacy); i != end(badges)) {
@@ -153,13 +149,8 @@ void UserpicBadge::paintEvent(QPaintEvent *e) {
 	pen.setWidthF(st::storiesBadgeOutline);
 	const auto half = st::storiesBadgeOutline / 2.;
 	auto outer = QRectF(_badge).marginsAdded({ half, half, half, half });
-	auto gradient = QLinearGradient(outer.topLeft(), outer.bottomLeft());
-	gradient.setStops({
-		{ 0., (*_badgeData.bg1)->c },
-		{ 1., (*_badgeData.bg2)->c },
-	});
 	q.setPen(pen);
-	q.setBrush(gradient);
+	q.setBrush(*_badgeData.bg);
 	q.setCompositionMode(QPainter::CompositionMode_Source);
 	q.drawEllipse(outer);
 	q.setCompositionMode(QPainter::CompositionMode_SourceOver);

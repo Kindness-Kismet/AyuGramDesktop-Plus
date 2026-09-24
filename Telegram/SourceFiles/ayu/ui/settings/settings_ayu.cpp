@@ -223,13 +223,8 @@ private:
 		{
 			auto hq = PainterHighQualityEnabler(p);
 			auto rect = QRectF(userpic.inner);
-			auto gradient = QLinearGradient(rect.topLeft(), rect.bottomLeft());
-			gradient.setStops({
-				{ 0., st::historyPeer5UserpicBg->c },
-				{ 1., st::historyPeer5UserpicBg2->c },
-			});
 			p.setPen(Qt::NoPen);
-			p.setBrush(gradient);
+			p.setBrush(st::historyPeer5UserpicBg);
 			AyuUserpic::PaintShape(p, rect);
 		}
 		{

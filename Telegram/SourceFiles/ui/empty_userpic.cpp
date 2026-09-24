@@ -307,14 +307,7 @@ void EmptyUserpic::paint(
 	font.setPixelSize(fontsize);
 
 	PainterHighQualityEnabler hq(p);
-	{
-		auto gradient = QLinearGradient(x, y, x, y + size);
-		gradient.setStops({
-			{ 0., _colors.color1->c },
-			{ 1., _colors.color2->c }
-		});
-		p.setBrush(gradient);
-	}
+	p.setBrush(_colors.color1);
 	p.setPen(Qt::NoPen);
 	paintBackground();
 
@@ -397,13 +390,9 @@ void EmptyUserpic::PaintSavedMessages(
 		int y,
 		int outerWidth,
 		int size) {
-	auto bg = QLinearGradient(x, y, x, y + size);
-	bg.setStops({
-		{ 0., st::historyPeerSavedMessagesBg->c },
-		{ 1., st::historyPeerSavedMessagesBg2->c }
-	});
+	const auto bg = st::historyPeerSavedMessagesBg->b;
 	const auto &fg = st::historyPeerUserpicFg;
-	PaintSavedMessages(p, x, y, outerWidth, size, QBrush(bg), fg);
+	PaintSavedMessages(p, x, y, outerWidth, size, bg, fg);
 }
 
 void EmptyUserpic::PaintSavedMessages(
@@ -436,13 +425,9 @@ void EmptyUserpic::PaintRepliesMessages(
 		int y,
 		int outerWidth,
 		int size) {
-	auto bg = QLinearGradient(x, y, x, y + size);
-	bg.setStops({
-		{ 0., st::historyPeerSavedMessagesBg->c },
-		{ 1., st::historyPeerSavedMessagesBg2->c }
-	});
+	const auto bg = st::historyPeerSavedMessagesBg->b;
 	const auto &fg = st::historyPeerUserpicFg;
-	PaintRepliesMessages(p, x, y, outerWidth, size, QBrush(bg), fg);
+	PaintRepliesMessages(p, x, y, outerWidth, size, bg, fg);
 }
 
 void EmptyUserpic::PaintRepliesMessages(
@@ -475,13 +460,9 @@ void EmptyUserpic::PaintHiddenAuthor(
 		int y,
 		int outerWidth,
 		int size) {
-	auto bg = QLinearGradient(x, y, x, y + size);
-	bg.setStops({
-		{ 0., st::premiumButtonBg2->c },
-		{ 1., st::premiumButtonBg3->c },
-	});
+	const auto bg = st::premiumButtonBg2->b;
 	const auto &fg = st::premiumButtonFg;
-	PaintHiddenAuthor(p, x, y, outerWidth, size, QBrush(bg), fg);
+	PaintHiddenAuthor(p, x, y, outerWidth, size, bg, fg);
 }
 
 void EmptyUserpic::PaintHiddenAuthor(
@@ -514,13 +495,9 @@ void EmptyUserpic::PaintMyNotes(
 		int y,
 		int outerWidth,
 		int size) {
-	auto bg = QLinearGradient(x, y, x, y + size);
-	bg.setStops({
-		{ 0., st::historyPeerSavedMessagesBg->c },
-		{ 1., st::historyPeerSavedMessagesBg2->c }
-	});
+	const auto bg = st::historyPeerSavedMessagesBg->b;
 	const auto &fg = st::historyPeerUserpicFg;
-	PaintMyNotes(p, x, y, outerWidth, size, QBrush(bg), fg);
+	PaintMyNotes(p, x, y, outerWidth, size, bg, fg);
 }
 
 void EmptyUserpic::PaintMyNotes(
@@ -553,13 +530,9 @@ void EmptyUserpic::PaintCurrency(
 		int y,
 		int outerWidth,
 		int size) {
-	auto bg = QLinearGradient(x, y, x, y + size);
-	bg.setStops({
-		{ 0., st::historyPeerSavedMessagesBg->c },
-		{ 1., st::historyPeerSavedMessagesBg2->c }
-	});
+	const auto bg = st::historyPeerSavedMessagesBg->b;
 	const auto &fg = st::historyPeerUserpicFg;
-	PaintCurrency(p, x, y, outerWidth, size, QBrush(bg), fg);
+	PaintCurrency(p, x, y, outerWidth, size, bg, fg);
 }
 
 void EmptyUserpic::PaintCurrency(

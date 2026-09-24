@@ -160,15 +160,6 @@ void SetupSubButtonBackground(
 	}, background->lifetime());
 }
 
-[[nodiscard]] QBrush CreateDefaultGradientBrush(int size) {
-	auto gradient = QLinearGradient(0, 0, 0, size);
-	gradient.setStops({
-		{ 0.0, st::historyPeer4UserpicBg->c },
-		{ 1.0, st::historyPeer4UserpicBg2->c },
-	});
-	return QBrush(std::move(gradient));
-}
-
 } // namespace
 
 UserpicButton::UserpicButton(
@@ -1161,7 +1152,7 @@ void UserpicButton::showCustom(QImage &&image) {
 			: Images::Circle(std::move(small)));
 	} else {
 		_userpic = CreateSquarePixmap(_st.photoSize, [&](Painter &p) {
-			fillShape(p, CreateDefaultGradientBrush(_st.photoSize));
+			fillShape(p, st::historyPeer4UserpicBg->b);
 		});
 	}
 	_userpic.setDevicePixelRatio(style::DevicePixelRatio());
@@ -1319,7 +1310,7 @@ void UserpicButton::prepareUserpicPixmap() {
 				}
 			}
 		} else {
-			fillShape(p, CreateDefaultGradientBrush(_st.photoSize));
+			fillShape(p, st::historyPeer4UserpicBg->b);
 		}
 	});
 	_userpicUniqueKey = _userpicHasImage

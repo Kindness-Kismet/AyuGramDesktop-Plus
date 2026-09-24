@@ -234,37 +234,29 @@ void RenameBox(not_null<Ui::GenericBox*> box) {
 	return DeviceType::Other;
 }
 
-[[nodiscard]] QBrush GradientForType(DeviceType type, int size) {
-	const auto colors = [&]() -> std::pair<style::color, style::color> {
-		switch (type) {
-		case DeviceType::Windows:
-		case DeviceType::Mac:
-		case DeviceType::Other:
-			return { st::historyPeer4UserpicBg, st::historyPeer4UserpicBg2 };
-		case DeviceType::Ubuntu:
-			return { st::historyPeer8UserpicBg, st::historyPeer8UserpicBg2 };
-		case DeviceType::Linux:
-			return { st::historyPeer5UserpicBg, st::historyPeer5UserpicBg2 };
-		case DeviceType::iPhone:
-		case DeviceType::iPad:
-			return { st::historyPeer7UserpicBg, st::historyPeer7UserpicBg2 };
-		case DeviceType::Android:
-			return { st::historyPeer2UserpicBg, st::historyPeer2UserpicBg2 };
-		case DeviceType::Web:
-		case DeviceType::Chrome:
-		case DeviceType::Edge:
-		case DeviceType::Firefox:
-		case DeviceType::Safari:
-			return { st::historyPeer6UserpicBg, st::historyPeer6UserpicBg2 };
-		}
-		Unexpected("Type in GradientForType.");
-	}();
-	auto gradient = QLinearGradient(0, 0, 0, size);
-	gradient.setStops({
-		{ 0.0, colors.first->c },
-		{ 1.0, colors.second->c },
-	});
-	return QBrush(std::move(gradient));
+[[nodiscard]] const style::color &ColorForType(DeviceType type) {
+	switch (type) {
+	case DeviceType::Windows:
+	case DeviceType::Mac:
+	case DeviceType::Other:
+		return st::historyPeer4UserpicBg;
+	case DeviceType::Ubuntu:
+		return st::historyPeer8UserpicBg;
+	case DeviceType::Linux:
+		return st::historyPeer5UserpicBg;
+	case DeviceType::iPhone:
+	case DeviceType::iPad:
+		return st::historyPeer7UserpicBg;
+	case DeviceType::Android:
+		return st::historyPeer2UserpicBg;
+	case DeviceType::Web:
+	case DeviceType::Chrome:
+	case DeviceType::Edge:
+	case DeviceType::Firefox:
+	case DeviceType::Safari:
+		return st::historyPeer6UserpicBg;
+	}
+	Unexpected("Type in ColorForType.");
 }
 
 [[nodiscard]] const style::icon &IconForType(DeviceType type) {
@@ -332,7 +324,7 @@ void RenameBox(not_null<Ui::GenericBox*> box) {
 
 	auto p = QPainter(&result);
 	auto hq = PainterHighQualityEnabler(p);
-	p.setBrush(GradientForType(type, size));
+	p.setBrush(ColorForType(type));
 	p.setPen(Qt::NoPen);
 	p.drawEllipse(rect);
 	IconForType(type).paintInCenter(p, rect);
@@ -368,7 +360,7 @@ void RenameBox(not_null<Ui::GenericBox*> box) {
 
 	auto p = QPainter(&state->background);
 	auto hq = PainterHighQualityEnabler(p);
-	p.setBrush(GradientForType(type, size));
+	p.setBrush(ColorForType(type));
 	p.setPen(Qt::NoPen);
 	p.drawEllipse(rect);
 	if (const auto icon = IconBigForType(type)) {
