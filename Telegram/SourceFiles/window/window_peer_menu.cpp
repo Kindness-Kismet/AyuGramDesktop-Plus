@@ -1757,7 +1757,7 @@ void Filler::addViewAsMessages() {
 			controller->showChatPreview({
 				peer->owner().history(peer),
 				FullMsgId(),
-			}, callback, QApplication::activePopupWidget());
+			}, callback, Ui::PopupMenu::Active());
 			return true;
 		} else if (base::IsCtrlPressed()) {
 			Ui::PreventDelayedActivation();

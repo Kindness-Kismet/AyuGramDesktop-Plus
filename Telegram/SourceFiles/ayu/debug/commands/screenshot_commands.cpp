@@ -3,6 +3,7 @@
 
 #include "core/application.h"
 #include "window/window_controller.h"
+#include "ui/widgets/popup_menu.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -21,13 +22,17 @@ using json = nlohmann::json;
 	}
 	const auto popup = (args.size() == 2);
 	const auto window = Core::App().activeWindow();
+	const auto menu = Ui::PopupMenu::Active();
 	const auto widget = popup
-		? QApplication::activePopupWidget()
+		? menu ? menu : QApplication::activePopupWidget()
 		: window ? window->widget().get() : nullptr;
 	if (!widget) {
 		return Result::Err(popup ? u"no active popup"_q : u"no active window"_q);
 	}
-	const auto image = widget->grab();
+	const auto root = widget->window();
+	const auto image = (root == widget)
+		? widget->grab()
+		: root->grab(QRect(widget->mapTo(root, QPoint()), widget->size()));
 	if (image.isNull()) {
 		return Result::Err(u"grab returned an empty image"_q);
 	}

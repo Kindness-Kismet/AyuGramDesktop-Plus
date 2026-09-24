@@ -84,12 +84,13 @@ python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true + 
 | `settings.open <main\|ayu\|search>` | 直接打开设置页：上游主页 / AyuGram 偏好 / 设置搜索页 |
 | `ghost.status` | 全局与当前账号的幽灵模式状态，需已登录 |
 | `storage.stats` | 保存开关、`ayudata.db` 路径与大小 |
-| `screenshot.take [--popup]` | 截主窗口或当前活动浮动菜单到 `build/screenshots/shot-<时间戳>.jpg` |
+| `screenshot.take [--popup]` | 截主窗口（包含菜单）或当前活动浮动菜单到 `build/screenshots/shot-<时间戳>.jpg` |
 | `control.list [filter] [--all]` | 列控件树：序号、objectName、类名、几何、可见性 |
 | `control.click <objectName \| #序号>` | 合成鼠标点击，进程内走真实事件分发路径 |
 | `control.set-text <objectName> <text\|--file path>` | 修改可见输入框，验证单行、多行和清空后的布局，不触发发送 |
 | `control.scroll <目标> [top]` | 读取或设置普通及弹性滚动区位置，支持默认控件序号，返回位置、最大值和可见高度 |
 | `control.hover <目标> <on\|off>` | 设置按钮悬停绘制状态，不触发点击 |
+| `control.key <目标> <按键>` | 进程内按键，`@menu` 定位当前菜单 |
 | `control.pointer <目标> [x y]` | 向控件内部位置合成移动事件；省略坐标时离开，不移动系统鼠标 |
 | `control.click <目标> --mouse` | 从窗口命中测试后合成点击，检查按钮是否被遮挡 |
 

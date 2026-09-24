@@ -410,8 +410,11 @@ object_ptr<Ui::RpWidget> ChooseRepeatPeriod(
 		const auto anchor = button->mapToGlobal(
 			QPoint(button->width() / 2, 0));
 		if (menu->prepareGeometryFor(anchor)) {
+			const auto local = menu->isWindow()
+				? anchor
+				: menu->parentWidget()->mapFromGlobal(anchor);
 			menu->move(
-				anchor.x() - menu->width() / 2,
+				local.x() - menu->width() / 2,
 				menu->y()
 					- Ui::BoxShadow::ExtendFor(menu->st().shadow).bottom());
 			menu->popupPrepared();

@@ -6,12 +6,15 @@
 #include "ui/widgets/elastic_scroll.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/widgets/fields/input_field.h"
+#include "ui/widgets/popup_menu.h"
 #include "window/window_controller.h"
 
 #include <QAbstractButton>
 #include <QApplication>
 #include <QEnterEvent>
 #include <QLabel>
+#include <QKeyEvent>
+#include <QMap>
 #include <QMouseEvent>
 #include <QPointer>
 #include <QWidget>
@@ -89,6 +92,7 @@ struct WidgetInfo {
 		{ "globalRect", json{ topLeft.x(), topLeft.y(), widget->width(), widget->height() } },
 		{ "visible", widget->isVisibleTo(info.root) },
 		{ "enabled", widget->isEnabledTo(info.root) },
+		{ "isWindow", widget->isWindow() },
 	};
 }
 
@@ -101,6 +105,8 @@ struct WidgetInfo {
 	if (filter == u"@scroll"_q) {
 		return dynamic_cast<Ui::ScrollArea*>(widget)
 			|| dynamic_cast<Ui::ElasticScroll*>(widget);
+	} else if (filter == u"@menu"_q) {
+		return dynamic_cast<Ui::PopupMenu*>(widget);
 	}
 	return widget->objectName().contains(filter, Qt::CaseInsensitive)
 		|| QString::fromLatin1(widget->metaObject()->className())
@@ -194,6 +200,8 @@ struct WidgetInfo {
 			return Result::Err(u"bad index, run control.list first"_q);
 		}
 		target = widgets[index].widget.data();
+	} else if (selector == u"@menu"_q) {
+		target = Ui::PopupMenu::Active();
 	} else {
 		if (const auto window = Core::App().activeWindow()) {
 			target = window->widget()->findChild<QWidget*>(selector);
@@ -325,7 +333,9 @@ struct WidgetInfo {
 }
 
 [[nodiscard]] QWidget *findControl(const QString &selector) {
-	if (selector.startsWith(u'#')) {
+	if (selector == u"@menu"_q) {
+		return Ui::PopupMenu::Active();
+	} else if (selector.startsWith(u'#')) {
 		auto ok = false;
 		const auto index = selector.mid(1).toInt(&ok);
 		const auto widgets = CollectWidgets(false);
@@ -335,6 +345,33 @@ struct WidgetInfo {
 	}
 	const auto window = Core::App().activeWindow();
 	return window ? window->widget()->findChild<QWidget*>(selector) : nullptr;
+}
+
+[[nodiscard]] Result controlKey(const QStringList &args) {
+	if (args.size() != 2) {
+		return Result::Err(u"usage: control.key <objectName | #index | @menu> <key>"_q);
+	}
+	static const auto keys = QMap<QString, Qt::Key>{
+		{ u"escape"_q, Qt::Key_Escape },
+		{ u"up"_q, Qt::Key_Up },
+		{ u"down"_q, Qt::Key_Down },
+		{ u"left"_q, Qt::Key_Left },
+		{ u"right"_q, Qt::Key_Right },
+		{ u"enter"_q, Qt::Key_Return },
+		{ u"tab"_q, Qt::Key_Tab },
+	};
+	const auto key = keys.constFind(args[1]);
+	const auto target = QPointer<QWidget>(findControl(args[0]));
+	if (key == keys.cend() || !target || !target->isVisible() || !target->isEnabled()) {
+		return Result::Err(u"expected a visible enabled control and a supported key"_q);
+	}
+	auto press = QKeyEvent(QEvent::KeyPress, *key, Qt::NoModifier);
+	QApplication::sendEvent(target, &press);
+	if (target) {
+		auto release = QKeyEvent(QEvent::KeyRelease, *key, Qt::NoModifier);
+		QApplication::sendEvent(target, &release);
+	}
+	return Result::Ok(u"sent"_q);
 }
 
 [[nodiscard]] Result controlHover(const QStringList &args) {
@@ -440,6 +477,7 @@ const HandlerMap &ControlHandlers() {
 		{ u"control.scroll"_q, &controlScroll },
 		{ u"control.hover"_q, &controlHover },
 		{ u"control.pointer"_q, &controlPointer },
+		{ u"control.key"_q, &controlKey },
 	};
 	return result;
 }
