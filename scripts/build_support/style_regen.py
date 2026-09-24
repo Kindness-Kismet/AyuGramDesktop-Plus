@@ -16,6 +16,12 @@ _TIMESTAMP = _GEN_STYLES / "td_ui_style.timestamp"
 _VCXPROJ = CMAKE_OUT_DIR / "Telegram" / "td_ui_styles.vcxproj"
 _MSBUILD_NS = "http://schemas.microsoft.com/developer/msbuild/2003"
 
+# 图标目录：内容会被嵌进生成的 style 文件，改动必须触发 codegen 重跑
+_ICON_DIRS = (
+    ROOT / "Telegram" / "Resources" / "icons",
+    ROOT / "Telegram" / "lib_ui" / "icons",
+)
+
 
 def _sha1(path: Path) -> str:
     return hashlib.sha1(path.read_bytes()).hexdigest()
@@ -71,6 +77,22 @@ def _inputs_newer_than_timestamp(cmake_config: str) -> bool:
     return any(p.is_file() and p.stat().st_mtime > stamp for p in inputs)
 
 
+def _icons_newer_than_timestamp() -> bool:
+    """图标文件比 timestamp 新也要重跑。
+
+    codegen 把图标内容嵌进生成文件，但 DEPENDS 里只有 .style/.palette，
+    不检测图标会导致只改图标时产物不更新（曾出现过界面仍是旧图标）。
+    """
+    stamp = _TIMESTAMP.stat().st_mtime
+    for directory in _ICON_DIRS:
+        if not directory.is_dir():
+            continue
+        for path in directory.rglob("*"):
+            if path.is_file() and path.stat().st_mtime > stamp:
+                return True
+    return False
+
+
 def _codegen_environment(environment: dict[str, str]) -> dict[str, str]:
     env = dict(environment)
     qt_bin = LIBRARIES_ARCH_DIR / f"Qt-{qt_version(TARGET)}" / "bin"
@@ -82,9 +104,10 @@ def _codegen_environment(environment: dict[str, str]) -> dict[str, str]:
 def regenerate_styles(environment: dict[str, str], cmake_config: str) -> str:
     """手动跑一次 style codegen,只回写内容变化的生成文件再刷新 timestamp。
 
-    codegen 的 DEPENDS 不含图标文件,直接删 timestamp 会让上百个生成文件
-    mtime 全刷新,MSBuild 据此近全量重编。首次构建时产物尚未生成,交给
-    CMake 全量处理,这里直接跳过。失败降级为告警,不中断构建。
+    codegen 的 DEPENDS 不含图标文件,所以除了 .style/.palette 变更,
+    图标变更也要主动重跑(见 _icons_newer_than_timestamp)。
+    首次构建时产物尚未生成,交给 CMake 全量处理,这里直接跳过。
+    失败降级为告警,不中断构建。
     """
     if not _TIMESTAMP.is_file() or not _GEN_STYLES.is_dir():
         return "generated styles not present yet, leaving to CMake"
@@ -98,8 +121,8 @@ def regenerate_styles(environment: dict[str, str], cmake_config: str) -> str:
     if not Path(binary).is_file():
         return warn(f"codegen_style not built yet ({binary_rel}), skipping style regen")
 
-    # 没有 .style 比 timestamp 新,codegen 不会产出任何变化,省掉这一遍
-    if not _inputs_newer_than_timestamp(cmake_config):
+    # 没有 .style 比 timestamp 新,也没有图标变更,codegen 不会产出变化
+    if not _inputs_newer_than_timestamp(cmake_config) and not _icons_newer_than_timestamp():
         return "no style inputs changed, skipping codegen"
 
     tmp = ROOT / "build" / "gen_tmp"
