@@ -9,7 +9,7 @@ AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py sc
 
 - `scenario.seed`：向本进程创建的假会话注入固定数据，重复调用复用同一列表。
 - `scenario.list`：返回场景的 `key`、`name`、`peerId`，可在初始化前查看。
-- `scenario.open <key> [--view main|alternate|scheduled]`：打开列表中的场景，话题场景直接进入真实话题输入区。
+- `scenario.open <key> [--view main|alternate|scheduled|shortcuts] [--input keep|empty|reply|edit]`：打开列表中的场景，话题场景直接进入真实话题输入区。
 - `app.info` 的 `fakeSession` 表示当前会话是否由本进程创建，重启后失效。
 
 | 键名 | 展示内容 |
@@ -34,3 +34,5 @@ AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py sc
 修改输入文字可用于多行布局验证，测试数据只写入独立配置。
 
 `--view alternate` 进入另一套聊天组件，`--view scheduled` 进入计划消息输入区，默认 `main` 使用主聊天。三种入口共用同一份本地会话数据，可用于检查组件差异。
+
+`--view shortcuts` 打开本地快捷回复输入区。`--input reply` 和 `--input edit` 为普通私聊或话题安装本地回复／编辑草稿，`empty` 清空，默认 `keep` 保留。草稿状态只用于主聊天和另一套聊天组件。机器人每次打开时恢复启动参数。

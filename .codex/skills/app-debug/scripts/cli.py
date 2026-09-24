@@ -142,7 +142,9 @@ def register_commands(sub) -> None:
     sub.add_parser("scenario.list", help="列出固定场景的名称、键名与会话编号")
     command = sub.add_parser("scenario.open", help="打开固定场景，先执行 scenario.seed")
     command.add_argument("key")
-    command.add_argument("--view", choices=("main", "alternate", "scheduled"), default="main", help="主聊天、另一套聊天组件或计划消息")
+    command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts"), default="main", help="主聊天、另一套聊天组件或计划消息")
+
+    command.add_argument("--input", choices=("keep", "empty", "reply", "edit"), default="keep", help="保留、清空、回复或编辑输入状态，仅用于普通私聊和话题")
 
     command = sub.add_parser("debug.fake-message", help="往假会话的 Saved Messages 塞本地文本消息，验证渲染与隐藏逻辑")
     command.add_argument("text", help="消息文本")
@@ -269,7 +271,7 @@ def execute_command(args: argparse.Namespace) -> None:
 def build_server_command(args: argparse.Namespace) -> str:
     command = args.command
     if command == "scenario.open":
-        return f"scenario.open {quote_arg(args.key)} --view {args.view}"
+        return f"scenario.open {quote_arg(args.key)} --view {args.view} --input {args.input}"
     if command == "control.hover":
         return f"control.hover {quote_arg(args.target)} {args.state}"
     if command == "control.key":

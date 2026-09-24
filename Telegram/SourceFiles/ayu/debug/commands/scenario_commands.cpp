@@ -4,6 +4,8 @@
 #include "ayu/debug/debug_login.h"
 #include "base/unixtime.h"
 #include "data/data_channel.h"
+#include "data/business/data_shortcut_messages.h"
+#include "data/data_drafts.h"
 #include "data/data_forum.h"
 #include "data/data_forum_topic.h"
 #include "data/data_replies_list.h"
@@ -16,6 +18,7 @@
 #include "history/view/history_view_scheduled_section.h"
 #include "main/main_session.h"
 #include "spellcheck/spellcheck_types.h"
+#include "settings/business/settings_shortcut_messages.h"
 #include "window/window_session_controller.h"
 
 namespace AyuDebug::Commands {
@@ -112,7 +115,8 @@ void initialiseUser(
 		int id,
 		const QString &text,
 		bool pinned,
-		bool topic) {
+		bool topic,
+		int shortcutId = 0) {
 	using Flag = MTPDmessage::Flag;
 	using ReplyFlag = MTPDmessageReplyHeader::Flag;
 	const auto reply = topic ? MTP_messageReplyHeader(
@@ -123,8 +127,10 @@ void initialiseUser(
 		MTPint(), MTPint(), MTPstring()) : MTPMessageReplyHeader();
 	return MTP_message(
 		MTP_flags(Flag::f_from_id
+			| ((sender == peer->session().userPeerId()) ? Flag::f_out : Flag())
 			| (pinned ? Flag::f_pinned : Flag())
 			| (topic ? Flag::f_reply_to : Flag())
+			| (shortcutId ? Flag::f_quick_reply_shortcut_id : Flag())
 			| (peer->isBroadcast() ? Flag::f_post : Flag())),
 		MTP_int(id), peerToMTP(sender), MTPint(), MTPstring(),
 		peerToMTP(peer->id), MTPPeer(), MTPMessageFwdHeader(),
@@ -134,7 +140,7 @@ void initialiseUser(
 		MTPVector<MTPMessageEntity>(), MTPint(), MTPint(),
 		MTPMessageReplies(), MTPint(), MTPstring(), MTPlong(),
 		MTPMessageReactions(), MTPVector<MTPRestrictionReason>(),
-		MTPint(), MTPint(), MTPlong(), MTPFactCheck(), MTPint(),
+		MTPint(), MTP_int(shortcutId), MTPlong(), MTPFactCheck(), MTPint(),
 		MTPlong(), MTPSuggestedPost(), MTPint(), MTPstring(),
 		MTPRichMessage());
 }
@@ -166,7 +172,10 @@ void fillHistory(
 			? u"置顶说明：检查顶部条、正文留白与窄窗换行。"_q
 			: u"本地场景消息 %1：用于检查输入区和提示条的布局。"_q.arg(i + 1);
 		const auto id = kFirstMessageId + 100 * index + i;
-		messages.prepend(makeMessage(peer, sender, id,
+		const auto outgoing = (i == messageCount - 1)
+			&& (topic || kScenarios[index].kind == Kind::Private);
+		messages.prepend(makeMessage(peer,
+			outgoing ? session->userPeerId() : sender, id,
 			text, pinned && i == 0, topic));
 		replyIds.push_back(id);
 	}
@@ -282,12 +291,31 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 }
 
 [[nodiscard]] Result openScenario(const QStringList &args) {
-	if (args.size() != 1 && (args.size() != 3 || args[1] != u"--view"_q)) {
-		return Result::Err(u"usage: scenario.open <key> [--view main|alternate|scheduled]"_q);
+	if (args.empty() || !(args.size() % 2)) {
+		return Result::Err(u"usage: scenario.open <key> [--view main|alternate|scheduled|shortcuts] [--input keep|empty|reply|edit]"_q);
 	}
-	const auto view = (args.size() == 3) ? args[2] : u"main"_q;
-	if (view != u"main"_q && view != u"alternate"_q && view != u"scheduled"_q) {
+	auto view = u"main"_q;
+	auto input = u"keep"_q;
+	for (auto i = 1; i < args.size(); i += 2) {
+		if (args[i] == u"--view"_q) {
+			view = args[i + 1];
+		} else if (args[i] == u"--input"_q) {
+			input = args[i + 1];
+		} else {
+			return Result::Err(u"unknown scenario option"_q);
+		}
+	}
+	if (view != u"main"_q && view != u"alternate"_q
+		&& view != u"scheduled"_q && view != u"shortcuts"_q) {
 		return Result::Err(u"unknown view"_q);
+	}
+	if (input != u"keep"_q && input != u"empty"_q
+		&& input != u"reply"_q && input != u"edit"_q) {
+		return Result::Err(u"unknown input state"_q);
+	}
+	if ((view == u"scheduled"_q || view == u"shortcuts"_q)
+		&& input != u"keep"_q) {
+		return Result::Err(u"input states require main or alternate view"_q);
 	}
 	const auto session = ActiveSession();
 	if (!session || SeededSession.get() != session) {
@@ -303,7 +331,49 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 		}
 		const auto peer = session->data().peer(scenarioPeerId(i));
 		const auto history = session->data().history(peer);
-		if (view == u"scheduled"_q) {
+		const auto kind = kScenarios[i].kind;
+		if (input != u"keep"_q) {
+			if (kind != Kind::Private && kind != Kind::Topic) {
+				return Result::Err(u"input states require private or topic scenario"_q);
+			}
+			// 先离开当前聊天，完成原草稿保存后再安装场景草稿。
+			controller->showPeerHistory(session->userPeerId(),
+				Window::SectionShow(Window::SectionShow::Way::ClearStack, anim::type::instant));
+			const auto topicId = (kind == Kind::Topic && view == u"main"_q)
+				? MsgId(kTopicRootId) : MsgId();
+			history->clearLocalDraft(topicId, {});
+			history->clearLocalEditDraft(topicId, {});
+			if (input != u"empty"_q) {
+				auto draft = std::make_unique<Data::Draft>();
+				draft->reply = {
+					.messageId = FullMsgId(peer->id, kFirstMessageId + 100 * i
+						+ ((input == u"edit"_q) ? 5 : 0)),
+					.topicRootId = topicId,
+				};
+				draft->textWithTags.text = u"本地输入区布局验证"_q;
+				if (input == u"edit"_q) {
+					history->setLocalEditDraft(std::move(draft));
+				} else {
+					history->setLocalDraft(std::move(draft));
+				}
+			}
+		}
+		if (kind == Kind::Bot) {
+			peer->asUser()->botInfo->startToken = u"layout"_q;
+		}
+		if (view == u"shortcuts"_q) {
+			auto &messages = session->data().shortcutMessages();
+			constexpr auto kShortcutMessageId = kFirstMessageId + 2000;
+			messages.apply(MTP_updateQuickReplyMessage(makeMessage(
+				session->user(), session->userPeerId(), kShortcutMessageId,
+				u"快捷回复样本：检查独立设置页的输入区。"_q,
+				false, false, 1)).c_updateQuickReplyMessage());
+			messages.apply(MTP_updateQuickReplies(MTP_vector<MTPQuickReply>({
+				MTP_quickReply(MTP_int(1), MTP_string("layout"),
+					MTP_int(kShortcutMessageId), MTP_int(1)),
+			})).c_updateQuickReplies());
+			controller->showSettings(Settings::ShortcutMessagesId(1));
+		} else if (view == u"scheduled"_q) {
 			controller->showSection(
 				std::make_shared<HistoryView::ScheduledMemento>(history),
 				Window::SectionShow::Way::ClearStack);
@@ -319,7 +389,8 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 				Window::SectionShow::Way::ClearStack, ShowAtTheEndMsgId);
 		}
 		return Result::Ok(Compact({ { "key", kScenarios[i].key },
-			{ "peerId", peer->id.value }, { "view", view.toStdString() } }));
+			{ "peerId", peer->id.value }, { "view", view.toStdString() },
+			{ "input", input.toStdString() } }));
 	}
 	return Result::Err(u"unknown scenario, use scenario.list"_q);
 }
