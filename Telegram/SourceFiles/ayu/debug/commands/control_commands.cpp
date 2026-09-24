@@ -156,17 +156,37 @@ struct WidgetInfo {
 	}));
 }
 
-// 合成鼠标点击：在目标控件中心命中子控件，按 Enter → Press → Release →
-// Leave 的顺序 sendEvent，走与真实点击相同的事件分发路径。不依赖窗口前台
-// 与真实光标，少数依赖 QCursor::pos() 的代码路径不适用。
-[[nodiscard]] QWidget *FindByAccessibleName(const QString &name) {
-	for (const auto &info : CollectWidgets(true)) {
-		const auto widget = info.widget.data();
-		if (widget && widget->accessibleName() == name) {
-			return widget;
-		}
+[[nodiscard]] QWidget *findControl(const QString &selector, bool all = false) {
+	if (selector == u"@menu"_q) {
+		return Ui::PopupMenu::Active();
 	}
-	return nullptr;
+	const auto widgets = CollectWidgets(all);
+	if (selector.startsWith(u'#')) {
+		auto ok = false;
+		const auto index = selector.mid(1).toInt(&ok);
+		return (ok && index >= 0 && index < int(widgets.size()))
+			? widgets[index].widget.data()
+			: nullptr;
+	}
+	// 多套聊天输入区会同时存在，只定位当前可见的控件。
+	const auto named = [&](const auto &candidates, bool accessible) -> QWidget* {
+		for (const auto &info : candidates) {
+			const auto widget = info.widget.data();
+			if (widget && widget->isVisible()
+				&& (accessible ? widget->accessibleName() : widget->objectName()) == selector) {
+				return widget;
+			}
+		}
+		return nullptr;
+	};
+	if (const auto widget = named(widgets, false)) {
+		return widget;
+	}
+	const auto topLevels = all ? widgets : CollectWidgets(true);
+	if (const auto widget = named(topLevels, false)) {
+		return widget;
+	}
+	return named(topLevels, true);
 }
 
 [[nodiscard]] Result ControlClick(const QStringList &args) {
@@ -189,37 +209,7 @@ struct WidgetInfo {
 		return Result::Err(
 			u"usage: control.click <objectName | #index> [--all] [--mouse]"_q);
 	}
-	auto target = (QWidget*)nullptr;
-	if (selector.startsWith(u'#')) {
-		auto ok = false;
-		const auto index = selector.mid(1).toInt(&ok);
-		// #index 与 control.list 同模式的序号对应；默认活动窗口，--all 全部顶层。
-		// UI 变化后序号会漂移，跨指令使用需先重新 list。
-		const auto widgets = CollectWidgets(all);
-		if (!ok || index < 0 || index >= int(widgets.size())) {
-			return Result::Err(u"bad index, run control.list first"_q);
-		}
-		target = widgets[index].widget.data();
-	} else if (selector == u"@menu"_q) {
-		target = Ui::PopupMenu::Active();
-	} else {
-		if (const auto window = Core::App().activeWindow()) {
-			target = window->widget()->findChild<QWidget*>(selector);
-		}
-		// 菜单、弹层是独立顶层窗口，活动窗口树里找不到时扫全部顶层。
-		if (!target) {
-			for (const auto top : QApplication::topLevelWidgets()) {
-				if ((target = top->findChild<QWidget*>(selector))) {
-					break;
-				}
-			}
-		}
-		// objectName 之外兜底 accessibleName 精确匹配：菜单外的标题栏按钮等
-		// 只有无障碍名，本地化文本随语言变化，固定语言环境下稳定。
-		if (!target) {
-			target = FindByAccessibleName(selector);
-		}
-	}
+	const auto target = findControl(selector, all);
 	if (!target) {
 		return Result::Err(u"widget not found: "_q
 			+ selector
@@ -313,10 +303,7 @@ struct WidgetInfo {
 	if (args.size() != 2 || !args[1].startsWith(u"b64:"_q)) {
 		return Result::Err(u"usage: control.set-text <objectName> <base64>"_q);
 	}
-	const auto window = Core::App().activeWindow();
-	const auto target = window
-		? window->widget()->findChild<QWidget*>(args.front())
-		: nullptr;
+	const auto target = findControl(args.front());
 	const auto field = dynamic_cast<Ui::InputField*>(target);
 	if (!field || !field->isVisible() || !field->isEnabled()) {
 		return Result::Err(u"editable input not found"_q);
@@ -330,21 +317,6 @@ struct WidgetInfo {
 		{ "length", text.size() },
 		{ "height", field->height() },
 	}));
-}
-
-[[nodiscard]] QWidget *findControl(const QString &selector) {
-	if (selector == u"@menu"_q) {
-		return Ui::PopupMenu::Active();
-	} else if (selector.startsWith(u'#')) {
-		auto ok = false;
-		const auto index = selector.mid(1).toInt(&ok);
-		const auto widgets = CollectWidgets(false);
-		return (ok && index >= 0 && index < int(widgets.size()))
-			? widgets[index].widget.data()
-			: nullptr;
-	}
-	const auto window = Core::App().activeWindow();
-	return window ? window->widget()->findChild<QWidget*>(selector) : nullptr;
 }
 
 [[nodiscard]] Result controlKey(const QStringList &args) {

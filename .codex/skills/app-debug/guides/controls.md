@@ -31,7 +31,7 @@ python .codex/skills/app-debug/scripts/cli.py control.pointer historyScroll
 `control.click <目标> --mouse` 从窗口开始命中测试，再发送鼠标事件。目标中心被遮挡时返回错误，
 用于检查遮罩、层级与点击回调；不等同于人工鼠标验收，依赖真实光标的行为仍需人工确认。
 
-## `control.set-text <objectName> <text|--file path>`
+## `control.set-text <objectName | #序号> <text|--file path>`
 
 修改活动窗口中可见且启用的输入框，用于验证单行、多行和清空后的布局。不会触发发送，
 但正常草稿保存仍会执行，因此只在本地假会话或自己掌控的测试对话中使用。
@@ -90,3 +90,5 @@ python .claude/skills/app-debug/scripts/cli.py control.click "#42"
   点击后 `control.list` 可能因控件销毁找不到目标，属正常。
 - 少数依赖 `QCursor::pos()` 真实光标位置的代码路径不会触发。
 - Windows 自绘标题栏（最小化/最大化/关闭）不是 QWidget，无法寻址；退出用 `app.quit`。
+
+多个页面具有相同控件名时，交互指令选择当前可见控件。序号仍按完整控件树定位；切页后重新查询。
