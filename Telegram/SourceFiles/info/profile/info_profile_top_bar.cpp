@@ -1896,7 +1896,7 @@ void TopBar::paintEdges(
 
 void TopBar::paintEdges(QPainter &p, const QRect &clip) const {
 	if (!_solidBg) {
-		paintEdges(p, clip, st::boxDividerBg);
+		paintEdges(p, clip, st::windowBg);
 	} else {
 		paintEdges(p, clip, *_solidBg);
 	}
@@ -4033,9 +4033,7 @@ TopBarActionButtonStyle TopBar::mapActionStyle(
 				st::boxBg->c,
 				1. - st::infoProfileTopBarActionButtonBgOpacity),
 			.fgColor = std::nullopt,
-			.shadowColor = Window::Theme::IsNightMode()
-				? std::nullopt
-				: std::make_optional(st::windowShadowFgFallback->c),
+			.shadowColor = std::nullopt,
 		};
 	}
 }

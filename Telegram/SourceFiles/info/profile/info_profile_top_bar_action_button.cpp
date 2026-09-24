@@ -120,11 +120,18 @@ void TopBarActionButton::paintEvent(QPaintEvent *e) {
 		/ st::infoProfileTopBarActionButtonSize;
 	p.setOpacity(progress);
 
+	const auto frame = QRect(0, 0, width(),
+		std::min(height(), st::infoProfileTopBarActionButtonFrameHeight));
 	p.setPen(Qt::NoPen);
 	p.setBrush(_bgColor);
 	{
 		auto hq = PainterHighQualityEnabler(p);
-		p.drawRoundedRect(rect(), st::boxRadius, st::boxRadius);
+		if (!_fgColor) {
+			p.setPen(QPen(st::windowDividerFg->c, st::lineWidth));
+		}
+		p.drawRoundedRect(QRectF(frame).adjusted(0.5, 0.5, -0.5, -0.5),
+			st::boxRadius, st::boxRadius);
+		p.setPen(Qt::NoPen);
 
 		const auto hovered = _rippleColor
 			? _overAnimation.value(isOver() ? 1. : 0.)
@@ -132,7 +139,7 @@ void TopBarActionButton::paintEvent(QPaintEvent *e) {
 		if (hovered > 0.) {
 			p.setOpacity(progress * hovered);
 			p.setBrush(*_rippleColor);
-			p.drawRoundedRect(rect(), st::boxRadius, st::boxRadius);
+			p.drawRoundedRect(frame, st::boxRadius, st::boxRadius);
 			p.setOpacity(progress);
 		}
 	}
@@ -175,7 +182,7 @@ void TopBarActionButton::paintEvent(QPaintEvent *e) {
 	if (_fgColor.has_value()) {
 		p.setPen(*_fgColor);
 	} else {
-		p.setPen(st::windowBoldFg);
+		p.setPen(st::menuIconFg);
 	}
 
 	p.setFont(st::infoProfileTopBarActionButtonFont);
@@ -211,7 +218,10 @@ void TopBarActionButton::onStateChanged(
 }
 
 QImage TopBarActionButton::prepareRippleMask() const {
-	return Ui::RippleAnimation::RoundRectMask(size(), st::boxRadius);
+	return Ui::RippleAnimation::RoundRectMask(
+		QSize(width(), std::min(height(),
+			st::infoProfileTopBarActionButtonFrameHeight)),
+		st::boxRadius);
 }
 
 QPoint TopBarActionButton::prepareRippleStartPosition() const {

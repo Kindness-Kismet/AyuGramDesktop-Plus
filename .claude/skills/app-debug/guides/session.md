@@ -92,3 +92,7 @@ userId 写法，缺省 self（Saved Messages）。配合 `screenshot.take` 做 U
 | 看界面、改设置、验证 Debug 入口 | `debug.fake-session` |
 | 测已删除消息、编辑历史、幽灵模式、过滤器 | `debug.testmode` + 测试号登录 |
 | 发文本验证发送链路 | `debug.chats` 定位 + `debug.send-message` |
+
+## 默认背景验证
+
+`debug.reset-background` 重置当前主题的默认背景，返回 `themePath`、`isPattern`、`intensity`、`imageWidth` 和 `imageHeight`，用于核对截图中的背景是否加载正确。

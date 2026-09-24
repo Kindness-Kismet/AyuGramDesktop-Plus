@@ -90,18 +90,18 @@ dialogsTextStyle: defaultTextStyle;
 dialogsDateFont: font(13px);
 dialogsDateSkip: 5px;
 
-dialogsRowHeight: 62px;
-dialogsFilterPadding: point(7px, 7px);
+dialogsRowHeight: 68px;
+dialogsFilterPadding: point(12px, 7px);
 dialogsFilterSkip: 4px;
 
 defaultDialogRow: DialogRow {
 	height: dialogsRowHeight;
-	padding: margins(10px, 8px, 10px, 8px);
-	photoSize: 46px;
-	nameLeft: 68px;
-	nameTop: 10px;
-	textLeft: 68px;
-	textTop: 34px;
+	padding: margins(12px, 9px, 12px, 9px);
+	photoSize: 50px;
+	nameLeft: 78px;
+	nameTop: 12px;
+	textLeft: 78px;
+	textTop: 37px;
 	activeMargin: margins(6px, 3px, 6px, 3px);
 	activeRadius: 10px;
 }
@@ -976,4 +976,18 @@ restoreWindowsOfferClose: IconButton(dialogsCancelSearchInPeer) {
 	iconPosition: point(5px, 6px);
 	rippleAreaPosition: point(0px, 1px);
 	rippleAreaSize: 28px;
+}
+
+dialogsHeadingHeight: 44px;
+dialogsHeadingLeft: 18px;
+dialogsHeadingFont: font(16px semibold);
+dialogsFoldersSettings: IconButton(defaultIconButton) {
+	width: 36px;
+	height: 36px;
+	icon: icon {{ "menu/settings", menuIconFg }};
+	iconOver: icon {{ "menu/settings", menuIconFgOver }};
+	iconPosition: point(-1px, -1px);
+	rippleAreaPosition: point(0px, 0px);
+	rippleAreaSize: 36px;
+	ripple: defaultRippleAnimationBgOver;
 }

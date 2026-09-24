@@ -33,11 +33,10 @@ PinnedBar::PinnedBar(
 	_wrap.entity()->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(_wrap.entity());
-		PaintFloatingRounded(
+		PaintChatBar(
 			p,
 			_wrap.entity()->rect(),
-			st::historyPinnedBg->c,
-			st::windowCardRadius);
+			st::historyPinnedBg->c);
 	}, lifetime());
 
 	if (customEmojiPausedChanges) {

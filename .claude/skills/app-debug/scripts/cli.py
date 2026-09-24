@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """app-debug CLI，用 domain.action 指令控制正在运行的 AyuGram Debug 构建。"""
 import argparse
+import base64
 import os
 import re
 import shlex
@@ -157,6 +158,14 @@ def register_commands(sub) -> None:
     command = sub.add_parser("control.click", help="合成鼠标点击：按 objectName/accessibleName 或 #序号 寻址，进程内分发")
     command.add_argument("target", help="objectName（如 mainMenuButton）、accessibleName 或 #序号")
     command.add_argument("--all", action="store_true", help="#序号 按 control.list --all 的全顶层序号寻址")
+    command.add_argument("--mouse", action="store_true", help="从窗口命中测试后投递鼠标事件，检查按钮是否被遮挡")
+    command = sub.add_parser("control.scroll", help="读取或设置可见滚动区的位置")
+    command.add_argument("target", help="滚动区名称，如 historyScroll")
+    command.add_argument("top", nargs="?", type=int, help="滚动位置，不传时只读取")
+    command = sub.add_parser("control.set-text", help="修改可见输入框的文字，验证输入布局，不触发发送")
+    command.add_argument("target", help="输入框的 objectName，如 messageInput")
+    command.add_argument("text", nargs="?", help="待输入文字，空字符串用于清空")
+    command.add_argument("--file", dest="text_file", help="按 UTF-8 读取文字，保留换行和引号")
 
 
 def main() -> int:
@@ -229,6 +238,14 @@ def execute_command(args: argparse.Namespace) -> None:
 
 def build_server_command(args: argparse.Namespace) -> str:
     command = args.command
+    if command == "control.scroll":
+        return f"control.scroll {quote_arg(args.target)}" + (f" {args.top}" if args.top is not None else "")
+    if command == "control.set-text":
+        if (args.text is None) == (args.text_file is None):
+            raise SystemExit("文字和 --file 必须且只能提供一项")
+        value = Path(args.text_file).read_text(encoding="utf-8") if args.text_file is not None else args.text
+        encoded = base64.b64encode(value.encode("utf-8")).decode("ascii")
+        return f"control.set-text {quote_arg(args.target)} b64:{encoded}"
     if command == "settings.get":
         return f"settings.get {quote_arg(args.key)}"
     if command == "settings.set":
@@ -250,6 +267,8 @@ def build_server_command(args: argparse.Namespace) -> str:
         parts = ["control.click", quote_arg(args.target)]
         if args.all:
             parts.append("--all")
+        if args.mouse:
+            parts.append("--mouse")
         return " ".join(parts)
     if command == "debug.fake-session":
         return ("debug.fake-session" if args.userId is None

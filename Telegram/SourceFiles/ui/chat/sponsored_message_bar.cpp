@@ -276,7 +276,7 @@ void FillSponsoredMessageBar(
 
 	const auto draw = [=](QPainter &p) {
 		const auto r = widget->rect();
-		PaintFloatingRounded(p, r, st::historyPinnedBg->c, st::windowCardRadius);
+		PaintChatBar(p, r, st::historyPinnedBg->c);
 		widget->paintRipple(p, 0, 0);
 		const auto leftPadding = st::msgReplyBarSkip + st::msgReplyBarSkip;
 		const auto rightPadding = st::msgReplyBarSkip;

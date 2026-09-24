@@ -1305,8 +1305,8 @@ historySendRight: 2px;
 historySendPadding: 9px;
 // 输入区胶囊:距窗口边缘间距、圆角半径、胶囊内侧边距
 historyComposeCapsuleMargin: 12px;
-historyComposeCapsuleRadius: 23px;
-historyComposeCapsulePadding: 8px;
+historyComposeCapsuleRadius: 27px;
+historyComposeCapsulePadding: 4px;
 // historyMinHeight: 56px;
 
 historyAttach: IconButton(defaultIconButton) {
@@ -1501,10 +1501,11 @@ defaultRecordBar: RecordBar {
 }
 
 historySend: SendButton {
+	sendIconFillPadding: 3px;
 	sendIconPosition: point(10px, 11px);
 	inner: IconButton(historyAttach) {
-		icon: historySendIcon;
-		iconOver: historySendIconOver;
+		icon: icon {{ "chat/input_send", windowFgActive }};
+		iconOver: icon {{ "chat/input_send", windowFgActive }};
 	}
 	stars: RoundButton(defaultActiveButton) {
 		height: 28px;

@@ -136,6 +136,7 @@ TopBarWidget::TopBarWidget(
 , _back(this, st::historyTopBarBack)
 , _cancelChoose(this, st::topBarCloseChoose)
 , _call(this, st::topBarCall)
+, _videoCall(this, st::topBarVideoCall)
 , _groupCall(this, st::topBarGroupCall)
 , _search(this, st::topBarSearch)
 , _infoToggle(this, st::topBarInfo)
@@ -168,6 +169,12 @@ TopBarWidget::TopBarWidget(
 	_messageShot->setClickedCallback([=] { _messageShotSelection.fire({}); });
 	_messageShot->setWidthChangedCallback([=] { updateControlsGeometry(); });
 	_clear->setClickedCallback([=] { _clearSelection.fire({}); });
+	_search->setObjectName(u"chat.search"_q);
+	_infoToggle->setObjectName(u"chat.info"_q);
+	_call->setObjectName(u"chat.call"_q);
+	_videoCall->setObjectName(u"chat.videoCall"_q);
+	_videoCall->setClickedCallback([=] { call({ .video = true }); });
+	_menuToggle->setObjectName(u"chat.menu"_q);
 	_call->setClickedCallback([=] { call({}); });
 	_call->setAcceptBoth(true, true);
 	_call->addClickHandler([=](Qt::MouseButton button) {
@@ -298,6 +305,7 @@ TopBarWidget::TopBarWidget(
 
 	setCursor(style::cur_pointer);
 	_call->setAccessibleName(tr::lng_profile_action_short_call(tr::now));
+	_videoCall->setAccessibleName(tr::lng_call_start_video(tr::now));
 	_groupCall->setAccessibleName(tr::lng_group_call_title(tr::now));
 	_search->setAccessibleName(tr::lng_shortcuts_search(tr::now));
 	_infoToggle->setAccessibleName(tr::lng_settings_section_info(tr::now));
@@ -563,12 +571,9 @@ void TopBarWidget::paintEvent(QPaintEvent *e) {
 		: -st::topBarHeight;
 	const auto slidingTop = std::max(selectedButtonsTop, searchFieldTop);
 
-	p.setRenderHint(QPainter::Antialiasing);
-	Ui::PaintFloatingRounded(
-		p,
-		QRect(0, 0, width(), st::topBarHeight),
-		st::topBarBg->c,
-		st::windowCardRadius);
+	p.fillRect(rect(), st::topBarBg);
+	p.fillRect(0, height() - st::lineWidth, width(), st::lineWidth,
+		st::windowDividerFg);
 	if (slidingTop < 0) {
 		p.translate(0, slidingTop + st::topBarHeight);
 		paintTopBar(p);
@@ -1130,6 +1135,7 @@ void TopBarWidget::refreshInfoButton() {
 		_info = std::move(info);
 	}
 	if (_info) {
+		_info->setObjectName(u"chat.avatar"_q);
 		_info->setAttribute(Qt::WA_TransparentForMouseEvents);
 		_info->setAccessibleName(tr::lng_settings_section_info(tr::now));
 		if (_back && _info) {
@@ -1169,7 +1175,9 @@ void TopBarWidget::updateInfoButtonVisibility() {
 	}
 	const auto shown = (communityChatsListBar() && !rootChatsListBar())
 		? communityUserpicShown()
-		: (_controller->adaptive().isOneColumn() || !_primaryWindow);
+		: (_activeChat.section != Section::ChatsList
+			|| _controller->adaptive().isOneColumn()
+			|| !_primaryWindow);
 	_info->setVisible(!_chooseForReportReason && shown);
 }
 
@@ -1338,6 +1346,10 @@ void TopBarWidget::updateControlsGeometry() {
 	if (!_infoToggle->isHidden()) {
 		_infoToggle->moveToRight(_rightTaken, otherButtonsTop);
 		_rightTaken += _infoToggle->width();
+	}
+	if (!_videoCall->isHidden()) {
+		_videoCall->moveToRight(_rightTaken, otherButtonsTop);
+		_rightTaken += _videoCall->width();
 	}
 	if (!_call->isHidden() || !_groupCall->isHidden()) {
 		_call->moveToRight(_rightTaken, otherButtonsTop);
@@ -1526,6 +1538,10 @@ void TopBarWidget::updateControlsVisibility() {
 	_call->setVisible(historyMode
 		&& callsEnabled
 		&& !_chooseForReportReason);
+	_videoCall->setVisible(!_call->isHidden());
+	if (!_videoCall->isHidden()) {
+		_infoToggle->hide();
+	}
 	const auto groupCallsEnabled = [&] {
 		if (const auto peer = _activeChat.key.peer()) {
 			if (!peer->isUser() && peer->canManageGroupCall()) {

@@ -373,11 +373,12 @@ infoProfileBirthdayDigitSize: 64px;
 
 infoProfileTopBarActionButtonBgOpacity: 0.16;
 infoProfileTopBarBackdropRippleOpacity: 0.125;
-infoProfileTopBarActionButtonSize: 52px;
+infoProfileTopBarActionButtonSize: 58px;
+infoProfileTopBarActionButtonFrameHeight: 38px;
 infoProfileTopBarActionButtonIconSize: 23px;
 infoProfileTopBarActionButtonLottieSize: infoProfileTopBarActionButtonIconSize - 0px;
-infoProfileTopBarActionButtonIconTop: 6px;
-infoProfileTopBarActionButtonTextTop: infoProfileTopBarActionButtonIconSize + infoProfileTopBarActionButtonIconTop + 1px;
+infoProfileTopBarActionButtonIconTop: 8px;
+infoProfileTopBarActionButtonTextTop: 40px;
 infoProfileTopBarActionButtonTextSkip: 4px;
 infoProfileTopBarActionButtonFont: font(11px);
 
@@ -529,7 +530,13 @@ infoPeerBadge: InfoPeerBadge {
 
 infoIconFg: windowBoldFg;
 
-infoProfileSkip: 7px;
+infoProfileSkip: 12px;
+infoProfileDividerPadding: margins(18px, 0px, 18px, 0px);
+infoProfileDivider: DividerBar {
+	bg: windowDividerFg;
+	top: icon {};
+	bottom: icon {};
+}
 
 infoProfileLabeledButtonQr: IconButton(defaultIconButton) {
 	width: 34px;
@@ -600,7 +607,7 @@ infoProfileToggleOver: Toggle(infoProfileToggle) {
 infoProfileButton: SettingsButton(defaultSettingsButton) {
 	style: defaultTextStyle;
 
-	padding: margins(79px, 10px, 8px, 8px);
+	padding: margins(62px, 12px, 18px, 12px);
 	iconLeft: 22px;
 
 	toggle: infoProfileToggle;
@@ -947,6 +954,11 @@ topBarMenuToggle: IconButton(topBarSearch) {
 topBarCall: IconButton(topBarSearch) {
 	icon: icon {{ "top_bar_call", menuIconFg }};
 	iconOver: icon {{ "top_bar_call", menuIconFgOver }};
+}
+topBarVideoCall: IconButton(topBarSearch) {
+	icon: icon {{ "menu/video_chat", menuIconFg }};
+	iconOver: icon {{ "menu/video_chat", menuIconFgOver }};
+	iconPosition: point(-1px, -1px);
 }
 topBarGroupCall: IconButton(topBarSearch) {
 	icon: icon {{ "top_bar_group_call", menuIconFg }};

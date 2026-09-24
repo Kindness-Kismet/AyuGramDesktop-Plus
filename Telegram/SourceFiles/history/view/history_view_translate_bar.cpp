@@ -289,11 +289,10 @@ void TranslateBar::setup(not_null<History*> history) {
 	button->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(button);
-		Ui::PaintFloatingRounded(
+		Ui::PaintChatBar(
 			p,
 			button->rect(),
-			st::historyComposeButtonBg->c,
-			st::windowCardRadius);
+			st::historyComposeButtonBg->c);
 	}, button->lifetime());
 
 	button->setClickedCallback([=] {

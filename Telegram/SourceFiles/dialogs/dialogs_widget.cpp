@@ -34,6 +34,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/chat_filters_tabs_strip.h"
+#include "settings/sections/settings_folders.h"
 #include "ui/widgets/elastic_scroll.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/popup_menu.h"
@@ -488,6 +489,7 @@ Widget::Widget(
 	+ st::defaultDialogRow.photoSize
 	+ st::defaultDialogRow.padding.left())
 , _searchControls(this)
+, _foldersSettings(_searchControls, st::dialogsFoldersSettings)
 , _mainMenu({
 	.toggle = object_ptr<Ui::IconButton>(
 		_searchControls,
@@ -914,9 +916,7 @@ Widget::Widget(
 	}
 	setupSwipeBack();
 
-	if (session().settings().dialogsFiltersEnabled()
-		&& (Core::App().settings().chatFiltersHorizontal()
-			|| !controller->enoughSpaceForFilters())) {
+	if (session().settings().dialogsFiltersEnabled()) {
 		toggleFiltersMenu(true);
 	}
 
@@ -1786,6 +1786,11 @@ void Widget::setupSupportMode() {
 }
 
 void Widget::setupMainMenuToggle() {
+	_foldersSettings->setObjectName(u"chatFolders.settings"_q);
+	_foldersSettings->setAccessibleName(tr::lng_filters_setup(tr::now));
+	_foldersSettings->setClickedCallback([=] {
+		controller()->showSettings(Settings::FoldersId());
+	});
 	_mainMenu.under->setClickedCallback([=] {
 		_mainMenu.toggle->clicked({}, Qt::LeftButton);
 	});
@@ -2176,7 +2181,9 @@ void Widget::toggleFiltersMenu(bool enabled) {
 			},
 			Window::GifPauseReason::Any,
 			controller(),
+			true,
 			true);
+		raw->setObjectName(u"chatFolders"_q);
 		raw->setVisible(_searchState.query.isEmpty()
 			&& !_openedForum
 			&& !_searchState.community
@@ -4681,11 +4688,20 @@ void Widget::updateSearchFromVisibility(bool fast) {
 	updateControlsGeometry();
 }
 
+int Widget::listHeaderHeight() const {
+	return (_layout == Layout::Main
+		&& !_subsectionTopBar
+		&& !_childListShown.current()
+		&& width() >= st::columnMinimalWidthLeft)
+		? st::dialogsHeadingHeight
+		: 0;
+}
+
 void Widget::updateControlsGeometry() {
 	if (width() < _narrowWidth) {
 		return;
 	}
-	auto filterAreaTop = 0;
+	const auto filterAreaTop = listHeaderHeight();
 
 	const auto ratiow = anim::interpolate(
 		width(),
@@ -4701,12 +4717,16 @@ void Widget::updateControlsGeometry() {
 		: (st::dialogsFilterPadding.x() + _mainMenu.toggle->width()))
 		+ st::dialogsFilterPadding.x();
 	const auto filterRight = st::dialogsFilterSkip
-		+ st::dialogsFilterPadding.x();
+		+ st::dialogsFilterPadding.x()
+		+ (filterAreaTop ? _foldersSettings->width() : 0);
 	const auto filterWidth = std::max(ratiow, smallw)
 		- filterLeft
 		- filterRight;
 	const auto filterAreaHeight = st::topBarHeight;
 	_searchControls->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
+	_foldersSettings->setVisible(filterAreaTop > 0);
+	_foldersSettings->moveToRight(st::dialogsFilterPadding.x(),
+		(filterAreaHeight - _foldersSettings->height()) / 2);
 	if (_subsectionTopBar) {
 		_subsectionTopBar->setGeometryWithNarrowRatio(
 			_searchControls->geometry(),
@@ -5059,6 +5079,13 @@ void Widget::paintEvent(QPaintEvent *e) {
 	auto above = QRect(0, 0, width(), _scroll->y());
 	if (above.intersects(r)) {
 		p.fillRect(above.intersected(r), bg);
+		if (const auto header = listHeaderHeight()) {
+			p.setFont(st::dialogsHeadingFont);
+			p.setPen(st::windowBoldFg);
+			p.drawTextLeft(st::dialogsHeadingLeft,
+				(header - st::dialogsHeadingFont->height) / 2,
+				width(), u"AyuGram"_q);
+		}
 	}
 
 	auto belowTop = _scroll->y() + _scroll->height();

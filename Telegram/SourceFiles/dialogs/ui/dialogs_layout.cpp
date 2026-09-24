@@ -500,6 +500,15 @@ void PaintRow(
 			: st::dialogsBgOver);
 		p.drawRoundedRect(highlight, radius, radius);
 	}
+	if (!context.active && !context.selected && !context.narrow) {
+		p.fillRect(
+			geometry.x() + context.st->nameLeft,
+			geometry.bottom(),
+			std::max(0, geometry.width() - context.st->nameLeft
+				- context.st->padding.right()),
+			st::lineWidth,
+			st::windowDividerFg);
+	}
 	if (!(flags & Flag::TopicJumpRipple)) {
 		auto ripple = context.active
 			? st::dialogsRippleBgActive

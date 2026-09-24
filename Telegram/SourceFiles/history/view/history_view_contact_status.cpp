@@ -296,11 +296,10 @@ void ContactStatus::BgButton::onStateChanged(
 
 void ContactStatus::BgButton::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
-	Ui::PaintFloatingRounded(
+	Ui::PaintChatBar(
 		p,
 		rect(),
-		isOver() ? _st.overBgColor->c : _st.bgColor->c,
-		st::windowCardRadius);
+		isOver() ? _st.overBgColor->c : _st.bgColor->c);
 	paintRipple(p, 0, 0);
 }
 
@@ -1218,11 +1217,10 @@ void BusinessBotStatus::Bar::showMenu() {
 
 void BusinessBotStatus::Bar::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
-	Ui::PaintFloatingRounded(
+	Ui::PaintChatBar(
 		p,
 		rect(),
-		st::historyContactStatusButton.bgColor->c,
-		st::windowCardRadius);
+		st::historyContactStatusButton.bgColor->c);
 }
 
 int BusinessBotStatus::Bar::resizeGetHeight(int newWidth) {
@@ -1419,11 +1417,10 @@ rpl::producer<> PaysStatus::Bar::removeClicks() const {
 
 void PaysStatus::Bar::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
-	Ui::PaintFloatingRounded(
+	Ui::PaintChatBar(
 		p,
 		rect(),
-		st::historyContactStatusButton.bgColor->c,
-		st::windowCardRadius);
+		st::historyContactStatusButton.bgColor->c);
 }
 
 int PaysStatus::Bar::resizeGetHeight(int newWidth) {

@@ -13,36 +13,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Ui {
 
-// 悬浮条的 2px 描边:亮色暗边,暗色亮边。
-inline QColor FloatingBarBorder() {
-	const auto base = st::windowBg->c;
-	const auto luminance = (base.red() * 299
-		+ base.green() * 587
-		+ base.blue() * 114) / 1000;
-	return (luminance <= 128)
-		? QColor(255, 255, 255, 48)
-		: QColor(0, 0, 0, 36);
-}
-
-// 圆角底加描边。调用方负责关掉 WA_OpaquePaintEvent,四角才能透出父级背景。
-inline void PaintFloatingRounded(
+// 通知条与聊天标题连续排列，仅在底边分隔。
+inline void PaintChatBar(
 		QPainter &p,
 		const QRect &rect,
-		const QColor &fill,
-		int radius) {
+		const QColor &fill) {
 	if (rect.isEmpty()) {
 		return;
 	}
-	auto hq = PainterHighQualityEnabler(p);
-	p.setPen(Qt::NoPen);
-	p.setBrush(fill);
-	p.drawRoundedRect(rect, radius, radius);
-	p.setPen(QPen(FloatingBarBorder(), 2));
-	p.setBrush(Qt::NoBrush);
-	p.drawRoundedRect(
-		QRectF(rect).adjusted(1, 1, -1, -1),
-		radius,
-		radius);
+	p.fillRect(rect, fill);
+	p.fillRect(rect.x(), rect.bottom(), rect.width(), st::lineWidth,
+		st::windowDividerFg);
 }
 
 } // namespace Ui

@@ -137,8 +137,17 @@ void ApplySettingsJson(const json &patched) {
 }
 
 [[nodiscard]] Result ResetBackground(const QStringList &) {
-	Window::Theme::Background()->reset();
-	return Result::Ok();
+	const auto background = Window::Theme::Background();
+	background->reset();
+	const auto &paper = background->paper();
+	const auto &image = background->prepared();
+	return Result::Ok(Compact(json{
+		{ "themePath", background->themeObject().pathAbsolute.toStdString() },
+		{ "isPattern", paper.isPattern() },
+		{ "intensity", paper.patternIntensity() },
+		{ "imageWidth", image.width() },
+		{ "imageHeight", image.height() },
+	}));
 }
 
 [[nodiscard]] Result ThemeNight(const QStringList &args) {

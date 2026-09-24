@@ -3,6 +3,8 @@
 
 #include "core/application.h"
 #include "ui/abstract_button.h"
+#include "ui/widgets/elastic_scroll.h"
+#include "ui/widgets/fields/input_field.h"
 #include "window/window_controller.h"
 
 #include <QAbstractButton>
@@ -159,19 +161,22 @@ struct WidgetInfo {
 [[nodiscard]] Result ControlClick(const QStringList &args) {
 	auto selector = QString();
 	auto all = false;
+	auto mouse = false;
 	for (const auto &arg : args) {
 		if (arg == u"--all"_q) {
 			all = true;
+		} else if (arg == u"--mouse"_q) {
+			mouse = true;
 		} else if (selector.isEmpty()) {
 			selector = arg;
 		} else {
 			return Result::Err(
-				u"usage: control.click <objectName | #index> [--all]"_q);
+				u"usage: control.click <objectName | #index> [--all] [--mouse]"_q);
 		}
 	}
 	if (selector.isEmpty()) {
 		return Result::Err(
-			u"usage: control.click <objectName | #index> [--all]"_q);
+			u"usage: control.click <objectName | #index> [--all] [--mouse]"_q);
 	}
 	auto target = (QWidget*)nullptr;
 	if (selector.startsWith(u'#')) {
@@ -216,7 +221,8 @@ struct WidgetInfo {
 	// 语义触发优先：AbstractButton 走 clicked()，直接执行回调与信号流，
 	// 与真实点击的最终出口等价，不受命中偏移和子控件遮挡影响。
 	// lib_ui 不挂 Q_OBJECT，qobject_cast 不可用，dynamic_cast 走 RTTI。
-	if (const auto button = dynamic_cast<Ui::AbstractButton*>(target)) {
+	if (const auto button = dynamic_cast<Ui::AbstractButton*>(target)
+		; button && !mouse) {
 		// 回调可能销毁按钮自身（菜单项点击后 PopupMenu 整体销毁），
 		// 返回字段必须先拷值，触发后不再访问 target。
 		const auto className = QString::fromLatin1(
@@ -231,9 +237,14 @@ struct WidgetInfo {
 	}
 	// 命中测试找最深子控件，模拟真实分发：事件先给子控件，不消费再冒泡。
 	const auto center = target->rect().center();
-	const auto hit = target->childAt(center);
+	const auto root = mouse ? target->window() : target;
+	const auto hit = root->childAt(root->mapFromGlobal(
+		target->mapToGlobal(center)));
+	if (mouse && (!hit || (hit != target && !target->isAncestorOf(hit)))) {
+		return Result::Err(u"widget is covered at its center"_q);
+	}
 	const auto receiver = hit ? static_cast<QWidget*>(hit) : target;
-	const auto local = QPointF(receiver->mapFrom(target, center));
+	const auto local = QPointF(receiver->mapFromGlobal(target->mapToGlobal(center)));
 	const auto windowPos = QPointF(
 		receiver->window()->mapFromGlobal(receiver->mapToGlobal(local.toPoint())));
 	const auto global = QPointF(receiver->mapToGlobal(local.toPoint()));
@@ -284,12 +295,65 @@ struct WidgetInfo {
 	}));
 }
 
+// 直接修改输入控件，供多行布局验证使用，不触发发送动作。
+[[nodiscard]] Result controlSetText(const QStringList &args) {
+	if (args.size() != 2 || !args[1].startsWith(u"b64:"_q)) {
+		return Result::Err(u"usage: control.set-text <objectName> <base64>"_q);
+	}
+	const auto window = Core::App().activeWindow();
+	const auto target = window
+		? window->widget()->findChild<QWidget*>(args.front())
+		: nullptr;
+	const auto field = dynamic_cast<Ui::InputField*>(target);
+	if (!field || !field->isVisible() || !field->isEnabled()) {
+		return Result::Err(u"editable input not found"_q);
+	}
+	const auto previous = field->getLastText();
+	const auto text = QString::fromUtf8(
+		QByteArray::fromBase64(args[1].mid(4).toLatin1()));
+	field->setTextWithTags({ text, {} });
+	return Result::Ok(Compact(json{
+		{ "previousText", previous.toStdString() },
+		{ "length", text.size() },
+		{ "height", field->height() },
+	}));
+}
+
+[[nodiscard]] Result controlScroll(const QStringList &args) {
+	if (args.isEmpty() || args.size() > 2) {
+		return Result::Err(u"usage: control.scroll <objectName> [top]"_q);
+	}
+	const auto window = Core::App().activeWindow();
+	const auto target = window
+		? window->widget()->findChild<QWidget*>(args.front())
+		: nullptr;
+	const auto scroll = dynamic_cast<Ui::ElasticScroll*>(target);
+	if (!scroll || !scroll->isVisible()) {
+		return Result::Err(u"visible scroll area not found"_q);
+	}
+	if (args.size() == 2) {
+		auto ok = false;
+		const auto top = args[1].toInt(&ok);
+		if (!ok) {
+			return Result::Err(u"expected integer scroll position"_q);
+		}
+		scroll->scrollToY(top);
+	}
+	return Result::Ok(Compact(json{
+		{ "top", scroll->scrollTop() },
+		{ "maximum", scroll->scrollTopMax() },
+		{ "height", scroll->height() },
+	}));
+}
+
 } // namespace
 
 const HandlerMap &ControlHandlers() {
 	static const auto result = HandlerMap{
 		{ u"control.list"_q, &ControlList },
 		{ u"control.click"_q, &ControlClick },
+		{ u"control.set-text"_q, &controlSetText },
+		{ u"control.scroll"_q, &controlScroll },
 	};
 	return result;
 }

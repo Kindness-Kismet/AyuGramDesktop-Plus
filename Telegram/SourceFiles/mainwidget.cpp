@@ -2567,8 +2567,7 @@ void MainWidget::paintEvent(QPaintEvent *e) {
 		checkChatBackground();
 	}
 	auto p = QPainter(this);
-	// 卡片间隙露出的统一底色,与各面板同源
-	p.fillRect(e->rect(), st::windowBg);
+	p.fillRect(e->rect(), st::windowShellBg);
 	if (_showAnimation) {
 		_showAnimation->paintContents(p);
 	}
@@ -2581,10 +2580,8 @@ void MainWidget::paintCardOverlay(QRect clip) {
 	auto p = QPainter(_cardOverlay.data());
 	p.setRenderHint(QPainter::Antialiasing);
 
-	// 遮罩四角用的统一底色,与缝隙同色
-	const auto fill = st::windowBg->c;
+	const auto fill = st::windowShellBg->c;
 	const auto radius = st::windowCardRadius;
-	const auto border = Ui::FloatingBarBorder();
 
 	for (const auto &r : _cardRects) {
 		if (!r.intersects(clip)) {
@@ -2595,13 +2592,15 @@ void MainWidget::paintCardOverlay(QRect clip) {
 		square.addRect(r);
 		auto rounded = QPainterPath();
 		rounded.addRoundedRect(r, radius, radius);
+		p.save();
+		// 连接处不裁圆角，遮罩只覆盖面板外角。
+		if (_dialogs && r == _dialogs->geometry()
+			&& _controller->filtersWidth()) {
+			p.setClipRect(QRect(r.center().x(), r.y(),
+				r.width(), r.height()), Qt::IntersectClip);
+		}
 		p.fillPath(square.subtracted(rounded), fill);
-		p.setPen(QPen(border, 2));
-		p.setBrush(Qt::NoBrush);
-		p.drawRoundedRect(
-			QRectF(r).adjusted(1, 1, -1, -1),
-			radius,
-			radius);
+		p.restore();
 	}
 }
 
@@ -2802,7 +2801,7 @@ void MainWidget::updateControlsGeometry() {
 		if (_hider) _hider->setGeometry(0, 0, dialogsWidth, height());
 	} else {
 		const auto gap = st::windowCardGap;
-		const auto half = gap / 2;
+		const auto half = st::windowColumnGap;
 		auto thirdSectionWidth = _thirdSection ? _thirdColumnWidth : 0;
 		if (_dialogs) {
 			accumulate_min(
@@ -2824,10 +2823,11 @@ void MainWidget::updateControlsGeometry() {
 				height() - thirdTop - gap * 2);
 		}
 		if (_dialogs) {
+			const auto left = _controller->filtersWidth() ? 0 : gap;
 			_dialogs->setGeometryToLeft(
+				left,
 				gap,
-				gap,
-				dialogsWidth - gap - half,
+				dialogsWidth - left,
 				height() - gap * 2);
 		}
 		// 卡片间隙已经区分各栏,两条 1px 竖直分隔线设零宽隐藏

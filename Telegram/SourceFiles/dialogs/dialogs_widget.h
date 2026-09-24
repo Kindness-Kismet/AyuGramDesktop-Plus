@@ -260,6 +260,7 @@ private:
 	void updateStoriesTitleShown();
 	void updateJumpToDateVisibility(bool fast = false);
 	void updateSearchFromVisibility(bool fast = false);
+	[[nodiscard]] int listHeaderHeight() const;
 	void updateControlsGeometry();
 	void refreshTopBars();
 	void showSearchInTopBar(anim::type animated);
@@ -337,6 +338,7 @@ private:
 	std::unique_ptr<Ui::AbstractButton> _frozenAccountBar;
 
 	object_ptr<Ui::RpWidget> _searchControls;
+	object_ptr<Ui::IconButton> _foldersSettings;
 	object_ptr<HistoryView::TopBarWidget> _subsectionTopBar = { nullptr };
 	struct {
 		object_ptr<Ui::IconButton> toggle;

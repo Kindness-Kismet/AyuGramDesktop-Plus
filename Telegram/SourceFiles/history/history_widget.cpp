@@ -397,6 +397,11 @@ HistoryWidget::HistoryWidget(
 , _topShadow(this) {
 	setAcceptDrops(true);
 	setVisualTabOrder(true);
+	_field->setObjectName(u"messageInput"_q);
+	_scroll->setObjectName(u"historyScroll"_q);
+	_send->setObjectName(u"sendButton"_q);
+	_attachToggle->setObjectName(u"compose.attach"_q);
+	_tabbedSelectorToggle->setObjectName(u"compose.emoji"_q);
 
 	// The controls inside these are created in an order of their own - the
 	// top bar's selection buttons start with the one placed last, the bars
@@ -7628,7 +7633,7 @@ void HistoryWidget::moveFieldControls() {
 	}
 	if (settings.showAttachButtonInMessageField()) {
 		_attachToggle->moveToLeft(left, buttonsBottom);
-	left += _attachToggle->width();
+		left += _attachToggle->width();
 	}
 	if (_sendAs) {
 		_sendAs->moveToLeft(left, buttonsBottom);
@@ -8317,11 +8322,10 @@ void HistoryWidget::resizeEvent(QResizeEvent *e) {
 void HistoryWidget::updateControlsGeometry() {
 	const auto width = this->width();
 
-	// 标题条和通知条内缩,和输入胶囊对齐,条与条之间留间隙
-	const auto margin = st::historyComposeCapsuleMargin;
-	const auto barGap = st::windowCardGap;
-	_topBar->resizeToWidth(std::max(0, width - 2 * margin));
-	_topBar->moveToLeft(margin, margin);
+	const auto margin = 0;
+	const auto barGap = 0;
+	_topBar->resizeToWidth(width);
+	_topBar->moveToLeft(0, 0);
 
 	const auto tabsLeftSkip = _subsectionTabs
 		? _subsectionTabs->leftSkip()
@@ -8686,10 +8690,10 @@ void HistoryWidget::updateHistoryGeometry(
 		newScrollHeight -= _unblock->height();
 	} else {
 		if (editingMessage() || _canSendMessages) {
-			// 上下各留一个 margin,消息列表与胶囊之间再抬一份
+			// 消息列表与胶囊之间保留一份间距。
 			newScrollHeight -= (fieldHeight()
 				+ 2 * st::historySendPadding
-				+ 3 * st::historyComposeCapsuleMargin);
+				+ 2 * st::historyComposeCapsuleMargin);
 		} else if (_sendRestriction) {
 			newScrollHeight -= _sendRestriction->height();
 		}
@@ -11420,26 +11424,10 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 		backh);
 	{
 		auto hq = PainterHighQualityEnabler(p);
-		// 胶囊底色比窗口底色略抬一点,避免和背景糊在一起
-		const auto base = st::windowBg->c;
-		const auto luminance = (base.red() * 299
-			+ base.green() * 587
-			+ base.blue() * 114) / 1000;
-		const auto capsuleBg = (luminance > 128)
-			? QColor(0xf4, 0xf5, 0xf7)
-			: QColor(
-				qBound(0, base.red() + 16, 255),
-				qBound(0, base.green() + 16, 255),
-				qBound(0, base.blue() + 16, 255));
-		p.setPen(Qt::NoPen);
-		p.setBrush(capsuleBg);
-		p.drawRoundedRect(capsuleRect, capsuleRadius, capsuleRadius);
-		p.setPen(QPen(Ui::FloatingBarBorder(), 2));
-		p.setBrush(Qt::NoBrush);
-		p.drawRoundedRect(
-			QRectF(capsuleRect).adjusted(1, 1, -1, -1),
-			capsuleRadius,
-			capsuleRadius);
+		p.setPen(QPen(st::windowDividerFg->c, st::lineWidth));
+		p.setBrush(st::historyComposeAreaBg);
+		p.drawRoundedRect(QRectF(capsuleRect).adjusted(0.5, 0.5, -0.5, -0.5),
+			capsuleRadius, capsuleRadius);
 	}
 	// 回复/编辑/转发条的内容整体右移,落进胶囊内部
 	p.translate(capsuleMargin, 0);

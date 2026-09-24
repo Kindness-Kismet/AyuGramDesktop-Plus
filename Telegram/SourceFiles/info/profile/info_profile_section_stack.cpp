@@ -26,8 +26,9 @@ namespace {
 	Ui::AddSkip(inner.data(), st::infoProfileSkip);
 	inner->add(object_ptr<Ui::BoxContentDivider>(
 		inner.data(),
-		st::boxDividerHeight,
-		st::defaultDividerBar));
+		st::lineWidth,
+		st::infoProfileDivider),
+		st::infoProfileDividerPadding);
 	Ui::AddSkip(inner.data(), st::infoProfileSkip);
 	return layout->add(object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 		layout,

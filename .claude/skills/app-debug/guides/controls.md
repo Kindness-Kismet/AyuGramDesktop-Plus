@@ -1,5 +1,27 @@
 # 控件树与合成交互
 
+## `control.scroll <objectName> [top]`
+
+读取弹性滚动区的位置；传入整数时滚动到该位置。用于验证历史消息列表及跳转按钮。
+返回 `top`、`maximum` 和 `height`。主聊天滚动区名称为 `historyScroll`。
+
+## 点击命中检查
+
+`control.click <目标> --mouse` 从窗口开始命中测试，再发送鼠标事件。目标中心被遮挡时返回错误，
+用于检查遮罩、层级与点击回调；不等同于人工鼠标验收，依赖真实光标的行为仍需人工确认。
+
+## `control.set-text <objectName> <text|--file path>`
+
+修改活动窗口中可见且启用的输入框，用于验证单行、多行和清空后的布局。不会触发发送，
+但正常草稿保存仍会执行，因此只在本地假会话或自己掌控的测试对话中使用。
+
+`--file` 按 UTF-8 读取文字，保留换行和引号。返回 `previousText`、`length` 和 `height`；
+验证前保存原文字，完成后恢复。协议使用编码后的文字，命令行负责转换。
+
+```bash
+python .claude/skills/app-debug/scripts/cli.py control.set-text messageInput --file build/compose-test.txt
+```
+
 ## `control.list [filter] [--all]`
 
 列出活动窗口的控件树。每项含：全树序号（`index`）、层级（`depth`）、类名（`class`）、
