@@ -241,7 +241,7 @@ python scripts/prebuild.py --clean    # 清空依赖缓存
 python scripts/build.py               # Release，默认
 python scripts/build.py --dev         # Debug（同时收集 AyuGram.pdb）
 python scripts/build.py --all         # 两个配置都构建
-python scripts/build.py --jobs 64     # 优先使用 64；默认 32，上限 128
+python scripts/build.py --jobs 32     # 协作使用 32；默认 32，上限 128
 python scripts/build.py --reconfigure # 丢弃 CMake 缓存重新配置
 python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 ```
@@ -253,7 +253,7 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 ### 编译并发
 
 - 构建脚本默认 32 并发，`--jobs` 接受 1 至 128，超过上限或非正数直接报错。
-- 协作时优先使用 `python scripts/build.py --dev --jobs 64`；未指定参数时仍使用脚本默认值 32。
+- 协作时使用 `python scripts/build.py --dev --jobs 32`，避免影响同时运行的其他任务；未指定参数时同样使用默认值 32。
 
 ### 增量编译时长（经验值）
 
