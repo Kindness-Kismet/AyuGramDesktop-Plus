@@ -4029,9 +4029,7 @@ TopBarActionButtonStyle TopBar::mapActionStyle(
 		};
 	} else {
 		return TopBarActionButtonStyle{
-			.bgColor = anim::with_alpha(
-				st::boxBg->c,
-				1. - st::infoProfileTopBarActionButtonBgOpacity),
+			.bgColor = st::windowBgOver->c,
 			.fgColor = std::nullopt,
 			.shadowColor = std::nullopt,
 		};

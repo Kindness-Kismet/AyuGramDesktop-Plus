@@ -372,11 +372,10 @@ infoProfileBirthdayDigitSize: 64px;
 infoProfileTopBarActionButtonBgOpacity: 0.16;
 infoProfileTopBarBackdropRippleOpacity: 0.125;
 infoProfileTopBarActionButtonSize: 58px;
-infoProfileTopBarActionButtonFrameHeight: 38px;
 infoProfileTopBarActionButtonIconSize: 23px;
 infoProfileTopBarActionButtonLottieSize: infoProfileTopBarActionButtonIconSize - 0px;
 infoProfileTopBarActionButtonIconTop: 8px;
-infoProfileTopBarActionButtonTextTop: 40px;
+infoProfileTopBarActionButtonTextTop: 36px;
 infoProfileTopBarActionButtonTextSkip: 4px;
 infoProfileTopBarActionButtonFont: font(11px);
 

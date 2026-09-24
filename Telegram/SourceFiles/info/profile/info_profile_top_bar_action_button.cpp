@@ -120,8 +120,7 @@ void TopBarActionButton::paintEvent(QPaintEvent *e) {
 		/ st::infoProfileTopBarActionButtonSize;
 	p.setOpacity(progress);
 
-	const auto frame = QRect(0, 0, width(),
-		std::min(height(), st::infoProfileTopBarActionButtonFrameHeight));
+	const auto frame = rect();
 	p.setPen(Qt::NoPen);
 	p.setBrush(_bgColor);
 	{
@@ -129,16 +128,15 @@ void TopBarActionButton::paintEvent(QPaintEvent *e) {
 		if (!_fgColor) {
 			p.setPen(QPen(st::windowDividerFg->c, st::lineWidth));
 		}
-		p.drawRoundedRect(QRectF(frame).adjusted(0.5, 0.5, -0.5, -0.5),
+		const auto inset = st::lineWidth / 2.;
+		p.drawRoundedRect(QRectF(frame).adjusted(inset, inset, -inset, -inset),
 			st::boxRadius, st::boxRadius);
 		p.setPen(Qt::NoPen);
 
-		const auto hovered = _rippleColor
-			? _overAnimation.value(isOver() ? 1. : 0.)
-			: 0.;
+		const auto hovered = _overAnimation.value(isOver() ? 1. : 0.);
 		if (hovered > 0.) {
 			p.setOpacity(progress * hovered);
-			p.setBrush(*_rippleColor);
+			p.setBrush(_rippleColor.value_or(st::windowBgRipple->c));
 			p.drawRoundedRect(frame, st::boxRadius, st::boxRadius);
 			p.setOpacity(progress);
 		}
@@ -182,14 +180,14 @@ void TopBarActionButton::paintEvent(QPaintEvent *e) {
 	if (_fgColor.has_value()) {
 		p.setPen(*_fgColor);
 	} else {
-		p.setPen(st::menuIconFg);
+		p.setPen(st::windowFg);
 	}
 
 	p.setFont(st::infoProfileTopBarActionButtonFont);
 
 	const auto textScale = std::max(kIconFadeStart, progress);
 	const auto textRect = rect()
-		- QMargins(0, st::infoProfileTopBarActionButtonTextTop, 0, 0);
+		- QMargins(skip, st::infoProfileTopBarActionButtonTextTop, skip, skip);
 	const auto textCenter = rect::center(textRect);
 	p.translate(textCenter);
 	p.scale(textScale, textScale);
@@ -219,8 +217,7 @@ void TopBarActionButton::onStateChanged(
 
 QImage TopBarActionButton::prepareRippleMask() const {
 	return Ui::RippleAnimation::RoundRectMask(
-		QSize(width(), std::min(height(),
-			st::infoProfileTopBarActionButtonFrameHeight)),
+		size(),
 		st::boxRadius);
 }
 
