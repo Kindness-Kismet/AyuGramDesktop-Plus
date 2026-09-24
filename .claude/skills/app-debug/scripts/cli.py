@@ -89,6 +89,7 @@ COMMAND_CATEGORY_LABELS = {
     "storage": "已删除消息与编辑历史",
     "screenshot": "截图",
     "control": "控件树与合成交互",
+    "scenario": "固定假会话场景",
 }
 
 
@@ -136,6 +137,11 @@ def register_commands(sub) -> None:
     command = sub.add_parser("debug.fake-session", help="造本地假会话绕过登录，直接进主界面")
     command.add_argument("userId", nargs="?")
     sub.add_parser("debug.testmode", help="在生产环境与官方测试数据中心之间切换")
+
+    sub.add_parser("scenario.seed", help="在当前假会话中创建固定场景列表，可重复调用")
+    sub.add_parser("scenario.list", help="列出固定场景的名称、键名与会话编号")
+    command = sub.add_parser("scenario.open", help="打开固定场景，先执行 scenario.seed")
+    command.add_argument("key")
 
     command = sub.add_parser("debug.fake-message", help="往假会话的 Saved Messages 塞本地文本消息，验证渲染与隐藏逻辑")
     command.add_argument("text", help="消息文本")
@@ -261,6 +267,8 @@ def execute_command(args: argparse.Namespace) -> None:
 
 def build_server_command(args: argparse.Namespace) -> str:
     command = args.command
+    if command == "scenario.open":
+        return f"scenario.open {quote_arg(args.key)}"
     if command == "control.hover":
         return f"control.hover {quote_arg(args.target)} {args.state}"
     if command == "control.key":

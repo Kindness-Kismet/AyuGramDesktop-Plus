@@ -7,6 +7,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "apiwrap.h"
 
+#ifdef _DEBUG
+#include "ayu/debug/debug_login.h"
+#endif
+
 #include "api/api_authorizations.h"
 #include "api/api_attached_stickers.h"
 #include "api/api_blocked_peers.h"
@@ -1344,6 +1348,11 @@ void ApiWrap::gotUserFull(
 }
 
 void ApiWrap::requestPeerSettings(not_null<PeerData*> peer) {
+#ifdef _DEBUG
+	if (AyuDebug::isFakeSession(_session)) {
+		return;
+	}
+#endif
 	if (!_requestedPeerSettings.emplace(peer).second) {
 		return;
 	} else if (peer->isMonoforum()) {

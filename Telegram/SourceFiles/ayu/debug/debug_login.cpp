@@ -5,10 +5,20 @@
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session_settings.h"
+#include "main/main_session.h"
 #include "mtproto/mtp_instance.h"
 #include "mtproto/mtproto_dc_options.h"
 
 namespace AyuDebug {
+namespace {
+
+base::weak_ptr<Main::Session> FakeSession;
+
+} // namespace
+
+bool isFakeSession(not_null<Main::Session*> session) {
+	return FakeSession.get() == session.get();
+}
 
 // 走的是 tdesktop 恢复本地会话的同一条路径（main_account.cpp:145 也是这样拼
 // MTPUser），所以界面联动天然成立：createSession 赋值 _sessionValue，
@@ -58,6 +68,7 @@ QString CreateFakeSession(int64 userId) {
 		MTPlong(), // bot_verification_icon
 		MTPlong(), // send_paid_messages_stars
 		MTPlong())); // linked_community_id
+	FakeSession = base::make_weak(&account.session());
 
 	return QString();
 }

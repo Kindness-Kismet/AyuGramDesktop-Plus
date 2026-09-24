@@ -26,6 +26,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 
+#ifdef _DEBUG
+#include "ayu/debug/debug_login.h"
+#endif
+
 
 namespace Data {
 namespace {
@@ -94,6 +98,18 @@ RepliesList::~RepliesList() {
 		_divider->destroy();
 	}
 }
+
+#ifdef _DEBUG
+void RepliesList::setLocalMessagesForDebug(std::vector<MsgId> ids) {
+	Expects(AyuDebug::isFakeSession(&_history->session()));
+	_list = std::move(ids);
+	ranges::sort(_list, std::greater<>());
+	_skippedBefore = _skippedAfter = 0;
+	_fullCount = int(_list.size());
+	setInboxReadTill(_list.empty() ? MsgId() : _list.front(), 0);
+	_listChanges.fire({});
+}
+#endif
 
 void RepliesList::subscribeToUpdates() {
 	_history->owner().repliesReadTillUpdates(

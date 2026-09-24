@@ -1,5 +1,6 @@
 #ifdef _DEBUG
 #include "ayu/debug/commands/commands_internal.h"
+#include "ayu/debug/debug_login.h"
 
 #include "core/application.h"
 #include "core/update_checker.h"
@@ -24,6 +25,7 @@ using json = nlohmann::json;
 		{ "workingDir", cWorkingDir().toStdString() },
 		{ "debugLogs", Logs::DebugEnabled() },
 		{ "hasSession", session != nullptr },
+		{ "fakeSession", session && isFakeSession(session) },
 		{ "hasWindow", window != nullptr },
 	};
 	if (session) {

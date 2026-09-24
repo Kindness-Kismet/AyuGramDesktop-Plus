@@ -3,6 +3,7 @@
 
 #include "apiwrap.h"
 #include "ayu/ayu_settings.h"
+#include "ayu/debug/debug_login.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "api/api_common.h"
 #include "core/application.h"
@@ -103,8 +104,8 @@ using json = nlohmann::json;
 	}
 
 	const auto session = ActiveSession();
-	if (!session) {
-		return Result::Err(u"no active session, run debug.fake-session first"_q);
+	if (!session || !isFakeSession(session)) {
+		return Result::Err(u"an in-process fake session is required"_q);
 	}
 	const auto selfPeer = session->userPeerId();
 	auto fromUser = not_null<UserData*>(session->user());

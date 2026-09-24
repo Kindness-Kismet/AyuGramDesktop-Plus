@@ -49,6 +49,9 @@ public:
 	[[nodiscard]] rpl::producer<std::optional<int>> unreadCountValue() const;
 
 	void setInboxReadTill(MsgId readTillId, std::optional<int> unreadCount);
+#ifdef _DEBUG
+	void setLocalMessagesForDebug(std::vector<MsgId> ids);
+#endif
 	[[nodiscard]] MsgId inboxReadTillId() const;
 	[[nodiscard]] MsgId computeInboxReadTillFull() const;
 

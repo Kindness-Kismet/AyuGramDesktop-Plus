@@ -274,6 +274,7 @@ set(ayugram_files
         ayu/debug/commands/commands_internal.h
         ayu/debug/commands/app_commands.cpp
         ayu/debug/commands/session_commands.cpp
+        ayu/debug/commands/scenario_commands.cpp
         ayu/debug/commands/settings_commands.cpp
         ayu/debug/commands/ghost_commands.cpp
         ayu/debug/commands/storage_commands.cpp

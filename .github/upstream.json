@@ -168,6 +168,7 @@
       "Telegram/SourceFiles/data/data_peer_values.cpp",
       "Telegram/SourceFiles/data/data_photo.h",
       "Telegram/SourceFiles/data/data_replies_list.cpp",
+      "Telegram/SourceFiles/data/data_replies_list.h",
       "Telegram/SourceFiles/data/data_session.cpp",
       "Telegram/SourceFiles/data/data_stories.cpp",
       "Telegram/SourceFiles/data/data_types.h",

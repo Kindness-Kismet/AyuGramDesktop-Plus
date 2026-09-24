@@ -56,6 +56,7 @@ CLI 使用 `build/debug-profiles/scenarios/`。配置名限小写字母、数字
 |---|---|
 | 应用启动/重启/停止、存活检查、应用信息、指令清单、窗口尺寸与最大化 | `guides/runtime.md` |
 | 假会话、假消息、拉黑/影子拉黑验证、打开聊天、测试数据中心切换 | `guides/session.md` |
+| 固定会话列表与对话区布局场景 | `guides/scenarios.md` |
 | 设置键名/导出/读写 | `guides/settings.md` |
 | 幽灵模式状态 | `guides/ghost.md` |
 | 已删除消息存储统计 | `guides/storage.md` |
@@ -82,6 +83,7 @@ CLI 使用 `build/debug-profiles/scenarios/`。配置名限小写字母、数字
 | `debug.open-archive` | 直接打开归档文件夹，不走抽屉入口 |
 | `debug.window-size [width height]` | 读或设窗口尺寸，验证依赖窗口宽度的布局 |
 | `debug.window-maximize <true\|false>` | 最大化或还原窗口 |
+| `scenario.seed` / `scenario.list` / `scenario.open <key>` | 创建、列出与打开固定假会话场景 |
 | `debug.testmode` | 在生产环境与官方测试数据中心之间切换 |
 | `settings.keys` / `settings.dump` | 96 个设置键的键名与全量导出 |
 | `settings.get <key>` / `settings.set <key> <value>` | 读写单个设置，写入返回实际生效值 |
