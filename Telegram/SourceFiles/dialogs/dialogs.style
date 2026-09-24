@@ -317,27 +317,29 @@ dialogsSearchType: IconButton(dialogsCalendar) {
 	iconOver: icon {{ "menu/tag_filter", dialogsMenuIconFgOver }};
 }
 
+dialogsFilterSearch: icon {{ "menu/search", windowSubTextFg }};
+dialogsFilterSearchSkip: 6px;
 dialogsFilter: InputField(defaultInputField) {
 	textBg: filterInputInactiveBg;
 	textBgActive: filterInputActiveBg;
-	textMargins: margins(12px, 8px, 30px, 5px);
+	textMargins: margins(34px, 8px, 30px, 5px);
 
 	placeholderFg: placeholderFg;
 	placeholderFgActive: placeholderFgActive;
 	placeholderFgError: placeholderFgActive;
-	placeholderMargins: margins(5px, 0px, 2px, 0px);
+	placeholderMargins: margins(0px, 0px, 2px, 0px);
 	placeholderScale: 0.;
 	placeholderShift: -50px;
 	placeholderFont: normalFont;
 
-	borderFg: filterInputInactiveBg;
-	borderFgActive: windowBgRipple;
+	borderFg: windowDividerFg;
+	borderFgActive: filterInputBorderFg;
 	borderFgError: activeLineFgError;
 
-	border: 3px;
-	borderActive: 2px;
-	borderRadius: 18px;
-	borderDenominator: 2;
+	border: 1px;
+	borderActive: 1px;
+	borderRadius: 12px;
+	borderDenominator: 1;
 
 	style: defaultTextStyle;
 
@@ -996,8 +998,8 @@ dialogsHeadingMenuUnreadMuted: icon {
 dialogsFoldersSettings: IconButton(defaultIconButton) {
 	width: 36px;
 	height: 36px;
-	icon: icon {{ "menu/settings", menuIconFg }};
-	iconOver: icon {{ "menu/settings", menuIconFgOver }};
+	icon: icon {{ "dialogs/folders_settings", menuIconFg }};
+	iconOver: icon {{ "dialogs/folders_settings", menuIconFgOver }};
 	iconPosition: point(-1px, -1px);
 	rippleAreaPosition: point(0px, 0px);
 	rippleAreaSize: 36px;
