@@ -27,7 +27,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/power_saving.h"
 #include "ui/rect.h"
 #include "ui/widgets/buttons.h"
-#include "ui/widgets/shadow.h"
 #include "window/section_widget.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
@@ -401,9 +400,8 @@ void FillSponsoredMessageBar(
 			: desiredHeight;
 		container->resize(
 			widget->width(),
-			std::clamp(
-				desiredHeight,
-				minHeight,
+			std::min(
+				std::max(desiredHeight, minHeight),
 				st::sponsoredMessageBarMaxHeight));
 	}, widget->lifetime());
 	{ // Calculate a good size for container.
@@ -412,19 +410,6 @@ void FillSponsoredMessageBar(
 		draw(p);
 	}
 
-	{
-		const auto top = Ui::CreateChild<PlainShadow>(widget);
-		const auto bottom = Ui::CreateChild<PlainShadow>(widget);
-		widget->sizeValue() | rpl::on_next([=] (const QSize &s) {
-			top->show();
-			top->raise();
-			top->resizeToWidth(s.width());
-			bottom->show();
-			bottom->raise();
-			bottom->resizeToWidth(s.width());
-			bottom->moveToLeft(0, s.height() - bottom->height());
-		}, top->lifetime());
-	}
 }
 
 } // namespace Ui
