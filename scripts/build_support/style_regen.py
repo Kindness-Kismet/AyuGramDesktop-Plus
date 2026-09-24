@@ -6,7 +6,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from build_support.console import warn
+from build_support.console import fail, warn
 from build_support.paths import CMAKE_OUT_DIR, LIBRARIES_ARCH_DIR, ROOT, TARGET
 from build_support.recipes import qt_version
 
@@ -28,12 +28,7 @@ def _sha1(path: Path) -> str:
 
 
 def _extract_codegen_command(cmake_config: str) -> list[str] | None:
-    """从 td_ui_styles.vcxproj 解析指定配置的 codegen_style 调用行。
-
-    vcxproj 的 CustomBuild Command 是 CMake 生成的权威命令,会随 .style
-    增删自动更新,比手抓的命令行稳。命令体是 setlocal 包裹的 .bat 片段,
-    取其中调用 codegen_style.exe 的那一行。
-    """
+    """从 CMake 生成的项目文件提取当前配置的样式生成命令。"""
     if not _VCXPROJ.is_file():
         return None
     tree = ET.parse(_VCXPROJ)
@@ -78,17 +73,15 @@ def _inputs_newer_than_timestamp(cmake_config: str) -> bool:
 
 
 def _icons_newer_than_timestamp() -> bool:
-    """图标文件比 timestamp 新也要重跑。
-
-    codegen 把图标内容嵌进生成文件，但 DEPENDS 里只有 .style/.palette，
-    不检测图标会导致只改图标时产物不更新（曾出现过界面仍是旧图标）。
-    """
+    """图标嵌入生成文件，内容或目录变化都需要重新生成。"""
     stamp = _TIMESTAMP.stat().st_mtime
     for directory in _ICON_DIRS:
         if not directory.is_dir():
             continue
+        if directory.stat().st_mtime > stamp:
+            return True
         for path in directory.rglob("*"):
-            if path.is_file() and path.stat().st_mtime > stamp:
+            if path.stat().st_mtime > stamp:
                 return True
     return False
 
@@ -102,19 +95,13 @@ def _codegen_environment(environment: dict[str, str]) -> dict[str, str]:
 
 
 def regenerate_styles(environment: dict[str, str], cmake_config: str) -> str:
-    """手动跑一次 style codegen,只回写内容变化的生成文件再刷新 timestamp。
-
-    codegen 的 DEPENDS 不含图标文件,所以除了 .style/.palette 变更,
-    图标变更也要主动重跑(见 _icons_newer_than_timestamp)。
-    首次构建时产物尚未生成,交给 CMake 全量处理,这里直接跳过。
-    失败降级为告警,不中断构建。
-    """
+    """仅更新内容变化的样式产物；生成成功后才刷新时间戳。"""
     if not _TIMESTAMP.is_file() or not _GEN_STYLES.is_dir():
         return "generated styles not present yet, leaving to CMake"
 
     parts = _extract_codegen_command(cmake_config)
     if not parts:
-        return warn("codegen command not found in vcxproj, skipping style regen")
+        raise SystemExit(fail("codegen command not found in vcxproj"))
 
     binary_rel = parts[0]
     binary = binary_rel if os.path.isabs(binary_rel) else str(CMAKE_OUT_DIR / "Telegram" / binary_rel)
@@ -150,7 +137,7 @@ def regenerate_styles(environment: dict[str, str], cmake_config: str) -> str:
     )
     if proc.returncode != 0:
         tail = (proc.stderr or proc.stdout or "").strip()[-400:]
-        return warn(f"style codegen failed (exit {proc.returncode}), leaving to CMake: {tail}")
+        raise SystemExit(fail(f"style codegen failed (exit {proc.returncode}): {tail}"))
 
     before = {Path(p).name: _sha1(Path(p)) for p in glob.glob(str(_GEN_STYLES / "*")) if Path(p).is_file()}
     after = {Path(p).name: _sha1(Path(p)) for p in glob.glob(str(tmp_styles / "*")) if Path(p).is_file()}
