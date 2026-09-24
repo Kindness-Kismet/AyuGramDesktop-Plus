@@ -47,7 +47,8 @@ python .claude/skills/app-debug/scripts/cli.py control.list --all
   混用时优先 objectName。
 - 最多返回 500 项，超出时 `truncated: true`。
 
-自带 objectName 的常用控件：`mainMenuButton`（主菜单）、`sendButton`（发送）、
+自带 objectName 的常用控件：`brandMenuButton`（顶部布局主菜单）、`chatFolders.menu`（左侧标签主菜单）、
+`mainMenuButton`（窄列表主菜单）、`sendButton`（发送）、
 `messageInput`（消息输入框）、`menu.*`（主菜单项）、`ayu/*`（AyuGram 设置按钮，
 id 即 objectName，如 `ayu/search`、`ayu/cat/ghost`）。没有 objectName 的控件用 `control.list`
 查类名/accessibleName 定位，或用 `#序号` 寻址。
@@ -68,6 +69,7 @@ python .claude/skills/app-debug/scripts/cli.py control.click "#42"
   精确匹配作为备选。
 - 语义触发优先：目标是 AbstractButton 时直接调 `clicked()`（等价真实点击的最终出口）；
   其余控件改用合成鼠标事件。
+- 单选和复选控件必须加 `--mouse`，普通语义触发只通知回调，不会执行控件内部的状态切换。
 - 目标不可见或被禁用时报错；被隐藏页里的控件先导航到对应页面。
 - 回调可能销毁控件自身（如菜单项点击后 PopupMenu 整体销毁），返回前已拷贝取值并确认控件存活，
   点击后 `control.list` 可能因控件销毁找不到目标，属正常。
