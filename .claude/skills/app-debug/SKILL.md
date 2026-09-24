@@ -3,187 +3,79 @@ name: app-debug
 description: Use this skill when the user asks to debug, test, or verify AyuGram functionality, take a screenshot, read or change settings, inspect ghost mode, check deleted-message storage, control the running Debug app, restart or stop the app, or says phrases like "调试", "测试", "验证", "截图", "看一下设置", "改个设置", "幽灵模式", "已删除消息", "重启应用", "停掉应用", "观察界面" in this AyuGram Desktop project.
 ---
 
-# App Debug
+# 应用调试
 
-实时控制正在运行的 AyuGram Debug 构建：启动、重启、查看与修改设置、查询幽灵模式、查询存储、截图、停止。
+通过命令行控制本仓库的调试构建。服务端仅在 `_DEBUG` 下启用，监听
+`127.0.0.1:20100`。界面指令在主线程执行，返回一行 `OK [JSON]` 或 `ERR 原因`。
 
-服务端只在 `_DEBUG` 下编译，Release 二进制里完全不存在这段代码。应用运行时常驻监听
-`127.0.0.1:20100`，一条指令一条连接，服务端回写 `OK[ payload]\n` 或 `ERR <reason>\n` 后立即断开。
-payload 是紧凑 JSON，不含换行。
+## 入口与顺序
 
-指令在主线程的 Qt 事件循环里同步执行，所以处理函数可以直接访问设置和界面对象，不需要额外加锁；
-反过来，耗时指令会阻塞界面。
-
-## 触发与验证策略
-
-用户表达"调试、测试、验证某项功能"时，应读取本 skill。
-
-- 验证业务状态（设置值、幽灵模式、存储开关与库大小）用 `settings.*`、`ghost.status`、`storage.stats`，直接读状态不需要界面配合。
-- 验证 UI 状态、控件绑定、视觉变化、布局时，用 `control.list`、`control.click`、`screenshot.take`；验证真实鼠标命中和弹层路由必须人工点击。
-- 改设置后验证界面反应：`settings.set <key> <value> + screenshot.take` 一次串联。
-- 消息气泡等自绘内容不在控件树里，视觉验证只能靠截图；导航到目标页面用 `control.click`。
-- 边界模糊时按验证目标选路径：验证"开关有没有生效"用 `settings.get`；验证"开关改了界面长什么样"用 `screenshot.take`。
-
-## 入口
-
-在项目根目录运行，PowerShell 与 Git Bash 写法相同：
+在项目根目录运行：
 
 ```bash
-python .claude/skills/app-debug/scripts/cli.py <command> [args...]
+python .codex/skills/app-debug/scripts/cli.py app.ensure
+python .codex/skills/app-debug/scripts/cli.py settings.get streamerMode + screenshot.take
 ```
 
-一次调用可串多条指令，用裸 `+` 分隔，按书写顺序依次执行；任一条失败即中止：
+用 `+` 串联指令，按顺序执行；整体参数解析成功后才开始操作，执行失败时停在当前步骤。
+同一应用的所有调试调用保持串行，CLI 用 `build/app-debug-cli.lock` 排队。
 
-```bash
-python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true + screenshot.take
-```
+## 验证方式
 
-全部指令先整体解析再开始执行，拼写错误不会让前几条已经生效。
+- 设置和业务状态：用 `settings.*`、`ghost.status`、`storage.stats` 查询。
+- 布局和颜色：导航到目标界面，截取图片并直接查看内容；控件树用于核对几何和可见性。
+- 滚动：用 `control.scroll` 查询位置、最大值和可见高度，再结合截图判断。
+- 控件交互：用 `control.click`、`control.key`、`control.pointer`，事件只投递到应用内部。
+- 悬停：`control.hover` 检查按钮绘制；`control.pointer` 检查自绘控件及菜单的内部事件。
+- 命中：`control.click --mouse` 从窗口内部查找目标。系统光标、原生窗口及焦点行为另行人工验证。
+- 修改输入文字只用于假会话或已获授权的测试对话，因为应用仍会保存草稿。
+- 真实发送、加入、通话等业务动作按用户明确指定的测试范围执行。
 
-验证其它工作树时设置 `AYUGRAM_DEBUG_ROOT` 为对应项目根目录，进程校验和产物路径会随之切换。
+截图来自 `QWidget::grab()`，包含宿主内菜单。需要等待切页、主题和弹层动画结束再截图；
+OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察。
 
-固定假会话使用独立配置目录：设置环境变量 `AYUGRAM_DEBUG_PROFILE=scenarios` 后，
-CLI 使用 `build/debug-profiles/scenarios/`。配置名限小写字母、数字、下划线和连字符。
-切换前先 `app.stop`；CLI 会核对现有进程的路径和工作目录。清除变量后回到原调试数据目录。
+## 按任务查参数
 
-所有指令必须串行；CLI 通过 `build/app-debug-cli.lock` 自动排队，手动编排也要保持顺序。
+命名采用“领域.动词 宾语 参数”，复合词用连字符。完整参数与返回值放在各指南中。
 
-## 先读哪份指引
-
-指令统一使用"领域.动词 宾语 参数"结构，复合词使用连字符。只阅读当前任务需要的 guide，不要一次性阅读全部表格。
-
-| 任务 | 指引 |
+| 任务 | 指南 |
 |---|---|
-| 应用启动/重启/停止、存活检查、应用信息、指令清单、窗口尺寸与最大化 | `guides/runtime.md` |
-| 假会话、假消息、拉黑/影子拉黑验证、打开聊天、测试数据中心切换 | `guides/session.md` |
-| 固定会话列表与对话区布局场景 | `guides/scenarios.md` |
-| 设置键名/导出/读写 | `guides/settings.md` |
-| 幽灵模式状态 | `guides/ghost.md` |
-| 已删除消息存储统计 | `guides/storage.md` |
-| 控件树列举、合成点击 | `guides/controls.md` |
-| 截图 | `guides/screenshot.md` |
+| 应用启动、停止、版本、更新、窗口、崩溃 | [运行控制](guides/runtime.md) |
+| 假会话、消息、打开聊天、测试环境 | [会话与消息](guides/session.md) |
+| 固定会话列表、顶部条、底部动作、各种输入区 | [场景](guides/scenarios.md) |
+| 设置值、主题、设置页面 | [设置](guides/settings.md) |
+| 幽灵模式 | [幽灵模式](guides/ghost.md) |
+| 消息留档 | [存储](guides/storage.md) |
+| 控件树、点击、输入、按键、悬停、滚动 | [控件](guides/controls.md) |
+| 主窗口与菜单截图 | [截图](guides/screenshot.md) |
 
-## 命令一览
+`cli.py --help` 查看客户端清单，`app.help` 查看当前构建的服务端清单。
 
-完整参数、返回字段和错误信息见对应 guide。
+## 数据与进程
 
-| 命令 | 说明 |
-|---|---|
-| `app.ensure` / `app.restart` / `app.stop` | 生命周期，CLI 本地执行，不进服务端 |
-| `app.ping` / `app.info` / `app.help` | 存活检查、应用信息、指令清单 |
-| `app.quit` | 让应用自行退出，`app.stop` 内部用它，一般不直接调 |
-| `app.check-update` | 触发一次更新检查，异步，结果看工作目录 `tupdates/` 与日志 |
-| `app.update-info` | 读更新源前缀：`tdata/prefix` 文件内容与内存里解析出的地址 |
-| `debug.fake-session [userId]` | 创建本地假会话绕过登录，直接进主界面 |
-| `debug.reset-background` | 重置聊天背景到默认壁纸，验证默认壁纸改动 |
-| `debug.fake-message <text> [--from <userId>] [--blocked] [--shadow-ban]` | 往 Saved Messages 插入本地文本消息，验证渲染与隐藏逻辑 |
-| `debug.chats [filter]` | 列出已加载对话的 peerId 与名称，供定位目标 |
-| `debug.send-message <peerId> <text\|--file path>` | 真实发送文本到指定对话，需已登录，仅发往自己掌控的测试对话；`--file` 按 UTF-8 读文件原样发送，用于带换行、引号的文本 |
-| `debug.open-chat [peerId\|userId]` | 打开指定对话，缺省 Saved Messages |
-| `debug.open-archive` | 直接打开归档文件夹，不走抽屉入口 |
-| `debug.window-size [width height]` | 读或设窗口尺寸，验证依赖窗口宽度的布局 |
-| `debug.window-maximize <true\|false>` | 最大化或还原窗口 |
-| `scenario.seed` / `scenario.list` / `scenario.open <key>` | 创建、列出与打开固定假会话场景 |
-| `debug.testmode` | 在生产环境与官方测试数据中心之间切换 |
-| `settings.keys` / `settings.dump` | 96 个设置键的键名与全量导出 |
-| `settings.get <key>` / `settings.set <key> <value>` | 读写单个设置，写入返回实际生效值 |
-| `settings.open <main\|ayu\|search>` | 直接打开设置页：上游主页 / AyuGram 偏好 / 设置搜索页 |
-| `ghost.status` | 全局与当前账号的幽灵模式状态，需已登录 |
-| `storage.stats` | 保存开关、`ayudata.db` 路径与大小 |
-| `screenshot.take [--popup]` | 截主窗口（包含菜单）或当前活动浮动菜单到 `build/screenshots/shot-<时间戳>.jpg` |
-| `control.list [filter] [--all]` | 列控件树：序号、objectName、类名、几何、可见性 |
-| `control.click <objectName \| #序号>` | 合成鼠标点击，进程内走真实事件分发路径 |
-| `control.set-text <objectName> <text\|--file path>` | 修改可见输入框，验证单行、多行和清空后的布局，不触发发送 |
-| `control.scroll <目标> [top]` | 读取或设置普通及弹性滚动区位置，支持默认控件序号，返回位置、最大值和可见高度 |
-| `control.hover <目标> <on\|off>` | 设置按钮悬停绘制状态，不触发点击 |
-| `control.key <目标> <按键>` | 进程内按键，`@menu` 定位当前菜单 |
-| `control.pointer <目标> [x y]` | 向控件内部位置合成移动事件；省略坐标时离开，不移动系统鼠标 |
-| `control.click <目标> --mouse` | 从窗口命中测试后合成点击，检查按钮是否被遮挡 |
+固定场景使用 `AYUGRAM_DEBUG_PROFILE=scenarios`，数据保存至
+`build/debug-profiles/scenarios/`。切换配置前先 `app.stop`，随后每次调用都带相同变量。
+配置名限 1 至 48 个小写字母、数字、下划线或连字符，首位为字母或数字。
 
-服务端响应格式：成功 `OK [payload]`，失败 `ERR <reason>`；CLI 将 `ERR` 写入 stderr 并返回退出码 1。
-常见错误：`unknown command`（拼写）、`usage: ...`（参数数量）、`unknown key`（设置键不存在）、
-`expected true or false`（类型不符）、`no active session`（需登录）、`no active window`（需窗口）。
+CLI 会核对已有进程的可执行文件路径和工作目录。恢复原调试账号时先退出应用，
+再清除配置变量并启动。验证其它工作树时用 `AYUGRAM_DEBUG_ROOT` 指定根目录。
 
-## 构建
+停止应用统一使用 `app.stop`：先请求正常退出，必要时仅结束经路径校验的本仓库调试进程。
+端口被其它应用占用时保留现场并报告路径、进程编号和错误。正式安装版有独立数据与进程。
 
-本 skill 不负责打包。C++ 改动后运行：
+## 构建与验证
 
-```bash
-python scripts/build.py --dev
-```
+C++ 修改后先 `app.stop`，再运行 `python scripts/build.py --dev --jobs 32`。
+产物位于 `build/AyuGram-v<版本>-win-x64-dev/`，包括程序和符号文件。
+构建成功后 `app.ensure` 启动已有产物，最多等待 60 秒；单条服务端指令超时为 180 秒。
 
-产物保存在 `build/AyuGram-v<版本>-win-x64-dev/`（版本取自 `Telegram/build/version`），
-含 `AyuGram.exe` 和 `AyuGram.pdb`。**编译会覆盖 exe，必须先
-`cli.py app.stop`**，否则链接器报文件占用。
+假会话在重启后消失，重新执行 `debug.fake-session` 和 `scenario.seed` 即可恢复固定场景。
+崩溃时先查看当前工作目录的 `crash.log`，结合调用栈定位文件与行号。
 
-Debug 应用的 `tdata` 建在产物目录旁边，与正式安装版的账号数据互不影响，
-首次启动需要单独登录。
+## 维护
 
-## 典型工作流
-
-串联步骤优先写成一次调用，用 `+` 分隔。
-
-- **改完 C++ 后验证**：`cli.py app.stop` → `python scripts/build.py --dev` → `cli.py app.ensure + screenshot.take`
-- **找某个设置的键名**：`cli.py settings.keys`，再 `cli.py settings.get <key>`
-- **改设置并看界面反应**：`cli.py settings.set materialSwitches true + screenshot.take`
-- **找可点控件**：`cli.py control.list send`，再 `cli.py control.click <objectName>`
-- **点击后看效果**：`cli.py control.click mainMenuButton + screenshot.take`
-- **查幽灵模式**：`cli.py ghost.status`
-- **验证忽略用户（拉黑/影子拉黑隐藏）**：`cli.py debug.fake-session` → `debug.fake-message ... --from <id> --blocked/--shadow-ban` → `settings.set filtersEnabled true` → `debug.open-chat + screenshot.take`，详见 `guides/session.md`
-- **查已删除消息有没有在存**：`cli.py storage.stats`
-- **结束**：`cli.py app.stop`
-
-## 限制
-
-- 端口在 `AyuInfra::init()` 里启动，晚于 Qt 初始化和账号加载；启动期间连接会被拒，`app.ensure`
-  和 `app.restart` 会轮询直至就绪，最多 60 秒。
-- Release 构建不挂调试端口，本 skill 仅对 Debug 产物有效。
-- 需要 session 的指令（`ghost.status`、`app.info` 的 `userId`）在未登录时报错或缺字段。
-- `control.list` / `control.click` 只覆盖有 QWidget 实体的控件；消息气泡等自绘内容不在树里，
-  这类验证仍靠 `screenshot.take`。
-- Windows 自绘标题栏（最小化/最大化/关闭）不是 QWidget，不在控件树里，
-  `control.click` 无法寻址；退出用 `app.quit`，不要试图点击关闭按钮。
-- 截图走 `QWidget::grab()`，抓的是窗口自身渲染内容而非屏幕像素；OpenGL 渲染的区域可能抓不全。
-- 布尔参数仅接受小写 `true` / `false`。
-
-## 失败处理
-
-脚本失败时优先报告失败原因，不要自行删除 `build/` 或清理用户的其他进程。
-
-### 严禁绕过 cli.py 结束进程
-
-`cli.py app.stop` 先校验端口 PID 属于本仓库 `build/AyuGram-v*-win-x64-dev/AyuGram.exe`，再让应用退出。
-端口尚未建立时，仅枚举路径匹配同一形态的进程。
-
-**禁止**用 `taskkill`、`Stop-Process`、`wmic process delete` 按进程名清理 `AyuGram.exe`——
-同名进程极可能是用户的正式安装版，强制结束会丢失工作状态。
-
-唯一允许的链路：
-
-1. 端口被占且 `cli.py` 报"被意外 PID 占用"。
-2. 先核对路径：`wmic process where "ProcessId=<pid>" get ExecutablePath`。
-3. **仅当路径匹配本仓库 `build/AyuGram-v*-win-x64-dev/AyuGram.exe` 时**，才结束它；否则报告给用户决定。
-
-## Skill 维护
-
-命令新增、删除、重命名，或入口、参数、返回值、行为发生变化时，按以下顺序处理：
-
-1. **三层同步**：服务端 `Telegram/SourceFiles/ayu/debug/commands/` 对应域文件
-   （新增域要建新文件并在 `debug_commands.cpp` 注册表与 `CMakeLists.txt` 登记）、
-   `scripts/cli.py` 的 `register_commands()` 和 `build_server_command()`、
-   对应 `guides/*.md` 与本文的命令一览表；未受影响的层不做机械修改。
-2. 新增或删除指令域时，同步更新本文"先读哪份指引"索引。
-3. **双侧同步**：`.claude/skills/app-debug/` 与 `.codex/skills/app-debug/` 内容保持一致
-   （Codex 从 `.codex/skills/` 加载），改完一侧立即复制到另一侧。
-4. 服务端改动必须 `python scripts/build.py --dev` 重新编译才生效。
-
-注意 `.gitignore` 有 `Debug/` 规则，Windows 大小写不敏感会连带忽略 `ayu/debug/`，
-已用 `!/Telegram/SourceFiles/ayu/debug/` 显式放行，新增该目录下的文件前先确认没有被忽略。
-
-写新指令时注意 nlohmann 的临时对象陷阱：`SettingsJson().items()` 这类写法会让代理持有
-已析构对象的引用，range-for 的生命周期延长不覆盖它，必须先存入具名变量：
-
-```cpp
-const auto all = SettingsJson();
-for (const auto &[key, value] : all.items()) { ... }
-```
+1. 指令变化时同步服务端注册、CLI 参数和对应指南；新增领域同时更新指南索引。
+2. `.codex/skills/app-debug/` 和 `.claude/skills/app-debug/` 保持相同内容。
+3. 调试源码包在 `_DEBUG` 内，新增文件登记 CMake，并检查 Git 忽略规则。
+4. 订阅绑定控件生命周期，长期持有的 Qt 对象随应用退出清理。
+5. 遍历 JSON 的 `items()` 前把 JSON 存入具名变量，确保代理引用有效。

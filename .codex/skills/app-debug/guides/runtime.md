@@ -2,7 +2,7 @@
 
 ## 服务端指令
 
-| method | arg | 作用 |
+| 指令 | 参数 | 作用 |
 |---|---|---|
 | `app.ping` | 空 | 心跳检测，返回 `pong`，验证服务端连通性。 |
 | `app.info` | 空 | 返回版本、配置、工作目录、会话与窗口状态 JSON。 |
@@ -15,10 +15,10 @@
 
 `app.quit` 一般不直接调，`app.stop` 内部先发它。
 
-`app.info` 返回字段：`version` / `versionCode` / `configuration` / `workingDir` / `debugLogs` / `hasSession` / `hasWindow` / `userId`（已登录时）。
+`app.info` 返回字段：`version` / `versionCode` / `configuration` / `workingDir` / `debugLogs` / `hasSession` / `hasWindow` / `fakeSession` / `userId`（已登录时）。
 
 `app.check-update` 只触发不等待：下载与验签是异步的，结果看工作目录下 `tupdates/`
-的落地文件和应用日志。更新被禁用时返回 `updater is disabled`。
+保存的文件和应用日志。更新被禁用时返回 `updater is disabled`。
 
 `app.update-info` 用来定位更新检查会打到哪个地址：`tdata/prefix` 里写的内容与
 `resolvedPrefix` 不一致时，说明前缀在运行时被固定值覆写过，改文件不会生效。
@@ -36,7 +36,7 @@ python .claude/skills/app-debug/scripts/cli.py debug.window-maximize true + scre
 
 不进服务端，由 CLI 自己完成。
 
-| method | arg | 作用 |
+| 指令 | 参数 | 作用 |
 |---|---|---|
 | `app.ensure` | 空 | 检查 Debug 应用是否运行，未运行时启动并等待端口就绪（最多 60 秒）。 |
 | `app.restart` | 空 | 先停止再启动，等到端口就绪。改完 C++ 重新编译后用它启动新构建。 |
@@ -59,7 +59,7 @@ python .claude/skills/app-debug/scripts/cli.py settings.open ayu   # 复现操�
 cat build/AyuGram-v*-win-x64-dev/crash.log                     # 读调用栈定位
 ```
 
-复现崩溃后先查看 crash.log 的栈帧，直接给到文件与行号，不要靠猜。
+复现崩溃后先查看 crash.log 的调用栈，定位文件与行号。
 
 ## 独立数据目录
 
