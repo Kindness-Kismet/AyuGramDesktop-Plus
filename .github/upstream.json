@@ -20,6 +20,7 @@
       ".gitmodules",
       "AGENTS.md",
       "CMakeLists.txt",
+      "LEGAL",
       "README.md",
       "Telegram/CMakeLists.txt",
       "Telegram/Resources/art/icon128.png",
