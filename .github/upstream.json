@@ -17,6 +17,7 @@
     "merge_commit": "e6f741d82fc68723670cf03ee432c48e21777990",
     "customised_paths": [
       ".gitmodules",
+      "AGENTS.md",
       "CMakeLists.txt",
       "README.md",
       "Telegram/CMakeLists.txt",
