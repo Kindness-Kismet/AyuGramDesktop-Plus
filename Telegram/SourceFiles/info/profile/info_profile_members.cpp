@@ -146,25 +146,29 @@ void Members::setupHeader() {
 	_openMembers = Ui::CreateChild<Ui::SettingsButton>(
 		parent,
 		rpl::single(QString()));
-	// _openMembers->setAccessibleName(tr::lng_manage_peer_members(tr::now));
+	_openMembers->setObjectName(u"profile.members"_q);
 
 	object_ptr<FloatingIcon>(
 		parent,
 		st::infoIconMembers,
-		st::infoGroupMembersIconPosition);
+		QPoint(st::infoGroupMembersIconPosition.x(),
+			st::infoProfileSkip
+				+ (st::infoMembersButton.height - st::infoIconMembers.height()) / 2));
 
 	_titleWrap = Ui::CreateChild<Ui::RpWidget>(parent);
 	_title = setupTitle();
 	_addMember = Ui::CreateChild<Ui::IconButton>(
-		_openMembers,
+		parent,
 		st::infoMembersAddMember);
+	_addMember->setObjectName(u"profile.members.add"_q);
 	_addMember->setAccessibleName(tr::lng_channel_add_members(tr::now));
 	//_searchField = _controller->searchFieldController()->createField(
 	//	parent,
 	//	st::infoMembersSearchField);
 	_search = Ui::CreateChild<Ui::IconButton>(
-		_openMembers,
+		parent,
 		st::infoMembersSearch);
+	_search->setObjectName(u"profile.members.search"_q);
 	_search->setAccessibleName(tr::lng_participant_filter(tr::now));
 	//_cancelSearch = Ui::CreateChild<Ui::CrossButton>(
 	//	parent,
@@ -222,16 +226,19 @@ void Members::setupButtons() {
 		_openMembers->setVisible(visible);
 	}, lifetime());
 
-	auto addMemberShown = CanAddMemberValue(
-		_peer
-	) | rpl::start_spawning(lifetime());
+	auto addMemberShown = rpl::combine(
+		CanAddMemberValue(_peer),
+		rpl::duplicate(visible)
+	) | rpl::map(_1 && _2) | rpl::start_spawning(lifetime());
 	_addMember->showOn(rpl::duplicate(addMemberShown));
 	_addMember->addClickHandler([this] { // TODO throttle(ripple duration)
 		this->addMember();
 	});
 
-	auto searchShown = MembersCountValue(_peer)
-		| rpl::map(_1 >= kEnableSearchMembersAfterCount)
+	auto searchShown = rpl::combine(
+		MembersCountValue(_peer),
+		rpl::duplicate(visible)
+	) | rpl::map((_1 >= kEnableSearchMembersAfterCount) && _2)
 		| rpl::distinct_until_changed()
 		| rpl::start_spawning(lifetime());
 	_search->showOn(rpl::duplicate(searchShown));
@@ -299,66 +306,28 @@ int Members::resizeGetHeight(int newWidth) {
 //}
 
 void Members::updateHeaderControlsGeometry(int newWidth) {
-	_openMembers->setGeometry(0, st::infoProfileSkip, newWidth, st::infoMembersButton.height);
+	const auto top = st::infoProfileSkip;
+	auto availableWidth = newWidth - st::infoMembersButtonPosition.x();
+	const auto place = [&](not_null<Ui::IconButton*> button) {
+		button->moveToLeft(availableWidth - button->width(), top, newWidth);
+		if (!button->isHidden()) {
+			availableWidth -= button->width();
+		}
+	};
+	place(_addMember);
+	place(_search);
 
-	auto availableWidth = newWidth
-		- st::infoMembersButtonPosition.x();
-
-	//auto cancelLeft = availableWidth - _cancelSearch->width();
-	//_cancelSearch->moveToLeft(
-	//	cancelLeft,
-	//	st::infoMembersButtonPosition.y());
-
-	//auto searchShownLeft = st::infoIconPosition.x()
-	//	- st::infoMembersSearch.iconPosition.x();
-	//auto searchHiddenLeft = availableWidth - _search->width();
-	//auto searchShown = _searchShownAnimation.value(_searchShown ? 1. : 0.);
-	//auto searchCurrentLeft = anim::interpolate(
-	//	searchHiddenLeft,
-	//	searchShownLeft,
-	//	searchShown);
-	//_search->moveToLeft(
-	//	searchCurrentLeft,
-	//	st::infoMembersButtonPosition.y());
-
-	//if (!_search->isHidden()) {
-	//	availableWidth -= st::infoMembersSearch.width;
-	//}
-	_addMember->moveToLeft(
-		availableWidth - _addMember->width(),
-		st::infoMembersButtonPosition.y(),
-		newWidth);
-	if (!_addMember->isHidden()) {
-		availableWidth -= st::infoMembersSearch.width;
-	}
-	_search->moveToLeft(
-		availableWidth - _search->width(),
-		st::infoMembersButtonPosition.y(),
-		newWidth);
-
-	//auto fieldLeft = anim::interpolate(
-	//	cancelLeft,
-	//	st::infoBlockHeaderPosition.x(),
-	//	searchShown);
-	//_searchField->setGeometryToLeft(
-	//	fieldLeft,
-	//	st::infoMembersSearchTop,
-	//	cancelLeft - fieldLeft,
-	//	_searchField->height());
-
-	//_titleWrap->resize(
-	//	searchCurrentLeft - st::infoBlockHeaderPosition.x(),
-	//	_title->height());
+	// 成员入口不覆盖右侧独立操作，三者共用同一条中心线。
+	_openMembers->setGeometry(0, top, availableWidth, st::infoMembersButton.height);
 	_titleWrap->resize(
-		availableWidth - _addMember->width() - st::infoBlockHeaderPosition.x(),
+		std::max(0, availableWidth - st::infoBlockHeaderPosition.x()
+			- st::settingsRowMargin.right()),
 		_title->height());
 	_titleWrap->moveToLeft(
 		st::infoBlockHeaderPosition.x(),
-		st::infoBlockHeaderPosition.y(),
+		top + (st::infoMembersButton.height - _title->height()) / 2,
 		newWidth);
 	_titleWrap->setAttribute(Qt::WA_TransparentForMouseEvents);
-
-	//_title->resizeToWidth(searchHiddenLeft);
 	_title->resizeToWidth(_titleWrap->width());
 	_title->moveToLeft(0, 0);
 }
@@ -494,4 +463,3 @@ void Members::peerListSetDescription(
 
 } // namespace Profile
 } // namespace Info
-
