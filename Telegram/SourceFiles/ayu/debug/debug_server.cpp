@@ -9,6 +9,9 @@
 #include <QtNetwork/QTcpSocket>
 
 #include <QCoreApplication>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonParseError>
 
 namespace AyuDebug {
 namespace {
@@ -18,7 +21,7 @@ constexpr auto kPort = 20100;
 
 std::unique_ptr<QTcpServer> Server;
 
-void Reply(not_null<QTcpSocket*> socket, const Result &result) {
+void reply(not_null<QTcpSocket*> socket, const Result &result) {
 	auto line = (result.ok ? u"OK"_q : u"ERR"_q);
 	if (!result.payload.isEmpty()) {
 		line += ' ' + result.payload;
@@ -26,64 +29,89 @@ void Reply(not_null<QTcpSocket*> socket, const Result &result) {
 	line += '\n';
 	socket->write(line.toUtf8());
 	socket->flush();
-	// 客户端读到 EOF 才认为响应结束，因此一条指令一条连接，回完即断。
-	// disconnectFromHost 在回环上同步触发 disconnected，会在 readyRead handler
-	// 还在栈上时就 delete buffer，造成 use-after-free。改用队列延迟到事件循环。
+	// 一条连接执行一条指令，响应发送后再关闭连接。
 	QMetaObject::invokeMethod(socket, [socket] {
 		socket->disconnectFromHost();
 	}, Qt::QueuedConnection);
 }
 
-void HandleLine(not_null<QTcpSocket*> socket, const QString &line) {
-	const auto trimmed = line.trimmed();
-	if (trimmed.isEmpty()) {
-		return;
-	}
-	// 参数按空白切分；需要含空格的值时用引号，见下面的 Split。
+void handleLine(not_null<QTcpSocket*> socket, const QString &line) {
 	auto parts = QStringList();
-	auto current = QString();
-	auto quoted = false;
-	for (const auto ch : trimmed) {
-		if (ch == '"') {
-			quoted = !quoted;
-		} else if (ch.isSpace() && !quoted) {
-			if (!current.isEmpty()) {
-				parts.push_back(current);
-				current.clear();
-			}
-		} else {
-			current += ch;
+	auto position = 0;
+	while (position < line.size()) {
+		if (line[position].isSpace()) {
+			++position;
+			continue;
 		}
-	}
-	if (!current.isEmpty()) {
-		parts.push_back(current);
+		const auto start = position;
+		if (line[position] != '"') {
+			while (position < line.size() && !line[position].isSpace()) {
+				++position;
+			}
+			parts.push_back(line.mid(start, position - start));
+			continue;
+		}
+		auto closed = false;
+		auto escaped = false;
+		while (++position < line.size()) {
+			const auto ch = line[position];
+			if (escaped) {
+				escaped = false;
+			} else if (ch == '\\') {
+				escaped = true;
+			} else if (ch == '"') {
+				++position;
+				closed = true;
+				break;
+			}
+		}
+		if (!closed || (position < line.size() && !line[position].isSpace())) {
+			reply(socket, Result::Err(u"invalid quoted argument"_q));
+			return;
+		}
+		// 引用参数采用 JSON 字符串，保留空值、换行与转义字符。
+		auto error = QJsonParseError();
+		const auto value = QJsonDocument::fromJson(
+			('[' + line.mid(start, position - start) + ']').toUtf8(), &error);
+		if (error.error != QJsonParseError::NoError) {
+			reply(socket, Result::Err(u"invalid argument escape"_q));
+			return;
+		}
+		parts.push_back(value.array().at(0).toString());
 	}
 	if (parts.isEmpty()) {
+		reply(socket, Result::Err(u"expected a command"_q));
 		return;
 	}
 	const auto command = parts.takeFirst();
-	Reply(socket, Execute(command, parts));
+	reply(socket, Execute(command, parts));
 }
 
-void SetupConnection(not_null<QTcpSocket*> socket) {
-	// 每条连接自带缓冲，指令可能分片到达，攒够一行再执行。
-	const auto buffer = new QString();
-	QObject::connect(socket, &QTcpSocket::readyRead, socket, [=] {
-		buffer->append(QString::fromUtf8(socket->readAll()));
-		while (true) {
-			const auto at = buffer->indexOf('\n');
-			if (at < 0) {
-				break;
-			}
-			const auto line = buffer->left(at);
-			buffer->remove(0, at + 1);
-			HandleLine(socket, line);
+void setupConnection(not_null<QTcpSocket*> socket) {
+	struct Input {
+		QByteArray bytes;
+		bool handled = false;
+	};
+	const auto input = std::make_shared<Input>();
+	const auto consume = [=] {
+		if (input->handled) {
+			return;
 		}
-	});
-	QObject::connect(socket, &QTcpSocket::disconnected, socket, [=] {
-		delete buffer;
-		socket->deleteLater();
-	});
+		input->bytes.append(socket->readAll());
+		const auto end = input->bytes.indexOf('\n');
+		if (end < 0) {
+			return;
+		}
+		// 收齐整行后再解码，UTF-8 字符可能跨 TCP 分包。
+		input->handled = true;
+		handleLine(socket, QString::fromUtf8(input->bytes.constData(), end));
+	};
+	QObject::connect(socket, &QTcpSocket::readyRead, socket, consume);
+	QObject::connect(socket, &QTcpSocket::disconnected,
+		socket, &QObject::deleteLater);
+	if (socket->bytesAvailable()) {
+		consume();
+	}
 }
 
 } // namespace
@@ -103,13 +131,11 @@ void StartServer() {
 	const auto raw = server.get();
 	QObject::connect(raw, &QTcpServer::newConnection, raw, [=] {
 		while (const auto socket = raw->nextPendingConnection()) {
-			SetupConnection(socket);
+			setupConnection(socket);
 		}
 	});
 	Server = std::move(server);
-	// Server 是静态持有，不挂清理会在 QApplication 析构后的静态析构期
-	// 才销毁 QObject，触发 Debug CRT abort 弹窗。aboutToQuit 时应用仍在，
-	// 是销毁 server 的最后安全窗口。
+	// 静态持有的服务端在 QApplication 析构前释放。
 	QObject::connect(
 		qApp,
 		&QCoreApplication::aboutToQuit,

@@ -6,7 +6,8 @@ description: Use this skill when the user asks to debug, test, or verify AyuGram
 # 应用调试
 
 通过命令行控制本仓库的调试构建。服务端仅在 `_DEBUG` 下启用，监听
-`127.0.0.1:20100`。界面指令在主线程执行，返回一行 `OK [JSON]` 或 `ERR 原因`。
+`127.0.0.1:20100`。界面指令在主线程执行，返回 `OK` 加可选数据或 `ERR 原因`。
+每条连接处理一行指令；带引号的参数采用 JSON 字符串转义，CLI 自动处理。
 
 ## 入口与顺序
 

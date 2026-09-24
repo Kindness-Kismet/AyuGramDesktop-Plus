@@ -363,7 +363,7 @@ def build_server_command(args: argparse.Namespace) -> str:
 
 
 def quote_arg(value: str) -> str:
-    return f'"{value}"' if (" " in value or not value) else value
+    return json.dumps(value, ensure_ascii=False)
 
 
 def ensure_debug_app() -> None:
