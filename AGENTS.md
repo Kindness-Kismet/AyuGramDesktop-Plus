@@ -249,6 +249,7 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 - 产物在带版本号的目录：`build/AyuGram-v<版本>-win-x64-release|dev/`（版本号读取 `Telegram/build/version`）
 - 脚本自己完成配置和构建两步，**不要手动执行 cmake**
 - 收集产物前会自动停止占用目标可执行文件的进程（按绝对路径匹配，不按进程名）
+- Release 不生成调试信息和 pdb，只有 Debug 带符号
 
 ### 编译并发
 

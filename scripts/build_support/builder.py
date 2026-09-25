@@ -169,6 +169,9 @@ def configure(environment: dict[str, str], api_id: str, api_hash: str) -> None:
     # 不会被 option() 覆盖，故显式传 OFF，让 Updater 参与构建。
     command.append("-DDESKTOP_APP_DISABLE_AUTOUPDATE=OFF")
 
+    # 只有 Debug 生成调试信息；Release 编译不带符号，链接走 /DEBUG:NONE，不产出 pdb。
+    command.append("-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=$<$<CONFIG:Debug>:ProgramDatabase>")
+
     # Qt5 的官方配置文件含有未初始化变量，开启该诊断会把外部包告警当成配置失败
     command += ["-Werror=dev", "-Werror=deprecated"]
     run(command, ROOT, environment, "CMake configure")
@@ -256,8 +259,7 @@ def collect(cmake_config: str, profile: str) -> list[tuple[str, object]]:
     for name in PRODUCT_BINARIES:
         release_target(destination / name)
 
-    # Debug 还要带 .pdb，否则调试器只能看到地址而没有符号。Release 的调试信息
-    # 已经由 CMAKE_MSVC_DEBUG_INFORMATION_FORMAT 内嵌，不单独产出 pdb。
+    # Debug 还要带 .pdb，否则调试器只能看到地址而没有符号；Release 不生成调试信息。
     wanted = PRODUCT_BINARIES + (DEBUG_SYMBOLS if profile == "dev" else ())
 
     collected: list[tuple[str, object]] = []
