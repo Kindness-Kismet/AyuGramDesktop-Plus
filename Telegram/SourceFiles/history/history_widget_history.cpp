@@ -1326,20 +1326,23 @@ void HistoryWidget::updateHistoryGeometry(
 		newScrollHeight -= _unblock->height()
 			+ 2 * st::historyComposeCapsuleMargin;
 	} else {
+		const auto hasFieldHeader = _editMsgId
+			|| replyTo()
+			|| readyToForward()
+			|| _previewDrawPreview
+			|| _suggestOptions;
 		if (editingMessage() || _canSendMessages) {
-			// 消息列表与胶囊之间保留一份间距。
+			const auto reclaimTopSpace = !hasFieldHeader
+				&& !_kbShown;
 			newScrollHeight -= (fieldHeight()
 				+ 2 * st::historySendPadding
-				+ 2 * st::historyComposeCapsuleMargin);
+				+ 2 * st::historyComposeCapsuleMargin
+				- (reclaimTopSpace ? st::historySendPadding : 0));
 		} else if (_sendRestriction) {
 			newScrollHeight -= _sendRestriction->height()
 				+ 2 * st::historyComposeCapsuleMargin;
 		}
-		if (_editMsgId
-			|| replyTo()
-			|| readyToForward()
-			|| _previewDrawPreview
-			|| _suggestOptions) {
+		if (hasFieldHeader) {
 			newScrollHeight -= st::historyReplyHeight;
 		}
 		if (_kbShown) {

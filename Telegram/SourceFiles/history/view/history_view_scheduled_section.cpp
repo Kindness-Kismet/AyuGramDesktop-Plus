@@ -1200,7 +1200,8 @@ void ScheduledWidget::updateControlsGeometry() {
 
 	const auto bottom = height();
 	const auto controlsHeight = _composeControls->heightCurrent();
-	const auto scrollHeight = bottom - _topBar->height() - controlsHeight;
+	const auto scrollHeight = bottom - _topBar->height() - controlsHeight
+		+ _composeControls->transparentTopSpaceCurrent();
 	const auto scrollSize = QSize(contentWidth, scrollHeight);
 	if (_scroll->size() != scrollSize) {
 		_skipScrollEvent = true;

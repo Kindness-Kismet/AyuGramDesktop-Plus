@@ -188,6 +188,7 @@ public:
 	void setAutocompleteBoundingRect(QRect rect);
 	[[nodiscard]] rpl::producer<int> height() const;
 	[[nodiscard]] int heightCurrent() const;
+	[[nodiscard]] int transparentTopSpaceCurrent() const;
 	[[nodiscard]] int fieldHeightCurrent() const;
 	[[nodiscard]] bool fieldHeaderShownCurrent() const;
 	void setFieldMaxHeight(int height);

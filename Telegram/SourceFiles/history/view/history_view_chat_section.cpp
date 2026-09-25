@@ -4448,12 +4448,17 @@ void ChatWidget::updateControlsGeometry() {
 		}
 	}
 	const auto composeTop = bottom;
+	const auto transparentTopSpace = (!isChoosingTheme()
+		&& !_suggestOptions
+		&& !bottomHeight)
+		? _composeControls->transparentTopSpaceCurrent()
+		: 0;
 	if (_suggestOptions) {
 		bottom -= st::historyReplyHeight;
 	}
 	bottom -= tabsBottomSkip;
 
-	const auto scrollHeight = bottom - top;
+	const auto scrollHeight = bottom - top + transparentTopSpace;
 	const auto scrollSize = QSize(innerWidth, scrollHeight);
 	if (_scroll->size() != scrollSize) {
 		_skipScrollEvent = true;

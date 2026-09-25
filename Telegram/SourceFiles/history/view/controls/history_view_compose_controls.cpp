@@ -1788,6 +1788,15 @@ int ComposeControls::heightCurrent() const {
 		: _wrap->height()) + 2 * ComposeOuterMargin(_st);
 }
 
+int ComposeControls::transparentTopSpaceCurrent() const {
+	return (ComposeOuterMargin(_st)
+		&& !_header->isDisplayed()
+		&& !_writeRestriction.current()
+		&& !_hidden.current())
+		? _st.padding.top()
+		: 0;
+}
+
 int ComposeControls::fieldHeightCurrent() const {
 	return _field->height();
 }
