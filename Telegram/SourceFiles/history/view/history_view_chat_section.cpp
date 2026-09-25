@@ -1611,7 +1611,7 @@ void ChatWidget::setupComposeControls() {
 		const auto wasMax = (_scroll->scrollTop() >= _scroll->scrollTopMax());
 		updateControlsGeometry();
 		if (wasMax) {
-			listScrollTo(_scroll->scrollTopMax());
+			_scroll->scrollToY(_scroll->scrollTopMax());
 		}
 	}, lifetime());
 
@@ -3112,7 +3112,7 @@ void ChatWidget::updateControlsVisibility() {
 		if (wasAtMax
 			&& _scroll
 			&& (_scroll->scrollTop() < _scroll->scrollTopMax())) {
-			listScrollTo(_scroll->scrollTopMax());
+			_scroll->scrollToY(_scroll->scrollTopMax());
 		}
 	});
 	_bottom->updateControlsVisibility();
@@ -4320,7 +4320,9 @@ void ChatWidget::restoreState(not_null<ChatMemento*> memento) {
 			if (!view) {
 				return false;
 			}
-			const auto top = std::max(view->y() - st::topBarHeight, 0);
+			const auto top = std::max(
+				_inner->itemTop(view) - st::topBarHeight,
+				0);
 			listScrollTo(top);
 			return true;
 		});
@@ -4454,15 +4456,24 @@ void ChatWidget::updateControlsGeometry() {
 	}
 	bottom -= tabsBottomSkip;
 
-	const auto scrollHeight = bottom - top;
+	const auto readableHeight = std::max(0, bottom - top);
+	// 置顶卡片覆盖列表，只有卡片下方才参与已读和定位。
+	const auto overlap = (readableHeight > 0)
+		? std::min(_topControls->pinnedOverlayHeight(),
+			std::max(0, bottom - topControlsTop - 1))
+		: 0;
+	const auto scrollHeight = readableHeight + overlap;
 	const auto scrollSize = QSize(innerWidth, scrollHeight);
-	if (_scroll->size() != scrollSize) {
+	_topBarsOverlap = overlap;
+	const auto paddingChanged = _inner->setTopPadding(overlap);
+	if (_scroll->size() != scrollSize || paddingChanged) {
 		_skipScrollEvent = true;
 		_scroll->resize(scrollSize);
 		_inner->resizeToWidth(scrollSize.width(), _scroll->height());
 		_skipScrollEvent = false;
 	}
-	_scroll->move(tabsLeftSkip, top);
+	_scroll->move(tabsLeftSkip, top - overlap);
+	_scroll->setBarTopInset(overlap);
 	if (!_scroll->isHidden()) {
 		if (wasAtBottom) {
 			_scroll->scrollToY(_scroll->scrollTopMax());
@@ -4576,7 +4587,9 @@ void ChatWidget::updateInnerVisibleArea() {
 		checkReplyReturns();
 	}
 	const auto scrollTop = _scroll->scrollTop();
-	_inner->setVisibleTopBottom(scrollTop, scrollTop + _scroll->height());
+	_inner->setVisibleTopBottom(
+		scrollTop + _topBarsOverlap,
+		scrollTop + _scroll->height());
 	updatePinnedVisibility();
 	_topControls->updatePinnedViewer();
 	_cornerButtons.updateJumpDownVisibility();
@@ -4616,7 +4629,8 @@ void ChatWidget::updatePinnedVisibility() {
 		? Data::MinMessagePosition
 		: rootItem()->position());
 	const auto visible = !view
-		|| (view->y() + view->height() <= _scroll->scrollTop());
+		|| (_inner->itemTop(view) + view->height()
+			<= _scroll->scrollTop() + _topBarsOverlap);
 	setPinnedVisibility(visible || (_topic && !view->data()->isPinned()));
 }
 
@@ -4707,7 +4721,7 @@ Context ChatWidget::listContext() {
 }
 
 bool ChatWidget::listScrollTo(int top, bool syntetic) {
-	top = std::clamp(top, 0, _scroll->scrollTopMax());
+	top = std::clamp(top - _topBarsOverlap, 0, _scroll->scrollTopMax());
 	const auto scrolled = (_scroll->scrollTop() != top);
 	_synteticScrollEvent = syntetic;
 	if (scrolled) {

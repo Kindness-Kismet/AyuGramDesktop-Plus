@@ -1011,7 +1011,7 @@ bool HistoryWidget::insideJumpToEndInsteadOfToUnread() const {
 	}
 	_history->calculateFirstUnreadMessage();
 	const auto unread = _history->firstUnreadMessage();
-	const auto visibleBottom = _scroll->scrollTop() + visibleScrollHeight();
+	const auto visibleBottom = visibleScrollBottom();
 	DEBUG_LOG(("JumpToEnd(%1, %2, %3): "
 		"unread: %4, top: %5, visibleBottom: %6."
 		).arg(_history->peer->name()

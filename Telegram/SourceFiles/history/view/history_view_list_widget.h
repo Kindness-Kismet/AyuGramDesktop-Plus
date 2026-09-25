@@ -344,12 +344,14 @@ public:
 	void restoreScrollPosition();
 
 	void resizeToWidth(int newWidth, int minHeight);
+	[[nodiscard]] bool setTopPadding(int padding);
 
 	void saveState(not_null<ListMemento*> memento);
 	void restoreState(not_null<ListMemento*> memento);
 	std::optional<int> scrollTopForPosition(
 		Data::MessagePosition position) const;
 	Element *viewByPosition(Data::MessagePosition position) const;
+	[[nodiscard]] int itemTop(not_null<const Element*> view) const;
 	std::optional<int> scrollTopForView(not_null<Element*> view) const;
 	[[nodiscard]] bool animatedScrolling() const;
 	bool isAbovePosition(Data::MessagePosition position) const;
@@ -726,7 +728,6 @@ private:
 	std::unique_ptr<QMimeData> prepareDrag();
 	void performDrag();
 	style::cursor computeMouseCursor() const;
-	int itemTop(not_null<const Element*> view) const;
 	void repaintItem(FullMsgId itemId);
 	void repaintItem(const Element *view);
 	void repaintItem(const Element *view, QRect rect);
@@ -904,7 +905,7 @@ private:
 	// Method has "bool (*Method)(not_null<Element*> view, int itemtop, int itembottom)" signature
 	// if it returns false the enumeration stops immediately.
 	template <EnumItemsDirection direction, typename Method>
-	void enumerateItems(Method method);
+	void enumerateItems(Method method, int visibleTop);
 
 	// This function finds all userpics on the left that are displayed and calls template method
 	// for each found userpic (from the top to the bottom) using enumerateItems() method.
@@ -912,7 +913,7 @@ private:
 	// Method has "bool (*Method)(not_null<Element*> view, int userpicTop)" signature
 	// if it returns false the enumeration stops immediately.
 	template <typename Method>
-	void enumerateUserpics(Method method);
+	void enumerateUserpics(Method method, int visibleTop);
 
 	// This function finds all date elements that are displayed and calls template method
 	// for each found date element (from the bottom to the top) using enumerateItems() method.
@@ -985,6 +986,7 @@ private:
 	bool _readMetricsStale = false;
 
 	int _minHeight = 0;
+	int _topPadding = 0;
 	int _visibleTop = 0;
 	int _visibleBottom = 0;
 	Element *_visibleTopItem = nullptr;

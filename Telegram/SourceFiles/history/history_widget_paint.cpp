@@ -608,8 +608,8 @@ QPoint HistoryWidget::clampMousePosition(QPoint point) {
 	}
 	if (point.y() < _scroll->scrollTop()) {
 		point.setY(_scroll->scrollTop());
-	} else if (point.y() >= _scroll->scrollTop() + visibleScrollHeight()) {
-		point.setY(_scroll->scrollTop() + visibleScrollHeight() - 1);
+	} else if (point.y() >= visibleScrollBottom()) {
+		point.setY(visibleScrollBottom() - 1);
 	}
 	return point;
 }

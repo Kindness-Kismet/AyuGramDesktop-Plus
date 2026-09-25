@@ -975,12 +975,16 @@ void HistoryInner::repaintItem(const Element *view, QRect rect) {
 }
 
 template <bool TopToBottom, typename Method>
-void HistoryInner::enumerateItemsInHistory(History *history, int historytop, Method method) {
+void HistoryInner::enumerateItemsInHistory(
+		History *history,
+		int historytop,
+		int visibleTop,
+		Method method) {
 	// No displayed messages in this history.
 	if (historytop < 0 || history->isEmpty()) {
 		return;
 	}
-	if (_visibleAreaBottom <= historytop || historytop + history->height() <= _visibleAreaTop) {
+	if (_visibleAreaBottom <= historytop || historytop + history->height() <= visibleTop) {
 		return;
 	}
 
@@ -990,7 +994,7 @@ void HistoryInner::enumerateItemsInHistory(History *history, int historytop, Met
 	}
 
 	auto searchEdge = TopToBottom
-		? (_visibleAreaTop - collapseGapsTotal)
+		? (visibleTop - collapseGapsTotal)
 		: _visibleAreaBottom;
 
 	// Binary search for blockIndex of the first block that is not completely below the visible area.
@@ -1031,7 +1035,7 @@ void HistoryInner::enumerateItemsInHistory(History *history, int historytop, Met
 			auto itembottom = itemtop + view->height();
 
 			if (TopToBottom) {
-				if (itembottom <= _visibleAreaTop) {
+				if (itembottom <= visibleTop) {
 					if (++itemIndex >= block->messages.size()) {
 						break;
 					}
@@ -1056,7 +1060,7 @@ void HistoryInner::enumerateItemsInHistory(History *history, int historytop, Met
 					return;
 				}
 			} else {
-				if (itemtop <= _visibleAreaTop) {
+				if (itemtop <= visibleTop) {
 					return;
 				}
 			}
@@ -1078,7 +1082,7 @@ void HistoryInner::enumerateItemsInHistory(History *history, int historytop, Met
 				return;
 			}
 		} else {
-			if (blocktop <= _visibleAreaTop) {
+			if (blocktop <= visibleTop) {
 				return;
 			}
 		}
@@ -1122,7 +1126,7 @@ void HistoryInner::toggleRemoveFromUserpics(bool remove) {
 }
 
 template <typename Method>
-void HistoryInner::enumerateUserpics(Method method) {
+void HistoryInner::enumerateUserpics(Method method, int visibleTop) {
 	if (!canHaveFromUserpics()) {
 		return;
 	}
@@ -1177,7 +1181,8 @@ void HistoryInner::enumerateUserpics(Method method) {
 		return true;
 	};
 
-	enumerateItems<EnumItemsDirection::TopToBottom>(userpicCallback);
+	enumerateItems<EnumItemsDirection::TopToBottom>(
+		userpicCallback, visibleTop);
 }
 
 template <typename Method>
@@ -1573,7 +1578,10 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			int height) {
 		_translateTracker->add(view);
 		const auto item = view->data();
-		if (metricsStale && height > 0) {
+		if (metricsStale
+			&& height > 0
+			&& top + height > _visibleAreaTop
+			&& top < _visibleAreaBottom) {
 			_readMetricsTracker->push(item, top, height);
 		}
 		const auto isSponsored = item->isSponsored();
@@ -1582,10 +1590,12 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			&& (item->history() == _history);
 		const auto withReaction = item->hasUnreadReaction();
 		const auto yShown = [&](int y) {
-			return (_visibleAreaBottom >= y && _visibleAreaTop <= y);
+			return (_visibleAreaTop < _visibleAreaBottom)
+				&& (_visibleAreaBottom >= y && _visibleAreaTop <= y);
 		};
 		const auto markShown = isSponsored
-			? view->markSponsoredViewed(_visibleAreaBottom - top)
+			? (view->markSponsoredViewed(_visibleAreaBottom - top)
+				&& !view->markSponsoredViewed(_visibleAreaTop - top))
 			: withReaction
 			? yShown(top + context.reactionInfo->position.y())
 			: isUnread
@@ -1845,7 +1855,7 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			}
 		}
 		return true;
-	});
+	}, _scroll->scrollTop());
 
 	const auto dateHeight = st::msgServicePadding.bottom()
 		+ st::msgServiceFont->height
@@ -1965,6 +1975,7 @@ HistoryInner::VideoUserpic *HistoryInner::validateVideoUserpic(
 		if (hasPendingResizedItems()) {
 			return;
 		}
+		const auto paintTop = _scroll->scrollTop();
 		enumerateUserpics([&](not_null<Element*> view, int userpicTop) {
 			// stop the enumeration if the userpic is below the painted rect
 			if (userpicTop >= _visibleAreaBottom) {
@@ -1972,7 +1983,7 @@ HistoryInner::VideoUserpic *HistoryInner::validateVideoUserpic(
 			}
 
 			// repaint the userpic if it intersects the painted rect
-			if (userpicTop + st::msgPhotoSize > _visibleAreaTop) {
+			if (userpicTop + st::msgPhotoSize > paintTop) {
 				if (const auto from = view->data()->displayFrom()) {
 					if (from == peer) {
 						rtlupdate(
@@ -1984,7 +1995,7 @@ HistoryInner::VideoUserpic *HistoryInner::validateVideoUserpic(
 				}
 			}
 			return true;
-		});
+		}, paintTop);
 	};
 	return _videoUserpics.emplace(peer, std::make_unique<VideoUserpic>(
 		peer,
@@ -3050,7 +3061,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 							moderateItem = item;
 						}
 						return false;
-					});
+					}, _scroll->scrollTop());
 				return moderateItem;
 			}(),
 			Ui::Menu::CreateAddActionCallback(_menu.get()));
@@ -4742,7 +4753,8 @@ void HistoryInner::registerReadMetricsActivity() {
 }
 
 void HistoryInner::checkActivation() {
-	if (!_widget->markingMessagesRead()) {
+	if (_visibleAreaTop >= _visibleAreaBottom
+		|| !_widget->markingMessagesRead()) {
 		return;
 	}
 	adjustCurrent(_visibleAreaBottom);
@@ -4789,9 +4801,10 @@ void HistoryInner::recountHistoryGeometry(bool initial) {
 	const auto visibleHeight = _scroll->height() - _widget->composeOverlap();
 	auto oldHistoryMarginTop = std::max(
 		visibleHeight - historyHeight() - _historyMarginBottom,
-		0);
+		_widget->topBarsOverlap());
 	if (aboutAboveHistory) {
-		accumulate_max(oldHistoryMarginTop, _aboutView->height);
+		accumulate_max(oldHistoryMarginTop,
+			_widget->topBarsOverlap() + _aboutView->height);
 	}
 
 	updateBotInfo(false);
@@ -4843,7 +4856,9 @@ void HistoryInner::recountHistoryGeometry(bool initial) {
 		if (aboutAboveHistory) {
 			_aboutView->top = std::min(
 				_historyMarginTop - _aboutView->height,
-				std::max(0, (visibleHeight - _aboutView->height) / 2));
+				_widget->topBarsOverlap() + std::max(0,
+					(visibleHeight - _widget->topBarsOverlap()
+						- _aboutView->height) / 2));
 		} else {
 			_aboutView->top = std::max(
 				std::max(0, (visibleHeight - _aboutView->height) / 2),
@@ -4855,9 +4870,10 @@ void HistoryInner::recountHistoryGeometry(bool initial) {
 
 	auto newHistoryMarginTop = std::max(
 		visibleHeight - historyHeight() - _historyMarginBottom,
-		0);
+		_widget->topBarsOverlap());
 	if (aboutAboveHistory) {
-		accumulate_max(newHistoryMarginTop, _aboutView->height);
+		accumulate_max(newHistoryMarginTop,
+			_widget->topBarsOverlap() + _aboutView->height);
 	}
 
 	const auto marginDelta = newHistoryMarginTop - oldHistoryMarginTop;
@@ -5094,16 +5110,19 @@ void HistoryInner::updateSize() {
 	}
 	auto newHistoryMarginTop = std::max(
 		visibleHeight - itemsHeight - newHistoryMarginBottom,
-		0);
+		_widget->topBarsOverlap());
 	if (aboutAboveHistory) {
-		accumulate_max(newHistoryMarginTop, _aboutView->height);
+		accumulate_max(newHistoryMarginTop,
+			_widget->topBarsOverlap() + _aboutView->height);
 	}
 
 	if (_aboutView && _aboutView->height > 0) {
 		if (aboutAboveHistory) {
 			_aboutView->top = std::min(
 				newHistoryMarginTop - _aboutView->height,
-				std::max(0, (visibleHeight - _aboutView->height) / 2));
+				_widget->topBarsOverlap() + std::max(0,
+					(visibleHeight - _widget->topBarsOverlap()
+						- _aboutView->height) / 2));
 		} else {
 			_aboutView->top = std::max(
 				std::max(0, (visibleHeight - _aboutView->height) / 2),
@@ -5956,7 +5975,7 @@ void HistoryInner::mouseActionUpdate() {
 							return false;
 						}
 						return true;
-					});
+					}, _scroll->scrollTop());
 				}
 			}
 		}

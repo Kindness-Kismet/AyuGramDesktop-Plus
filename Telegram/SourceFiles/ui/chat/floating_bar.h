@@ -11,7 +11,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/palette.h"
 #include "styles/style_window.h"
 
+#include <QtGui/QRegion>
 #include <QtWidgets/QGraphicsEffect>
+
+#include <utility>
+#include <vector>
 
 namespace Ui {
 
@@ -23,6 +27,7 @@ public:
 		}
 		const auto top = _height + st::windowCardGap / 2;
 		_height = top + contentHeight;
+		_cards.emplace_back(top, contentHeight);
 		return top;
 	}
 
@@ -30,8 +35,17 @@ public:
 		return _height ? (_height + st::windowCardGap / 2) : 0;
 	}
 
+	[[nodiscard]] QRegion cardRegion(int width) const {
+		auto result = QRegion();
+		for (const auto &[top, height] : _cards) {
+			result += QRect(0, top, width, height);
+		}
+		return result;
+	}
+
 private:
 	int _height = 0;
+	std::vector<std::pair<int, int>> _cards;
 };
 
 class ChatControlSurface final : public QGraphicsEffect {

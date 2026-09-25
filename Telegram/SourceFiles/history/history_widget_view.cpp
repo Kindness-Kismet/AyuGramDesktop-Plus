@@ -676,7 +676,7 @@ void HistoryWidget::destroyUnreadBarOnClose() {
 		return;
 	}
 	const auto top = unreadBarTop();
-	if (top && *top < _scroll->scrollTop()) {
+	if (top && *top < visibleScrollTop()) {
 		destroyUnreadBar();
 		return;
 	}
@@ -756,8 +756,8 @@ void HistoryWidget::maybeMarkReactionsRead(not_null<HistoryItem*> item) {
 	}
 	const auto reactionCenter
 		= view->reactionButtonParameters({}, {}).center.y();
-	const auto visibleTop = _scroll->scrollTop();
-	const auto visibleBottom = visibleTop + visibleScrollHeight();
+	const auto visibleTop = visibleScrollTop();
+	const auto visibleBottom = visibleScrollBottom();
 	if (itemTop + reactionCenter < visibleTop
 		|| itemTop + view->height() > visibleBottom) {
 		return;

@@ -229,6 +229,7 @@
       "Telegram/SourceFiles/history/view/controls/history_view_compose_controls.h",
       "Telegram/SourceFiles/history/view/controls/history_view_compose_search.cpp",
       "Telegram/SourceFiles/history/view/controls/history_view_top_controls.cpp",
+      "Telegram/SourceFiles/history/view/controls/history_view_top_controls.h",
       "Telegram/SourceFiles/history/view/controls/history_view_voice_record_bar.cpp",
       "Telegram/SourceFiles/history/view/controls/history_view_webpage_processor.cpp",
       "Telegram/SourceFiles/history/view/history_view_about_view.cpp",

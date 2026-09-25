@@ -1177,9 +1177,8 @@ HistoryWidget::HistoryWidget(
 		if (const auto view = query.item->mainView()) {
 			auto top = _list->itemTop(view);
 			if (top >= 0) {
-				auto scrollTop = _scroll->scrollTop();
-				if (top + view->height() > scrollTop
-					&& top < scrollTop + visibleScrollHeight()) {
+				if (top + view->height() > visibleScrollTop()
+					&& top < visibleScrollBottom()) {
 					*query.isVisible = true;
 				}
 			}

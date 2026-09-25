@@ -371,17 +371,25 @@ private:
 	// Method has "bool (*Method)(not_null<Element*> view, int itemtop, int itembottom)" signature
 	// if it returns false the enumeration stops immediately.
 	template <bool TopToBottom, typename Method>
-	void enumerateItemsInHistory(History *history, int historytop, Method method);
+	void enumerateItemsInHistory(
+		History *history,
+		int historytop,
+		int visibleTop,
+		Method method);
 
 	template <EnumItemsDirection direction, typename Method>
-	void enumerateItems(Method method) {
+	void enumerateItems(Method method, int visibleTop = -1) {
 		constexpr auto TopToBottom = (direction == EnumItemsDirection::TopToBottom);
+		visibleTop = (visibleTop >= 0) ? visibleTop : _visibleAreaTop;
 		if (TopToBottom && _migrated) {
-			enumerateItemsInHistory<TopToBottom>(_migrated, migratedTop(), method);
+			enumerateItemsInHistory<TopToBottom>(
+				_migrated, migratedTop(), visibleTop, method);
 		}
-		enumerateItemsInHistory<TopToBottom>(_history, historyTop(), method);
+		enumerateItemsInHistory<TopToBottom>(
+			_history, historyTop(), visibleTop, method);
 		if (!TopToBottom && _migrated) {
-			enumerateItemsInHistory<TopToBottom>(_migrated, migratedTop(), method);
+			enumerateItemsInHistory<TopToBottom>(
+				_migrated, migratedTop(), visibleTop, method);
 		}
 	}
 
@@ -391,7 +399,7 @@ private:
 	// Method has "bool (*Method)(not_null<Element*> view, int userpicTop)" signature
 	// if it returns false the enumeration stops immediately.
 	template <typename Method>
-	void enumerateUserpics(Method method);
+	void enumerateUserpics(Method method, int visibleTop = -1);
 
 	// This function finds all date elements that are displayed and calls template method
 	// for each found date element (from the bottom to the top) using enumerateItems() method.
