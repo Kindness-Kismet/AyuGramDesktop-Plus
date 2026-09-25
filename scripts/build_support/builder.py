@@ -193,7 +193,27 @@ def compile_target(environment: dict[str, str], cmake_config: str, jobs: int) ->
     ]
     # 项目串行、源文件并行，避免两级并发相乘突破指定上限。
     command.extend(["--parallel", "1", "--", f"/p:CL_MPCount={jobs}"])
+    command.extend(ccache_properties(environment))
     run(command, ROOT, environment, f"Build {cmake_config}")
+
+
+def ccache_properties(environment: dict[str, str]) -> list[str]:
+    """AYUGRAM_CCACHE 指向 ccache.exe 时，让 MSBuild 经 ccache 调用编译器。"""
+    ccache = environment.get("AYUGRAM_CCACHE")
+    if not ccache:
+        return []
+    # ccache 以 cl.exe 的名字运行时，会到 PATH 里找真正的编译器来调用。
+    shim = BUILD_DIR / "ccache-cl" / "cl.exe"
+    shim.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(ccache, shim)
+    # 放宽预编译头的宏定义与时间宏检查，否则用到预编译头的源文件一律不缓存。
+    environment.setdefault("CCACHE_SLOPPINESS", "pch_defines,time_macros")
+    # 未命中时直接编译并由 /showIncludes 记录依赖，省掉一遍预处理。
+    environment.setdefault("CCACHE_DEPEND", "1")
+    print(f"  ccache {ccache}", flush=True)
+    # ccache 每次只能编译一个文件，须由 MultiToolTask 逐文件调用；
+    # 关闭文件跟踪，免得缓存目录里的文件被记成编译输入。
+    return [f"/p:CLToolPath={shim.parent}", "/p:UseMultiToolTask=true", "/p:TrackFileAccess=false"]
 
 
 def stop_running_instances(configurations: list[str]) -> str:

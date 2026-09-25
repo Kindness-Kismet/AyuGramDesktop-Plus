@@ -250,6 +250,7 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 - 脚本自己完成配置和构建两步，**不要手动执行 cmake**
 - 收集产物前会自动停止占用目标可执行文件的进程（按绝对路径匹配，不按进程名）
 - Release 不生成调试信息和 pdb，只有 Debug 带符号
+- 设置环境变量 `AYUGRAM_CCACHE=<ccache.exe 路径>` 后经 ccache 编译（云端 Windows 构建使用）；开启后每次都要重新编译全部文件（大多直接命中缓存），不适合本地增量构建
 
 ### 编译并发
 
