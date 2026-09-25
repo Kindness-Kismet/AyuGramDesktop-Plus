@@ -7,10 +7,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 using "window/window.style";
 
-mainMenuWidth: 274px;
-mainMenuCoverHeight: 120px;
+mainMenuWidth: 296px;
+mainMenuCoverHeight: 112px;
+mainMenuCoverMargin: 12px;
+mainMenuCoverRadius: 12px;
 mainMenuUserpicLeft: 24px;
-mainMenuUserpicTop: 16px;
+mainMenuUserpicTop: 32px;
 mainMenuCloudButton: IconButton {
 	width: 48px;
 	height: 48px;
@@ -26,12 +28,17 @@ mainMenuResetScaleLeft: 36px;
 mainMenuResetScaleRight: 12px;
 mainMenuResetScaleTop: 2px;
 mainMenuResetScaleIconLeft: 5px;
-mainMenuCoverNameLeft: 26px;
-mainMenuCoverNameTop: 74px;
+mainMenuCoverNameLeft: 84px;
+mainMenuCoverNameTop: 35px;
 mainMenuCoverStatusLeft: mainMenuCoverNameLeft;
-mainMenuCoverStatusTop: 94px;
+mainMenuCoverStatusTop: 58px;
+mainMenuStatusLabel: FlatLabel(defaultFlatLabel) {
+	maxHeight: 20px;
+}
 mainMenuSkip: 6px;
-mainMenuFooterHeightMin: 80px;
+mainMenuContentMargin: 4px;
+mainMenuSeparatorPadding: margins(20px, 6px, 20px, 6px);
+mainMenuFooterHeightMin: 72px;
 mainMenu: Menu(defaultMenu) {
 	itemFg: windowBoldFg;
 	itemFgOver: windowBoldFgOver;
@@ -46,8 +53,8 @@ mainMenu: Menu(defaultMenu) {
 	}
 	itemToggleShift: 11px;
 }
-mainMenuFooterLeft: 25px;
+mainMenuFooterLeft: 24px;
 mainMenuTelegramBottom: 38px;
 mainMenuVersionBottom: 17px;
 mainMenuToggleSize: 6px;
-mainMenuTogglePosition: point(30px, 30px);
+mainMenuTogglePosition: point(20px, 44px);

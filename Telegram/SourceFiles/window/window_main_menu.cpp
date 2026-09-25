@@ -109,8 +109,7 @@ constexpr auto kPlayStatusLimit = 12;
 		|| (now.month() == 1 && now.day() == 1);
 }
 
-[[nodiscard]] rpl::producer<TextWithEntities> SetStatusLabel(
-		not_null<Main::Session*> session) {
+[[nodiscard]] rpl::producer<TextWithEntities> PreferencesLabel() {
 	return tr::ayu_AyuPreferences() | rpl::map([](const QString& text) {
 		return tr::link(text);
 	});
@@ -194,6 +193,15 @@ MainMenu::ToggleAccountsButton::ToggleAccountsButton(
 
 void MainMenu::ToggleAccountsButton::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
+	auto hq = PainterHighQualityEnabler(p);
+	if (isOver() || isDown()) {
+		p.setPen(st::windowDividerFg);
+		p.setBrush(Qt::NoBrush);
+		p.drawRoundedRect(
+			QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5),
+			st::mainMenuCoverRadius,
+			st::mainMenuCoverRadius);
+	}
 
 	const auto path = Ui::ToggleUpDownArrowPath(
 		0. + width() - st::mainMenuTogglePosition.x(),
@@ -202,7 +210,6 @@ void MainMenu::ToggleAccountsButton::paintEvent(QPaintEvent *e) {
 		st::mainMenuToggleFourStrokes,
 		_toggledAnimation.value(_toggled ? 1. : 0.));
 
-	auto hq = PainterHighQualityEnabler(p);
 	p.fillPath(path, st::windowSubTextFg);
 
 	paintUnreadBadge(p);
@@ -231,6 +238,7 @@ void MainMenu::ToggleAccountsButton::paintUnreadBadge(Painter &p) {
 
 void MainMenu::ToggleAccountsButton::validateUnreadBadge() {
 	const auto base = st::mainMenuTogglePosition.x()
+		+ st::mainMenuCoverMargin
 		+ 2 * st::mainMenuToggleSize;
 	if (_toggled) {
 		_rightSkip = base;
@@ -312,7 +320,7 @@ MainMenu::MainMenu(
 	_controller->session().user(),
 	st::mainMenuUserpic)
 , _toggleAccounts(this, &controller->session().account())
-, _setEmojiStatus(this, SetStatusLabel(&controller->session()))
+, _setEmojiStatus(this, PreferencesLabel(), st::mainMenuStatusLabel)
 , _emojiStatusPanel(std::make_unique<Info::Profile::EmojiStatusPanel>())
 , _badge(std::make_unique<Info::Profile::Badge>(
 	this,
@@ -347,12 +355,17 @@ MainMenu::MainMenu(
 		st::defaultBoxDividerLabelPadding.right(), 0 }))
 , _menu(_inner->add(
 	object_ptr<Ui::VerticalLayout>(_inner.get()),
-	{ 0, st::mainMenuSkip, 0, 0 }))
+	{ st::mainMenuContentMargin, st::mainMenuSkip,
+		st::mainMenuContentMargin, 0 }))
 , _footer(_inner->add(object_ptr<Ui::RpWidget>(_inner.get())))
 , _telegram(
 	Ui::CreateChild<Ui::FlatLabel>(_footer.get(), st::mainMenuTelegramLabel))
 , _version(AddVersionLabel(_footer)) {
 	setAttribute(Qt::WA_OpaquePaintEvent);
+	setObjectName(u"mainMenu"_q);
+	_scroll->setObjectName(u"mainMenu.scroll"_q);
+	_toggleAccounts->setObjectName(u"mainMenu.accounts"_q);
+	_setEmojiStatus->setObjectName(u"mainMenu.preferences"_q);
 
 	setupUserpicButton();
 	setupAccountsToggle();
@@ -360,17 +373,6 @@ MainMenu::MainMenu(
 	setupAccounts();
 	setupArchive();
 	setupMenu();
-
-	const auto shadow = Ui::CreateChild<Ui::PlainShadow>(
-		this,
-		st::windowDividerFg);
-	widthValue(
-	) | rpl::on_next([=](int width) {
-		const auto line = st::lineWidth;
-		const auto inset = st::defaultBoxDividerLabelPadding.left();
-		shadow->setGeometry(inset, st::mainMenuCoverHeight - line,
-			width - 2 * inset, line);
-	}, shadow->lifetime());
 
 	_nightThemeSwitch.setCallback([this] {
 		Expects(_nightThemeToggle != nullptr);
@@ -386,6 +388,16 @@ MainMenu::MainMenu(
 	) | rpl::on_next([=] {
 		_telegram->moveToLeft(st::mainMenuFooterLeft, _footer->height() - st::mainMenuTelegramBottom - _telegram->height());
 		_version->moveToLeft(st::mainMenuFooterLeft, _footer->height() - st::mainMenuVersionBottom - _version->height());
+	}, _footer->lifetime());
+	_footer->paintRequest(
+	) | rpl::on_next([=] {
+		auto p = QPainter(_footer);
+		p.fillRect(
+			st::mainMenuFooterLeft,
+			_footer->height() - st::mainMenuFooterHeightMin,
+			_footer->width() - 2 * st::mainMenuFooterLeft,
+			st::lineWidth,
+			st::windowDividerFg);
 	}, _footer->lifetime());
 
 	rpl::combine(
@@ -449,6 +461,7 @@ MainMenu::MainMenu(
 		rpl::single(rpl::empty) | rpl::then(_exteraBadge->updated())
 	) | rpl::on_next([=] {
 		moveBadge();
+		updateControlsGeometry();
 	}, lifetime());
 	_badge->setPremiumClickCallback([=] {
 		chooseEmojiStatus();
@@ -485,6 +498,7 @@ MainMenu::MainMenu(
 			) | rpl::on_next([=](const QRect &r) {
 				auto p = Painter(snowRaw);
 				p.fillRect(r, st::mainMenuBg);
+				drawCover(p);
 				drawName(p);
 				snow->paint(p, snowRaw->rect());
 			}, snowRaw->lifetime());
@@ -590,8 +604,7 @@ void MainMenu::setupArchive() {
 		{ &st::menuIconArchiveOpen });
 	inner->add(
 		object_ptr<Ui::PlainShadow>(inner, st::windowDividerFg),
-		{ st::defaultBoxDividerLabelPadding.left(), st::mainMenuSkip,
-			st::defaultBoxDividerLabelPadding.right(), st::mainMenuSkip });
+		st::mainMenuSeparatorPadding);
 	button->setAcceptBoth(true);
 	button->clicks(
 	) | rpl::on_next([=](Qt::MouseButton which) {
@@ -685,6 +698,7 @@ void MainMenu::setupAccounts() {
 }
 
 void MainMenu::setupAccountsToggle() {
+	_toggleAccounts->lower();
 	_toggleAccounts->show();
 	_toggleAccounts->setAcceptBoth();
 	_toggleAccounts->addClickHandler([=](Qt::MouseButton button) {
@@ -722,12 +736,25 @@ void MainMenu::setupMenu() {
 	const auto &settings = AyuSettings::getInstance();
 
 	const auto controller = _controller;
+	auto section = _menu->add(object_ptr<Ui::VerticalLayout>(_menu));
+	const auto nextSection = [&] {
+		const auto separator = _menu->add(
+			object_ptr<Ui::SlideWrap<Ui::PlainShadow>>(
+				_menu,
+				object_ptr<Ui::PlainShadow>(_menu, st::windowDividerFg),
+				st::mainMenuSeparatorPadding));
+		separator->toggleOn(section->heightValue() | rpl::map([](int height) {
+			return height > 0;
+		}));
+		separator->finishAnimating();
+		section = _menu->add(object_ptr<Ui::VerticalLayout>(_menu));
+	};
 	const auto addAction = [&](
 			rpl::producer<QString> text,
 			IconDescriptor &&descriptor,
 			QString name = {}) {
 		const auto button = AddButtonWithIcon(
-			_menu,
+			section,
 			std::move(text),
 			st::mainMenuButton,
 			std::move(descriptor));
@@ -739,27 +766,20 @@ void MainMenu::setupMenu() {
 	};
 	if (!_controller->session().supportMode()) {
 		if (settings.showMyProfileInDrawer()) {
-			const auto myProfile = _menu->add(
-				CreateButtonWithIcon(
-					_menu,
-					tr::lng_menu_my_profile(),
-					st::mainMenuButton,
-					{ &st::menuIconProfile }));
-			myProfile->setObjectName(u"menu.myProfile"_q);
+			const auto myProfile = addAction(
+				tr::lng_menu_my_profile(),
+				{ &st::menuIconProfile },
+				u"myProfile"_q);
 			myProfile->setClickedCallback([=] {
 				controller->showSection(
 					Info::Stories::Make(controller->session().user()));
 			});
 		}
 
-		if (settings.showBotsInDrawer())
-		SetupMenuBots(_menu, controller);
-
-		if (settings.showMyProfileInDrawer() || settings.showBotsInDrawer())
-		_menu->add(
-			object_ptr<Ui::PlainShadow>(_menu, st::windowDividerFg),
-			{ st::defaultBoxDividerLabelPadding.left(), st::mainMenuSkip,
-				st::defaultBoxDividerLabelPadding.right(), st::mainMenuSkip });
+		if (settings.showBotsInDrawer()) {
+			SetupMenuBots(section, controller);
+		}
+		nextSection();
 
 		if (settings.showNewGroupInDrawer())
 		AddMyChannelsBox(addAction(
@@ -895,6 +915,7 @@ void MainMenu::setupMenu() {
 			_controller->session().supportTemplates().reload();
 		});
 	}
+	nextSection();
 	addAction(
 		tr::lng_menu_settings(),
 		{ &st::menuIconSettings },
@@ -998,16 +1019,18 @@ void MainMenu::updateControlsGeometry() {
 	if (_resetScaleButton) {
 		_resetScaleButton->moveToRight(0, 0);
 	}
+	_toggleAccounts->setGeometry(
+		st::mainMenuCoverMargin,
+		st::mainMenuCoverMargin,
+		width() - 2 * st::mainMenuCoverMargin,
+		st::mainMenuCoverHeight - 2 * st::mainMenuCoverMargin);
+	_setEmojiStatus->resizeToWidth(width()
+		- st::mainMenuCoverStatusLeft
+		- _toggleAccounts->rightSkip());
 	_setEmojiStatus->moveToLeft(
 		st::mainMenuCoverStatusLeft,
 		st::mainMenuCoverStatusTop,
 		width());
-	_toggleAccounts->setGeometry(
-		0,
-		st::mainMenuCoverNameTop,
-		width(),
-		st::mainMenuCoverHeight - st::mainMenuCoverNameTop);
-	// Allow cover shadow over the scrolled content.
 	const auto top = st::mainMenuCoverHeight - st::lineWidth;
 	_scroll->setGeometry(0, top, width(), height() - top);
 	updateInnerControlsGeometry();
@@ -1077,8 +1100,21 @@ void MainMenu::paintEvent(QPaintEvent *e) {
 
 	p.fillRect(clip, st::mainMenuBg);
 	if (cover.intersects(clip)) {
+		drawCover(p);
 		drawName(p);
 	}
+}
+
+void MainMenu::drawCover(Painter &p) {
+	auto hq = PainterHighQualityEnabler(p);
+	p.setPen(Qt::NoPen);
+	p.setBrush(st::windowBgOver);
+	p.drawRoundedRect(
+		QRect(0, 0, width(), st::mainMenuCoverHeight).marginsRemoved(
+			QMargins(st::mainMenuCoverMargin, st::mainMenuCoverMargin,
+				st::mainMenuCoverMargin, st::mainMenuCoverMargin)),
+		st::mainMenuCoverRadius,
+		st::mainMenuCoverRadius);
 }
 
 void MainMenu::drawName(Painter &p) {

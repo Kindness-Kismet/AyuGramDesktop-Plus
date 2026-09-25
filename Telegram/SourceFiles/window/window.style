@@ -116,12 +116,15 @@ mainMenuUserpic: UserpicButton(defaultUserpicButton) {
 }
 mainMenuButton: SettingsButton(defaultSettingsButton) {
 	style: defaultTextStyle;
-	padding: margins(61px, 11px, 20px, 9px);
-	toggleSkip: 19px;
-	iconLeft: 21px;
+	textBg: mainMenuBg;
+	padding: margins(56px, 11px, 20px, 9px);
+	toggleSkip: 20px;
+	iconLeft: 20px;
 }
 mainMenuAddAccountButton: SettingsButton(mainMenuButton) {
-	iconLeft: 23px;
+	padding: margins(60px, 11px, 24px, 9px);
+	toggleSkip: 24px;
+	iconLeft: 24px;
 }
 
 mainMenuAccountSize: 26px;
