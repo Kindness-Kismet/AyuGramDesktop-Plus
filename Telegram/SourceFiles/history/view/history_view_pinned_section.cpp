@@ -533,7 +533,8 @@ void PinnedWidget::updateControlsGeometry() {
 		? std::nullopt
 		: base::make_optional(_scroll->scrollTop() + takeTopDelta());
 	_topBar->resizeToWidth(contentWidth);
-	_topBarShadow->resize(contentWidth, st::lineWidth);
+	// 顶栏已是浮动卡片，分隔线高度置 0；多处直接调用 show，不能只靠隐藏。
+	_topBarShadow->resize(contentWidth, 0);
 
 	const auto bottom = height() - _clearButton->height();
 	_clearButton->resizeToWidth(width());

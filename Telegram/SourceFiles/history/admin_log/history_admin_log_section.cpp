@@ -591,7 +591,8 @@ void Widget::resizeEvent(QResizeEvent *e) {
 	const auto delta = takeTopDelta();
 	const auto newScrollTop = _scroll->scrollTop() + delta;
 	_fixedBar->resizeToWidth(contentWidth);
-	_fixedBarShadow->resize(contentWidth, st::lineWidth);
+	// 与其它聊天分区一致，顶栏下不画分隔线；多处直接调用 show，不能只靠隐藏。
+	_fixedBarShadow->resize(contentWidth, 0);
 
 	const auto bottom = height();
 	const auto scrollHeight = bottom
