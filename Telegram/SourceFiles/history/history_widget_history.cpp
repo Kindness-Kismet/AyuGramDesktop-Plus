@@ -1407,8 +1407,10 @@ void HistoryWidget::updateHistoryGeometry(
 	if (newScrollHeight - composeHeight <= 0) {
 		return;
 	}
-	const auto overlapChanged = (_composeOverlap != composeHeight);
-	_composeOverlap = composeHeight;
+	// 列表占用胶囊上方一半留白，最近一条消息更贴近输入区。
+	const auto overlap = composeHeight ? (composeHeight - margin / 2) : 0;
+	const auto overlapChanged = (_composeOverlap != overlap);
+	_composeOverlap = overlap;
 	const auto wasScrollTop = _scroll->scrollTop();
 	const auto wasAtBottom = (wasScrollTop >= _scroll->scrollTopMax());
 	const auto needResize = (_scroll->width() != newScrollWidth)
