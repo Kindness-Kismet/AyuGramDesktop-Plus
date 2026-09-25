@@ -51,7 +51,7 @@ tagInfoAdminsOnlyLabel: FlatLabel(defaultFlatLabel) {
 }
 
 msgMargin: margins(16px, 6px, 56px, 2px);
-msgMarginTopAttached: 0px;
+msgMarginTopAttached: 2px;
 msgShadow: 2px;
 msgSelectionOffset: 30px;
 msgSelectionBottomSkip: 5px;
