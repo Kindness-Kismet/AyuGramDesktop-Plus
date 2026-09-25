@@ -867,7 +867,13 @@ void HistoryWidget::moveFieldControls() {
 			bottom - fieldHeight() - st::historySendPadding);
 	}
 	auto right = st::historyComposeCapsuleMargin + st::historyComposeCapsulePadding;
-	_send->moveToRight(right, buttonsBottom); right += _send->width();
+	// 发送圆与胶囊右端同心：圆的右侧留白等于底部留白。
+	const auto sendInset = (st::historySend.inner.height
+		- st::historySend.inner.width) / 2;
+	_send->moveToRight(
+		st::historyComposeCapsuleMargin + sendInset,
+		buttonsBottom);
+	right += _send->width();
 	_voiceRecordBar->moveToLeft(0, bottom - _voiceRecordBar->height());
 	_tabbedSelectorToggle->moveToRight(right, buttonsBottom);
 	_botKeyboardHide->moveToRight(right, buttonsBottom);

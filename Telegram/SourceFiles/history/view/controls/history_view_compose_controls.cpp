@@ -5085,8 +5085,12 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		_starsReaction->moveToRight(right, buttonsTop);
 		right += _starsReaction->width() + _st.starsSkip;
 	}
+	// 胶囊模式下发送圆与右端同心：圆的右侧留白等于底部留白。
+	const auto sendRight = ComposeOuterMargin(_st)
+		? (right + (_st.send.inner.height - _st.send.inner.width) / 2)
+		: (right + rightPadding);
 	right += rightPadding;
-	_send->moveToRight(right, buttonsTop);
+	_send->moveToRight(sendRight, buttonsTop);
 	right += _send->width();
 	if (_editStars) {
 		_editStars->moveToRight(right, buttonsTop);
