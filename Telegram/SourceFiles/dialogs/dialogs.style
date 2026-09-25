@@ -397,14 +397,14 @@ dialogSearchFrom: IconButton(dialogCalendar) {
 
 dialogsChatTypeSkip: 3px;
 dialogsChatIcon: ThreeStateIcon {
-	icon: icon {{ "dialogs/dialogs_chat", dialogsChatIconFg, point(1px, 4px) }};
-	over: icon {{ "dialogs/dialogs_chat", dialogsChatIconFgOver, point(1px, 4px) }};
-	active: icon {{ "dialogs/dialogs_chat", dialogsChatIconFgActive, point(1px, 4px) }};
+	icon: icon {{ "dialogs/dialogs_chat", dialogsChatIconFg, point(3px, 3px) }};
+	over: icon {{ "dialogs/dialogs_chat", dialogsChatIconFgOver, point(3px, 3px) }};
+	active: icon {{ "dialogs/dialogs_chat", dialogsChatIconFgActive, point(3px, 3px) }};
 }
 dialogsChannelIcon: ThreeStateIcon {
-	icon: icon {{ "dialogs/dialogs_channel", dialogsChatIconFg, point(3px, 4px) }};
-	over: icon {{ "dialogs/dialogs_channel", dialogsChatIconFgOver, point(3px, 4px) }};
-	active: icon {{ "dialogs/dialogs_channel", dialogsChatIconFgActive, point(3px, 4px) }};
+	icon: icon {{ "dialogs/dialogs_channel", dialogsChatIconFg, point(3px, 3px) }};
+	over: icon {{ "dialogs/dialogs_channel", dialogsChatIconFgOver, point(3px, 3px) }};
+	active: icon {{ "dialogs/dialogs_channel", dialogsChatIconFgActive, point(3px, 3px) }};
 }
 dialogsArchiveUserpic: icon {{ "archive_userpic", historyPeerUserpicFg }};
 dialogsRepliesUserpic: icon {{ "replies_userpic", historyPeerUserpicFg }};

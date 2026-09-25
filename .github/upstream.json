@@ -189,6 +189,7 @@
       "Telegram/SourceFiles/dialogs/ui/chat_search_in.cpp",
       "Telegram/SourceFiles/dialogs/ui/chat_search_in.h",
       "Telegram/SourceFiles/dialogs/ui/dialogs_layout.cpp",
+      "Telegram/SourceFiles/dialogs/ui/dialogs_layout.style",
       "Telegram/SourceFiles/dialogs/ui/dialogs_message_view.cpp",
       "Telegram/SourceFiles/dialogs/ui/dialogs_stories_list.cpp",
       "Telegram/SourceFiles/dialogs/ui/dialogs_video_userpic.cpp",

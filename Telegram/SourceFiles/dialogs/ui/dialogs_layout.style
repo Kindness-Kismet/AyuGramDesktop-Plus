@@ -38,14 +38,14 @@ dialogsTextPaletteTakenActive: TextPalette(defaultTextPalette) {
 	spoilerFg: dialogsTextFgActive;
 }
 dialogsBotIcon: ThreeStateIcon {
-	icon: icon {{ "dialogs/dialogs_bot", dialogsChatIconFg, point(1px, 3px) }};
-	over: icon {{ "dialogs/dialogs_bot", dialogsChatIconFgOver, point(1px, 3px) }};
-	active: icon {{ "dialogs/dialogs_bot", dialogsChatIconFgActive, point(1px, 3px) }};
+	icon: icon {{ "dialogs/dialogs_bot", dialogsChatIconFg, point(3px, 3px) }};
+	over: icon {{ "dialogs/dialogs_bot", dialogsChatIconFgOver, point(3px, 3px) }};
+	active: icon {{ "dialogs/dialogs_bot", dialogsChatIconFgActive, point(3px, 3px) }};
 }
 dialogsForumIcon: ThreeStateIcon {
-	icon: icon {{ "dialogs/dialogs_forum", dialogsChatIconFg, point(1px, 4px) }};
-	over: icon {{ "dialogs/dialogs_forum", dialogsChatIconFgOver, point(1px, 4px) }};
-	active: icon {{ "dialogs/dialogs_forum", dialogsChatIconFgActive, point(1px, 4px) }};
+	icon: icon {{ "dialogs/dialogs_forum", dialogsChatIconFg, point(3px, 3px) }};
+	over: icon {{ "dialogs/dialogs_forum", dialogsChatIconFgOver, point(3px, 3px) }};
+	active: icon {{ "dialogs/dialogs_forum", dialogsChatIconFgActive, point(3px, 3px) }};
 }
 dialogsSendingIcon: ThreeStateIcon {
 	icon: icon {{ "dialogs/dialogs_sending", dialogsSendingIconFg, point(8px, 4px) }};
