@@ -58,7 +58,6 @@
       "Telegram/Resources/night-green.tdesktop-theme",
       "Telegram/Resources/night.tdesktop-theme",
       "Telegram/Resources/qrc/telegram/telegram.qrc",
-      "Telegram/Resources/uwp/AppX/AppxManifest.xml",
       "Telegram/Resources/winrc/Telegram.rc",
       "Telegram/Resources/winrc/Updater.rc",
       "Telegram/SourceFiles/_other/packer.cpp",
@@ -622,6 +621,7 @@
     }
   },
   "deferred": {
-    "$comment": "Upstream changes we deliberately do not follow yet. prepare marks matching paths in the manifest so the decision does not silently drift."
+    "$comment": "Upstream changes we deliberately do not follow yet. prepare marks matching paths in the manifest so the decision does not silently drift.",
+    "Telegram/Resources/uwp/": "不发布微软商店包，目录已删除，上游改动不跟进。"
   }
 }

@@ -17,7 +17,6 @@ _PACKER_VERSION_MAX = 999_999_999
 _CORE_VERSION = ROOT / "Telegram" / "SourceFiles" / "core" / "version.h"
 _TELEGRAM_RC = ROOT / "Telegram" / "Resources" / "winrc" / "Telegram.rc"
 _UPDATER_RC = ROOT / "Telegram" / "Resources" / "winrc" / "Updater.rc"
-_APPX_MANIFEST = ROOT / "Telegram" / "Resources" / "uwp" / "AppX" / "AppxManifest.xml"
 _UPSTREAM_TRACKING = ROOT / ".github" / "upstream.json"
 _CHANGELOG = ROOT / "changelog.txt"
 
@@ -164,7 +163,6 @@ def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
     ])
     touched += _replace(_TELEGRAM_RC, rc_rules)
     touched += _replace(_UPDATER_RC, rc_rules)
-    touched += _replace(_APPX_MANIFEST, [(r'( Version=)"\d+\.\d+\.\d+\.\d+"', r"\g<1>" + f'"{dot}"')])
     return touched
 
 

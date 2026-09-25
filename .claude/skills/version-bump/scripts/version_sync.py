@@ -7,7 +7,6 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parents[4]
 BRAND_VERSION_H = {
@@ -89,10 +88,6 @@ def main() -> int:
             check(f"{name} {key}", match(resource, rf'VALUE "{key}", "([^"]*)"'), expected)
         for key in ("FILEVERSION", "PRODUCTVERSION"):
             check(f"{name} {key}", match(resource, rf"^\s*{key}\s+([\d,]+)"), comma)
-
-    manifest = telegram / "Resources/uwp/AppX/AppxManifest.xml"
-    identity = ElementTree.fromstring(manifest.read_bytes()).find("{*}Identity")
-    check("应用包版本", identity.get("Version") if identity is not None else None, dotted)
 
     tracking = ROOT / ".github/upstream.json"
     raw = tracking.read_text(encoding="utf-8")

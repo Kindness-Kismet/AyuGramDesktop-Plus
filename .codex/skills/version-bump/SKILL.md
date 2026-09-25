@@ -40,6 +40,6 @@ python .codex/skills/version-bump/scripts/version_sync.py
 python scripts/release_notes.py .github/CHANGELOG.md <本项目版本> build/release-notes.md
 ```
 
-检查版本文件、Windows 资源和包清单一致，发布正文只包含目标版本及对应变化。
+检查版本文件和 Windows 资源一致，发布正文只包含目标版本及对应变化。
 上游适配完成后可用 `version_sync.py --write` 补全已登记提交的基线元数据。
 此操作保持发布版本和基线提交号不变。校验失败时修正报告中的具体差异。
