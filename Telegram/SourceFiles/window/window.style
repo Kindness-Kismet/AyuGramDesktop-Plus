@@ -263,16 +263,16 @@ windowFiltersButtonIconsOnly: SideBarButton(windowFiltersButton) {
 	minHeight: 54px;
 }
 windowFiltersMainMenu: SideBarButton(windowFiltersButton) {
-	icon: icon {{ "intro_qr_plane", windowBgActive }};
+	icon: icon {{ "folders/sidebar/telegram_plane", windowBgActive }};
 	iconPosition: point(-1px, -1px);
 	minHeight: 54px;
 }
 windowFiltersMainMenuUnread: icon {
-	{ "intro_qr_plane", windowBgActive },
+	{ "folders/sidebar/telegram_plane", windowBgActive },
 	{ "dialogs/dialogs_menu_unread_dot", sideBarBadgeBg },
 };
 windowFiltersMainMenuUnreadMuted: icon {
-	{ "intro_qr_plane", windowBgActive },
+	{ "folders/sidebar/telegram_plane", windowBgActive },
 	{ "dialogs/dialogs_menu_unread_dot", sideBarBadgeBgMuted },
 };
 windowFilterSmallItem: PeerListItem(defaultPeerListItem) {

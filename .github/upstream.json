@@ -467,6 +467,7 @@
       "Telegram/SourceFiles/ui/effects/reaction_fly_animation.h",
       "Telegram/SourceFiles/ui/effects/round_checkbox.cpp",
       "Telegram/SourceFiles/ui/empty_userpic.cpp",
+      "Telegram/SourceFiles/ui/filter_icons.style",
       "Telegram/SourceFiles/ui/peer/video_userpic_player.cpp",
       "Telegram/SourceFiles/ui/unread_badge.cpp",
       "Telegram/SourceFiles/ui/unread_badge.h",
