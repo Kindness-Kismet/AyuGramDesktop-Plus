@@ -1,22 +1,28 @@
-name: Release
+name: Build-release
 
+# 版本文件变化即发版：先按版本号打 tag，再构建并发布。
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths:
+      - 'Telegram/build/version'
 
 permissions:
   contents: read
 
+# 发版排队执行，不中断已在构建的版本。
 concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: true
+  group: build-release
+  cancel-in-progress: false
 
 jobs:
   validate:
     name: Tests and static checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -57,7 +63,6 @@ jobs:
           test -n "$version"
           appversion=$(sed -n 's/^AppUpdateVersion  *//p' Telegram/build/version)
           test -n "$appversion"
-          test "$GITHUB_REF" = "refs/tags/v${version}"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=v${version}" >> "$GITHUB_OUTPUT"
           echo "appversion=${appversion}" >> "$GITHUB_OUTPUT"
@@ -70,6 +75,26 @@ jobs:
           python3 scripts/release_notes.py \
             .github/CHANGELOG.md "$VERSION" "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
+
+      # 一个版本号只对应一个提交；重跑时 tag 已指向本提交则直接沿用。
+      - name: Create the release tag.
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          direct=$(git ls-remote --refs origin "refs/tags/$TAG" | cut -f1)
+          peeled=$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)
+          existing=${peeled:-$direct}
+          if test -z "$existing"; then
+            git tag "$TAG" "$GITHUB_SHA"
+            git push origin "refs/tags/$TAG"
+            echo "::notice::Created $TAG at $GITHUB_SHA."
+          elif test "$existing" = "$GITHUB_SHA"; then
+            echo "::notice::$TAG already points at this commit."
+          else
+            echo "::error::$TAG already points at $existing; bump the version for a new release."
+            exit 1
+          fi
 
   windows-x64:
     name: Windows x64 remote build
@@ -100,7 +125,7 @@ jobs:
             --workflow build.yml \
             --ref main \
             --source-sha "$GITHUB_SHA" \
-            --source-ref "$GITHUB_REF" \
+            --source-ref "refs/tags/${{ needs.validate.outputs.tag }}" \
             --source-run-id "$GITHUB_RUN_ID" \
             --source-run-attempt "$GITHUB_RUN_ATTEMPT" \
             --version "${{ needs.validate.outputs.version }}" \
@@ -157,7 +182,7 @@ jobs:
             --workflow build.yml \
             --ref main \
             --source-sha "$GITHUB_SHA" \
-            --source-ref "$GITHUB_REF" \
+            --source-ref "refs/tags/${{ needs.validate.outputs.tag }}" \
             --source-run-id "$GITHUB_RUN_ID" \
             --source-run-attempt "$GITHUB_RUN_ATTEMPT" \
             --version "${{ needs.validate.outputs.version }}" \
@@ -216,7 +241,7 @@ jobs:
             --workflow build.yml \
             --ref main \
             --source-sha "$GITHUB_SHA" \
-            --source-ref "$GITHUB_REF" \
+            --source-ref "refs/tags/${{ needs.validate.outputs.tag }}" \
             --source-run-id "$GITHUB_RUN_ID" \
             --source-run-attempt "$GITHUB_RUN_ATTEMPT" \
             --version "${{ needs.validate.outputs.version }}" \
@@ -270,7 +295,7 @@ jobs:
             --workflow build.yml \
             --ref main \
             --source-sha "$GITHUB_SHA" \
-            --source-ref "$GITHUB_REF" \
+            --source-ref "refs/tags/${{ needs.validate.outputs.tag }}" \
             --source-run-id "$GITHUB_RUN_ID" \
             --source-run-attempt "$GITHUB_RUN_ATTEMPT" \
             --version "${{ needs.validate.outputs.version }}" \
@@ -299,7 +324,6 @@ jobs:
   publish:
     name: Verify and publish release
     needs: [validate, windows-x64, windows-arm64, linux, macos]
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -356,6 +380,7 @@ jobs:
 
       - name: Verify artifact provenance.
         env:
+          SOURCE_REF: refs/tags/${{ needs.validate.outputs.tag }}
           VERSION: ${{ needs.validate.outputs.version }}
           APPVERSION: ${{ needs.validate.outputs.appversion }}
           WINDOWS_RUN_ID: ${{ needs.windows-x64.outputs.run_id }}
@@ -433,7 +458,7 @@ jobs:
             --root artifacts \
             --source-repository "$GITHUB_REPOSITORY" \
             --source-sha "$GITHUB_SHA" \
-            --source-ref "$GITHUB_REF" \
+            --source-ref "$SOURCE_REF" \
             --source-run-id "$GITHUB_RUN_ID" \
             --source-run-attempt "$GITHUB_RUN_ATTEMPT" \
             --version "$VERSION" \

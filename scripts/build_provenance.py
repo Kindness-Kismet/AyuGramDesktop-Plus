@@ -30,6 +30,9 @@ from build_support.artifact_provenance import (
 
 
 ALLOWED_SOURCE_EVENTS = {"push"}
+# 发版由推送 main 上的版本文件触发，tag 由该运行自行创建。
+SOURCE_BRANCH = "main"
+SOURCE_WORKFLOW = ".github/workflows/build-release.yml"
 SOURCE_RUN_API_ATTEMPTS = 4
 SOURCE_RUN_API_TIMEOUT_SECONDS = 15
 MAX_RETRY_DELAY_SECONDS = 30
@@ -199,7 +202,7 @@ def validate_source(
     require_positive_integers(
         {"source run id": run_id, "source run attempt": run_attempt, "AppUpdateVersion": appupdateversion}
     )
-    if workflow_path != ".github/workflows/release.yml":
+    if workflow_path != SOURCE_WORKFLOW:
         raise ProvenanceError(f"不受信任的 source workflow：{workflow_path}")
     if validate_sha(_git_head(root)) != sha:
         raise ProvenanceError("当前 checkout HEAD 与 source SHA 不一致")
@@ -225,7 +228,7 @@ def validate_source(
         "run attempt": (run.get("run_attempt"), run_attempt),
         "repository": (actual_repository, repository),
         "head SHA": (str(run.get("head_sha", "")).lower(), sha),
-        "head branch": (run.get("head_branch"), ref.removeprefix("refs/tags/")),
+        "head branch": (run.get("head_branch"), SOURCE_BRANCH),
         "workflow path": (run.get("path"), workflow_path),
     }
     for label, (actual, expected) in checks.items():
