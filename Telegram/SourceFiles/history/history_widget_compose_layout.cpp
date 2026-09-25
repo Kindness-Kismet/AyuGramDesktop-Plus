@@ -874,7 +874,9 @@ void HistoryWidget::moveFieldControls() {
 		st::historyComposeCapsuleMargin + sendInset,
 		buttonsBottom);
 	right += _send->width();
-	_voiceRecordBar->moveToLeft(0, bottom - _voiceRecordBar->height());
+	_voiceRecordBar->moveToLeft(
+		st::historyComposeCapsuleMargin,
+		bottom - _voiceRecordBar->height());
 	_tabbedSelectorToggle->moveToRight(right, buttonsBottom);
 	_botKeyboardHide->moveToRight(right, buttonsBottom);
 	right += settings.showEmojiButtonInMessageField() || !_botKeyboardHide->isHidden() ? _botKeyboardHide->width() : 0;
@@ -976,7 +978,7 @@ void HistoryWidget::updateFieldSize() {
 	}
 
 	if (_fieldDisabled) {
-		_fieldDisabled->resize(width(), st::historySendSize.height());
+		_fieldDisabled->resize(fieldWidth, st::historySendSize.height());
 	}
 	if (_field->width() != fieldWidth) {
 		_field->resize(fieldWidth, _field->height());

@@ -228,7 +228,8 @@ public:
 	FieldHeader(
 		QWidget *parent,
 		std::shared_ptr<ChatHelpers::Show> show,
-		Fn<bool()> hasSendText);
+		Fn<bool()> hasSendText,
+		bool floatingSurface);
 
 	void setHistory(const SetHistoryArgs &args);
 	void updateTopicRootId(MsgId topicRootId);
@@ -321,6 +322,7 @@ private:
 
 	const std::shared_ptr<ChatHelpers::Show> _show;
 	const Fn<bool()> _hasSendText;
+	const bool _floatingSurface;
 
 	History *_history = nullptr;
 	MsgId _topicRootId = 0;
@@ -373,10 +375,12 @@ private:
 FieldHeader::FieldHeader(
 	QWidget *parent,
 	std::shared_ptr<ChatHelpers::Show> show,
-	Fn<bool()> hasSendText)
+	Fn<bool()> hasSendText,
+	bool floatingSurface)
 : RpWidget(parent)
 , _show(std::move(show))
 , _hasSendText(std::move(hasSendText))
+, _floatingSurface(floatingSurface)
 , _forwardPanel(
 	std::make_unique<ForwardPanel>([=] { customEmojiRepaint(); }))
 , _data(&_show->session().data())
@@ -423,6 +427,11 @@ void FieldHeader::init() {
 	) | rpl::on_next([=] {
 		Painter p(this);
 		p.setInactive(_show->paused(Window::GifPauseReason::Any));
+		if (_floatingSurface) {
+			p.fillRect(rect(), AyuSettings::getInstance().disableChatBackground()
+				? st::windowBgOver
+				: st::historyComposeAreaBg);
+		}
 
 		const auto position = st::historyReplyIconPosition;
 		if (_suggestOptions) {
@@ -1303,7 +1312,8 @@ ComposeControls::ComposeControls(
 , _header(std::make_unique<FieldHeader>(
 	_wrap.get(),
 	_show,
-	[=] { return _field->isVisible() && HasSendText(_field); }))
+	[=] { return _field->isVisible() && HasSendText(_field); },
+	ComposeOuterMargin(_st) != 0))
 , _voiceRecordBar(std::make_unique<VoiceRecordBar>(
 	_wrap.get(),
 	Controls::VoiceRecordBarDescriptor{
@@ -1330,7 +1340,11 @@ ComposeControls::ComposeControls(
 	}
 	if (ComposeOuterMargin(_st)) {
 		Ui::ApplyChatControlSurface(
-			_wrap.get(), st::historyComposeCapsuleRadius, false);
+			_header.get(), st::historyComposeCapsuleRadius);
+		Ui::ApplyChatControlSurface(
+			_richDraftPreview.get(), st::historyComposeField.borderRadius);
+		Ui::ApplyChatControlSurface(
+			_voiceRecordBar.get(), st::historyComposeCapsuleRadius);
 	}
 	rpl::combine(
 		replyingToMessageValue(),
@@ -2795,6 +2809,9 @@ void ComposeControls::init() {
 
 	_wrap->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
+		if (ComposeOuterMargin(_st)) {
+			return;
+		}
 		auto p = QPainter(_wrap.get());
 		paintBackground(p, _wrap->rect(), clip);
 	}, _wrap->lifetime());
@@ -3668,7 +3685,8 @@ void ComposeControls::updateFieldDisabled() {
 		_fieldDisabled = CreateDisabledFieldView(
 			_wrap.get(),
 			_history->peer,
-			_parent);
+			_parent,
+			ComposeOuterMargin(_st) != 0);
 		_fieldDisabled->show();
 		orderControls();
 		updateHeight();
@@ -5071,7 +5089,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		_richDraftPreview->moveToLeft(left, fieldTop);
 	}
 	if (_fieldDisabled) {
-		_fieldDisabled->resize(size.width(), st::historySendSize.height());
+		_fieldDisabled->resize(fieldWidth, st::historySendSize.height());
 		_fieldDisabled->moveToLeft(left, fieldTop);
 	}
 

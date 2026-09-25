@@ -780,6 +780,9 @@ storiesComposeControls: ComposeControls(defaultComposeControls) {
 		textMargins: margins(2px, 0px, 2px, 0px);
 		textFg: storiesComposeWhiteText;
 		textBg: storiesComposeBg;
+		textBgActive: storiesComposeBg;
+		border: 0px;
+		borderRadius: 0px;
 		placeholderFg: storiesComposeGrayText;
 		placeholderFgActive: storiesComposeGrayText;
 		placeholderFgError: storiesComposeGrayText;

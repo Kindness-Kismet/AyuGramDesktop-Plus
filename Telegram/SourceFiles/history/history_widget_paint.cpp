@@ -234,29 +234,28 @@ using namespace HistoryWidgetDetails;
 void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 	_repaintFieldScheduled = false;
 
-	auto backy = _field->y() - st::historySendPadding;
-	auto backh = fieldHeight() + 2 * st::historySendPadding;
-	auto hasForward = readyToForward();
-	auto drawMsgText = (_editMsgId || _replyTo) ? _replyEditMsg : _kbReplyTo;
-	if (_editMsgId
+	const auto hasForward = readyToForward();
+	const auto drawMsgText = (_editMsgId || _replyTo) ? _replyEditMsg : _kbReplyTo;
+	if (!(_editMsgId
 		|| _replyTo
 		|| hasForward
 		|| _kbReplyTo
 		|| _previewDrawPreview
-		|| _suggestOptions) {
-		backy -= st::historyReplyHeight;
-		backh += st::historyReplyHeight;
+		|| _suggestOptions)) {
+		return;
 	}
+	const auto backy = _field->y()
+		- st::historySendPadding
+		- st::historyReplyHeight;
 	p.setInactive(
 		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
-	// 无壁纸时用独立底色区分输入区，四周保留悬浮间距。
 	const auto flatBackground = AyuSettings::getInstance().disableChatBackground();
 	const auto capsuleMargin = st::historyComposeCapsuleMargin;
 	const auto capsuleRect = myrtlrect(
 		capsuleMargin,
 		backy,
 		width() - 2 * capsuleMargin,
-		backh);
+		st::historyReplyHeight);
 	const auto halfStroke = st::lineWidth / 2.;
 	const auto capsuleOutline = QRectF(capsuleRect).adjusted(
 		halfStroke, halfStroke, -halfStroke, -halfStroke);

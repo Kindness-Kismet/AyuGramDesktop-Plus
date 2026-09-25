@@ -351,6 +351,10 @@ HistoryWidget::HistoryWidget(
 	setAcceptDrops(true);
 	setVisualTabOrder(true);
 	_field->setObjectName(u"messageInput"_q);
+	Ui::ApplyChatControlSurface(
+		_richDraftPreview.get(), st::historyComposeField.borderRadius);
+	Ui::ApplyChatControlSurface(
+		_voiceRecordBar.get(), st::historyComposeCapsuleRadius);
 	_scroll->setObjectName(u"historyScroll"_q);
 	_send->setObjectName(u"sendButton"_q);
 	_attachToggle->setObjectName(u"compose.attach"_q);

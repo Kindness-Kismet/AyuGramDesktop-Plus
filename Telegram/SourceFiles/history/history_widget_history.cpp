@@ -986,7 +986,7 @@ void HistoryWidget::updateControlsGeometry() {
 		: 0;
 	const auto innerWidth = std::max(0, width - tabsLeftSkip - 2 * margin);
 
-	_voiceRecordBar->resizeToWidth(width);
+	_voiceRecordBar->resizeToWidth(std::max(0, width - 2 * margin));
 
 	moveFieldControls();
 
