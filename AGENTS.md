@@ -255,13 +255,6 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 - 构建脚本默认 32 并发，`--jobs` 接受 1 至 128，超过上限或非正数直接报错。
 - 协作时使用 `python scripts/build.py --dev --jobs 32`，避免影响同时运行的其他任务；未指定参数时同样使用默认值 32。
 
-### 增量编译时长（经验值）
-
-- 改一个 `.cpp`：约 2 分钟（主要耗时在链接 238 MB 的静态可执行文件）
-- 改头文件：按包含关系扩散，最坏情况接近全量（Release 约 35 分钟）
-- 改 `CMakeLists.txt`：触发 codegen 时间戳连锁更新，约 35 分钟接近全量重编
-- 提速办法：尽量只改 `.cpp` 实现；头文件里用前置声明代替 `#include`
-
 ---
 
 ## 调试（app-debug skill）
