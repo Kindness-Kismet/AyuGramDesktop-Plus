@@ -1047,16 +1047,21 @@ bool PullToNextChannel::hintVisible() const {
 	return _holding && (_pull > 0.);
 }
 
+void PullToNextChannel::setBottomSkip(int skip) {
+	_bottomSkip = skip;
+}
+
 void PullToNextChannel::updateGeometry() {
 	const auto height = st::historyPullNextMaxHeight;
+	const auto visibleHeight = _scroll->height() - _bottomSkip;
 	_indicator->setGeometry(
 		0,
-		_scroll->height() - height,
+		visibleHeight - height,
 		_scroll->width(),
 		height);
 	_indicator->raise();
 
-	const auto top = _scroll->y() + _scroll->height();
+	const auto top = _scroll->y() + visibleHeight;
 	const auto bottom = _parent->height();
 	if (bottom > top) {
 		_hint->setGeometry(_scroll->x(), top, _scroll->width(), bottom - top);

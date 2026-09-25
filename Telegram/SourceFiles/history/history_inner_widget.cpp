@@ -4746,7 +4746,8 @@ void HistoryInner::checkActivation() {
 		return;
 	}
 	adjustCurrent(_visibleAreaBottom);
-	if (_history->loadedAtBottom() && _visibleAreaBottom >= height()) {
+	if (_history->loadedAtBottom()
+		&& _visibleAreaBottom >= height() - _widget->composeOverlap()) {
 		// Clear possible message notifications.
 		// Side-effect: Also clears all notifications from forum topics.
 		Core::App().notifications().clearFromHistory(_history);
@@ -4785,7 +4786,7 @@ void HistoryInner::recountHistoryGeometry(bool initial) {
 		_recountedAfterPendingResizedItems = true;
 	}
 	const auto aboutAboveHistory = _aboutView && _aboutView->aboveHistory();
-	const auto visibleHeight = _scroll->height();
+	const auto visibleHeight = _scroll->height() - _widget->composeOverlap();
 	auto oldHistoryMarginTop = std::max(
 		visibleHeight - historyHeight() - _historyMarginBottom,
 		0);
@@ -4842,10 +4843,10 @@ void HistoryInner::recountHistoryGeometry(bool initial) {
 		if (aboutAboveHistory) {
 			_aboutView->top = std::min(
 				_historyMarginTop - _aboutView->height,
-				std::max(0, (_scroll->height() - _aboutView->height) / 2));
+				std::max(0, (visibleHeight - _aboutView->height) / 2));
 		} else {
 			_aboutView->top = std::max(
-				std::max(0, (_scroll->height() - _aboutView->height) / 2),
+				std::max(0, (visibleHeight - _aboutView->height) / 2),
 				_historyMarginTop + historyHeight() - _historyMarginBottom);
 		}
 	} else if (_aboutView) {
@@ -5078,7 +5079,8 @@ void HistoryInner::updateSize() {
 	if (_thanosController) {
 		_thanosController->flushRemovals(historyHeight() - _revealHeight);
 	}
-	const auto visibleHeight = _scroll->height();
+	const auto overlap = _widget->composeOverlap();
+	const auto visibleHeight = _scroll->height() - overlap;
 	auto collapseGapTotal = 0;
 	for (const auto &gap : collapseGaps()) {
 		collapseGapTotal += gap.height;
@@ -5101,10 +5103,10 @@ void HistoryInner::updateSize() {
 		if (aboutAboveHistory) {
 			_aboutView->top = std::min(
 				newHistoryMarginTop - _aboutView->height,
-				std::max(0, (_scroll->height() - _aboutView->height) / 2));
+				std::max(0, (visibleHeight - _aboutView->height) / 2));
 		} else {
 			_aboutView->top = std::max(
-				std::max(0, (_scroll->height() - _aboutView->height) / 2),
+				std::max(0, (visibleHeight - _aboutView->height) / 2),
 				(newHistoryMarginTop
 					+ itemsHeight
 					+ newHistoryMarginBottom
@@ -5125,7 +5127,8 @@ void HistoryInner::updateSize() {
 
 	const auto newHeight = _historyMarginTop
 		+ itemsHeight
-		+ _historyMarginBottom;
+		+ _historyMarginBottom
+		+ overlap;
 	if (width() != _scroll->width() || height() != newHeight) {
 		resize(_scroll->width(), newHeight);
 
@@ -6069,7 +6072,9 @@ void HistoryInner::mouseActionUpdate() {
 		_selectScroll.checkDeltaScroll(
 			mousePos,
 			_scroll->scrollTop(),
-			_scroll->scrollTop() + _scroll->height());
+			(_scroll->scrollTop()
+				+ _scroll->height()
+				- _widget->composeOverlap()));
 	} else {
 		updateDragSelection(nullptr, nullptr, false);
 		_selectScroll.cancel();

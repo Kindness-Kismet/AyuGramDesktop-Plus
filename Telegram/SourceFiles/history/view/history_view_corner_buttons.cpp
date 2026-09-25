@@ -354,6 +354,10 @@ void CornerButtons::updateJumpDownVisibility(std::optional<int> counter) {
 	}
 }
 
+void CornerButtons::setBottomSkip(int skip) {
+	_bottomSkip = skip;
+}
+
 void CornerButtons::updatePositions() {
 	const auto checkVisibility = [](CornerButton &button) {
 		const auto shouldBeHidden = !button.shown
@@ -370,7 +374,7 @@ void CornerButtons::updatePositions() {
 
 	const auto columnWidth = st::historyToDown.width
 		+ 2 * st::historyToDownPosition.x();
-	_column.resize(columnWidth, _parent->height());
+	_column.resize(columnWidth, _parent->height() - _bottomSkip);
 	_column.moveToRight(0, 0, _parent->width());
 
 	const auto historyDownShown = shown(_down);
@@ -385,7 +389,7 @@ void CornerButtons::updatePositions() {
 			historyDownShown);
 		_down.widget->moveToRight(
 			st::historyToDownPosition.x(),
-			_parent->height() - top);
+			_column.height() - top);
 	}
 	{
 		const auto right = anim::interpolate(
@@ -396,7 +400,7 @@ void CornerButtons::updatePositions() {
 			0,
 			_down.widget->height() + skip,
 			historyDownShown);
-		const auto top = _parent->height()
+		const auto top = _column.height()
 			- _mentions.widget->height()
 			- st::historyToDownPosition.y()
 			- shift;
@@ -415,7 +419,7 @@ void CornerButtons::updatePositions() {
 			0,
 			_mentions.widget->height() + skip,
 			unreadMentionsShown);
-		const auto top = _parent->height()
+		const auto top = _column.height()
 			- _reactions.widget->height()
 			- st::historyToDownPosition.y()
 			- shift;
@@ -438,7 +442,7 @@ void CornerButtons::updatePositions() {
 			0,
 			_reactions.widget->height() + skip,
 			unreadReactionsShown);
-		const auto top = _parent->height()
+		const auto top = _column.height()
 			- _pollVotes.widget->height()
 			- st::historyToDownPosition.y()
 			- shift;

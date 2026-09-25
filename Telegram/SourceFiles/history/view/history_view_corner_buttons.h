@@ -86,6 +86,8 @@ public:
 	void updateVisibility(Type type, bool shown);
 	void updateUnreadThingsVisibility();
 	void updateJumpDownVisibility(std::optional<int> counter = {});
+	// 列表底部被悬浮输入区遮住的高度，按钮停在其上方。
+	void setBottomSkip(int skip);
 	void updatePositions();
 
 	void finishAnimations();
@@ -129,6 +131,7 @@ private:
 	// whole group after the list instead of before it.
 	Ui::RpWidget _column;
 	QRegion _columnMask;
+	int _bottomSkip = 0;
 
 	CornerButton _down;
 	CornerButton _mentions;

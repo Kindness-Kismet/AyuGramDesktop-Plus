@@ -1178,7 +1178,7 @@ HistoryWidget::HistoryWidget(
 			if (top >= 0) {
 				auto scrollTop = _scroll->scrollTop();
 				if (top + view->height() > scrollTop
-					&& top < scrollTop + _scroll->height()) {
+					&& top < scrollTop + visibleScrollHeight()) {
 					*query.isVisible = true;
 				}
 			}

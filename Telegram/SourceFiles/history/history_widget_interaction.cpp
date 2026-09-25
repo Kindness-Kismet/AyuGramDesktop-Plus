@@ -657,7 +657,7 @@ bool HistoryWidget::floatPlayerHandleWheelEvent(QEvent *e) {
 }
 
 QRect HistoryWidget::floatPlayerAvailableRect() {
-	return _peer ? mapToGlobal(_scroll->geometry()) : mapToGlobal(rect());
+	return _peer ? mapToGlobal(visibleScrollGeometry()) : mapToGlobal(rect());
 }
 
 bool HistoryWidget::readyToForward() const {

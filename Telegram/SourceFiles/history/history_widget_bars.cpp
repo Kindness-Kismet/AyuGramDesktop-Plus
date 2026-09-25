@@ -240,7 +240,7 @@ void HistoryWidget::updatePinnedViewer() {
 		|| !_pinnedTracker) {
 		return;
 	}
-	const auto visibleBottom = _scroll->scrollTop() + _scroll->height();
+	const auto visibleBottom = _scroll->scrollTop() + visibleScrollHeight();
 	auto [view, offset] = _list->findViewForPinnedTracking(visibleBottom);
 	const auto lessThanId = !view
 		? (ServerMaxMsgId - 1)

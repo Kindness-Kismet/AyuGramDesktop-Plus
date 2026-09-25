@@ -43,6 +43,8 @@ public:
 	void setHistory(History *history);
 	void setTopic(Data::ForumTopic *topic);
 	void reset(anim::type animated);
+	// 列表底部被悬浮输入区遮住的高度，指示与提示都放在其上方。
+	void setBottomSkip(int skip);
 	void updateGeometry();
 
 private:
@@ -77,6 +79,7 @@ private:
 	const Fn<bool()> _loadedAtBottom;
 	const base::unique_qptr<Indicator> _indicator;
 	const base::unique_qptr<HintOverlay> _hint;
+	int _bottomSkip = 0;
 
 	Mode _mode = Mode::None;
 	base::weak_ptr<History> _history;

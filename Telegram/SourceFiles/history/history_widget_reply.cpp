@@ -953,6 +953,6 @@ void HistoryWidget::updateField() {
 		return;
 	}
 	_repaintFieldScheduled = true;
-	const auto fieldAreaTop = _scroll->y() + _scroll->height();
+	const auto fieldAreaTop = _scroll->y() + visibleScrollHeight();
 	rtlupdate(0, fieldAreaTop, width(), height() - fieldAreaTop);
 }

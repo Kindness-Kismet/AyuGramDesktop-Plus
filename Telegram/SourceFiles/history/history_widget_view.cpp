@@ -757,7 +757,7 @@ void HistoryWidget::maybeMarkReactionsRead(not_null<HistoryItem*> item) {
 	const auto reactionCenter
 		= view->reactionButtonParameters({}, {}).center.y();
 	const auto visibleTop = _scroll->scrollTop();
-	const auto visibleBottom = visibleTop + _scroll->height();
+	const auto visibleBottom = visibleTop + visibleScrollHeight();
 	if (itemTop + reactionCenter < visibleTop
 		|| itemTop + view->height() > visibleBottom) {
 		return;

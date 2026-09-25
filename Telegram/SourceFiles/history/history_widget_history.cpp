@@ -256,7 +256,7 @@ void HistoryWidget::scrollToCurrentVoiceMessage(
 		auto toTop = _list->itemTop(toView);
 		if (toTop >= 0 && !isItemCompletelyHidden(from)) {
 			auto scrollTop = _scroll->scrollTop();
-			auto scrollBottom = scrollTop + _scroll->height();
+			auto scrollBottom = scrollTop + visibleScrollHeight();
 			auto toBottom = toTop + toView->height();
 			if ((toTop < scrollTop && toBottom < scrollBottom)
 				|| (toTop > scrollTop && toBottom > scrollBottom)) {
@@ -375,7 +375,7 @@ int HistoryWidget::itemTopForHighlight(
 		? view->reactionButtonParameters({}, {}).center.y()
 		: -1;
 
-	const auto visibleAreaHeight = _scroll->height();
+	const auto visibleAreaHeight = visibleScrollHeight();
 	const auto viewHeight = view->height();
 	const auto heightLeft = (visibleAreaHeight - viewHeight);
 	if (heightLeft >= 0) {
@@ -755,14 +755,45 @@ bool HistoryWidget::isItemCompletelyHidden(HistoryItem *item) const {
 
 	const auto bottom = top + view->height();
 	const auto scrollTop = _scroll->scrollTop();
-	const auto scrollBottom = scrollTop + _scroll->height();
+	const auto scrollBottom = scrollTop + visibleScrollHeight();
 	return (top >= scrollBottom || bottom <= scrollTop);
+}
+
+int HistoryWidget::composeOverlap() const {
+	return _composeOverlap;
+}
+
+int HistoryWidget::visibleScrollHeight() const {
+	return _scroll->height() - _composeOverlap;
+}
+
+QRect HistoryWidget::visibleScrollGeometry() const {
+	return _scroll->geometry().marginsRemoved({ 0, 0, 0, _composeOverlap });
+}
+
+void HistoryWidget::updateScrollMask(QRect capsule) {
+	// 胶囊由本控件绘制在列表下层，需要从列表中抠掉，否则会被消息盖住并抢走点击。
+	capsule.translate(-_scroll->pos());
+	if (!capsule.intersects(_scroll->rect())) {
+		_scroll->clearMask();
+		return;
+	}
+	const auto radius = std::min(
+		qreal(st::historyComposeCapsuleRadius),
+		capsule.height() / 2.);
+	auto path = QPainterPath();
+	path.addRoundedRect(QRectF(capsule), radius, radius);
+	const auto mask = QRegion(_scroll->rect())
+		- QRegion(path.toFillPolygon().toPolygon());
+	if (_scroll->mask() != mask) {
+		_scroll->setMask(mask);
+	}
 }
 
 void HistoryWidget::visibleAreaUpdated() {
 	if (_list && !_firstLoadRequest && !_scroll->isHidden()) {
 		const auto scrollTop = _scroll->scrollTop();
-		const auto scrollBottom = scrollTop + _scroll->height();
+		const auto scrollBottom = scrollTop + visibleScrollHeight();
 		_list->visibleAreaUpdated(scrollTop, scrollBottom);
 		controller()->floatPlayerAreaUpdated();
 		session().data().itemVisibilitiesUpdated();
@@ -854,7 +885,7 @@ void HistoryWidget::checkReplyReturns() {
 	}
 	auto scrollTop = _scroll->scrollTop();
 	auto scrollTopMax = _scroll->scrollTopMax();
-	auto scrollHeight = _scroll->height();
+	auto scrollHeight = visibleScrollHeight();
 	while (const auto replyReturn = _cornerButtons.replyReturn()) {
 		auto below = !replyReturn->mainView()
 			&& (replyReturn->history() == _history)
@@ -1042,10 +1073,10 @@ void HistoryWidget::updateControlsGeometry() {
 	if (_scroll->y() != scrollAreaTop || _scroll->x() != tabsLeftSkip) {
 		_scroll->moveToLeft(tabsLeftSkip, scrollAreaTop);
 		if (_autocomplete) {
-			_autocomplete->setBoundings(_scroll->geometry());
+			_autocomplete->setBoundings(visibleScrollGeometry());
 		}
 		if (_supportAutocomplete) {
-			_supportAutocomplete->setBoundings(_scroll->geometry());
+			_supportAutocomplete->setBoundings(visibleScrollGeometry());
 		}
 	}
 
@@ -1314,6 +1345,10 @@ void HistoryWidget::updateHistoryGeometry(
 	bars.add(_contactStatus ? _contactStatus->bar().height() : 0);
 	bars.add(_businessBotStatus ? _businessBotStatus->bar().height() : 0);
 	newScrollHeight -= bars.height();
+	// 输入区悬浮在列表底部之上，四周留白透出消息，只有胶囊本身遮挡。
+	const auto margin = st::historyComposeCapsuleMargin;
+	auto composeHeight = 0;
+	auto capsule = QRect();
 	if (isChoosingTheme()) {
 		newScrollHeight -= _chooseTheme->height();
 	} else if (!editingMessage()
@@ -1323,58 +1358,90 @@ void HistoryWidget::updateHistoryGeometry(
 			|| isJoinChannel()
 			|| isMuteUnmute()
 			|| isReportMessages())) {
-		newScrollHeight -= _unblock->height()
-			+ 2 * st::historyComposeCapsuleMargin;
+		composeHeight = _unblock->height() + 2 * margin;
 	} else {
 		if (editingMessage() || _canSendMessages) {
-			// 消息列表与胶囊之间保留一份间距。
-			newScrollHeight -= (fieldHeight()
+			composeHeight = fieldHeight()
 				+ 2 * st::historySendPadding
-				+ 2 * st::historyComposeCapsuleMargin);
+				+ 2 * margin;
 		} else if (_sendRestriction) {
-			newScrollHeight -= _sendRestriction->height()
-				+ 2 * st::historyComposeCapsuleMargin;
+			composeHeight = _sendRestriction->height() + 2 * margin;
 		}
 		if (_editMsgId
 			|| replyTo()
 			|| readyToForward()
 			|| _previewDrawPreview
 			|| _suggestOptions) {
-			newScrollHeight -= st::historyReplyHeight;
+			composeHeight += st::historyReplyHeight;
 		}
 		if (_kbShown) {
 			newScrollHeight -= _kbScroll->height();
 		}
+		if (editingMessage() || _canSendMessages) {
+			// 与 drawField 的胶囊范围一致。
+			const auto header = _editMsgId
+				|| _replyTo
+				|| readyToForward()
+				|| _kbReplyTo
+				|| _previewDrawPreview
+				|| _suggestOptions;
+			const auto capsuleHeight = fieldHeight()
+				+ 2 * st::historySendPadding
+				+ (header ? st::historyReplyHeight : 0);
+			const auto capsuleBottom = height()
+				- (_kbShown ? _kbScroll->height() : 0)
+				- margin;
+			capsule = QRect(
+				margin,
+				capsuleBottom - capsuleHeight,
+				width() - 2 * margin,
+				capsuleHeight);
+		}
 	}
-	if (newScrollHeight <= 0) {
+	if (_subsectionTabs && _subsectionTabs->bottomSkip()) {
+		// 底部标签栏夹在列表与输入区之间，此时不重叠。
+		newScrollHeight -= composeHeight;
+		composeHeight = 0;
+		capsule = QRect();
+	}
+	if (newScrollHeight - composeHeight <= 0) {
 		return;
 	}
+	const auto overlapChanged = (_composeOverlap != composeHeight);
+	_composeOverlap = composeHeight;
 	const auto wasScrollTop = _scroll->scrollTop();
 	const auto wasAtBottom = (wasScrollTop >= _scroll->scrollTopMax());
 	const auto needResize = (_scroll->width() != newScrollWidth)
 		|| (_scroll->height() != newScrollHeight);
 	if (needResize) {
 		_scroll->resize(newScrollWidth, newScrollHeight);
-		// on initial updateListSize we didn't put the _scroll->scrollTop
-		// correctly yet so visibleAreaUpdated() call will erase it
-		// with the new (undefined) value
-		if (!initial) {
-			visibleAreaUpdated();
-		}
 	}
-	if (needResize || initial) {
+	updateScrollMask(capsule);
+	// on initial updateListSize we didn't put the _scroll->scrollTop
+	// correctly yet so visibleAreaUpdated() call will erase it
+	// with the new (undefined) value
+	if ((needResize || overlapChanged) && !initial) {
+		visibleAreaUpdated();
+	}
+	if (needResize || overlapChanged || initial) {
 		if (_autocomplete) {
-			_autocomplete->setBoundings(_scroll->geometry());
+			_autocomplete->setBoundings(visibleScrollGeometry());
 		}
 		if (_supportAutocomplete) {
-			_supportAutocomplete->setBoundings(_scroll->geometry());
+			_supportAutocomplete->setBoundings(visibleScrollGeometry());
 		}
+		_scroll->setBarBottomInset(_composeOverlap);
+		_cornerButtons.setBottomSkip(_composeOverlap);
 		_cornerButtons.updatePositions();
+		_pullToNext->setBottomSkip(_composeOverlap);
+		_pullToNext->updateGeometry();
 		controller()->floatPlayerAreaUpdated();
 	}
 	if (_subsectionTabs) {
 		const auto tabsBottomSkip = _subsectionTabs->bottomSkip();
-		const auto scrollBottom = _scroll->y() + newScrollHeight;
+		const auto scrollBottom = _scroll->y()
+			+ newScrollHeight
+			- _composeOverlap;
 		const auto areaHeight = scrollBottom
 			+ tabsBottomSkip
 			- subsectionTabsTop;
