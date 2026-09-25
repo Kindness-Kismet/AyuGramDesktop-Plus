@@ -16,7 +16,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/qthelp_url.h"
 #include "base/event_filter.h"
 #include "ui/chat/chat_style.h"
-#include "ui/chat/floating_bar.h"
 #include "ui/layers/generic_box.h"
 #include "ui/boxes/calendar_box.h"
 #include "ui/boxes/choose_date_time.h"
@@ -1270,14 +1269,9 @@ void MessageLinksParser::applyRanges(const QString &text) {
 base::unique_qptr<Ui::RpWidget> CreateDisabledFieldView(
 		QWidget *parent,
 		not_null<PeerData*> peer,
-		QWidget *toastParent,
-		bool floatingSurface) {
+		QWidget *toastParent) {
 	auto result = base::make_unique_q<Ui::AbstractButton>(parent);
 	const auto raw = result.get();
-	if (floatingSurface) {
-		Ui::ApplyChatControlSurface(
-			raw, st::historyComposeField.borderRadius);
-	}
 	const auto label = CreateChild<Ui::FlatLabel>(
 		result.get(),
 		tr::lng_send_text_no(),
@@ -1312,9 +1306,6 @@ base::unique_qptr<Ui::RpWidget> CreateDisabledFieldView(
 	raw->paintRequest(
 	) | rpl::on_next([=] {
 		auto p = QPainter(raw);
-		if (floatingSurface) {
-			p.fillRect(raw->rect(), st::historyComposeAreaBg);
-		}
 		const auto &icon = st::historySendDisabledIcon;
 		icon.paint(
 			p,

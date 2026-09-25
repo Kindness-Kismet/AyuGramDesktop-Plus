@@ -1279,11 +1279,11 @@ historyTextStyle: TextStyle(defaultTextStyle) {
 }
 historyComposeField: InputField(defaultInputField) {
 	style: historyTextStyle;
-	textMargins: margins(12px, 0px, 12px, 0px);
+	textMargins: margins(0px, 0px, 0px, 0px);
 	textAlign: align(left);
 	textFg: historyComposeAreaFg;
-	textBg: historyComposeAreaBg;
-	textBgActive: historyComposeAreaBg;
+	// 透明底,融入外层胶囊,不再多一块白色矩形
+	textBg: transparent;
 	heightMin: 36px;
 	heightMax: 72px;
 	placeholderFg: placeholderFg;
@@ -1294,11 +1294,8 @@ historyComposeField: InputField(defaultInputField) {
 	placeholderScale: 0.;
 	placeholderFont: normalFont;
 	placeholderShift: -50px;
-	borderFg: windowDividerFg;
-	borderFgActive: windowDividerFg;
-	border: 1px;
+	border: 0px;
 	borderActive: 0px;
-	borderRadius: 18px;
 	duration: 100;
 }
 historyComposeFieldMaxHeight: 224px;

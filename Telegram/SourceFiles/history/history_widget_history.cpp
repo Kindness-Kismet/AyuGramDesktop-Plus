@@ -986,7 +986,7 @@ void HistoryWidget::updateControlsGeometry() {
 		: 0;
 	const auto innerWidth = std::max(0, width - tabsLeftSkip - 2 * margin);
 
-	_voiceRecordBar->resizeToWidth(std::max(0, width - 2 * margin));
+	_voiceRecordBar->resizeToWidth(width);
 
 	moveFieldControls();
 
@@ -1326,23 +1326,20 @@ void HistoryWidget::updateHistoryGeometry(
 		newScrollHeight -= _unblock->height()
 			+ 2 * st::historyComposeCapsuleMargin;
 	} else {
-		const auto hasFieldHeader = _editMsgId
-			|| replyTo()
-			|| readyToForward()
-			|| _previewDrawPreview
-			|| _suggestOptions;
 		if (editingMessage() || _canSendMessages) {
-			const auto reclaimTopSpace = !hasFieldHeader
-				&& !_kbShown;
+			// 消息列表与胶囊之间保留一份间距。
 			newScrollHeight -= (fieldHeight()
 				+ 2 * st::historySendPadding
-				+ 2 * st::historyComposeCapsuleMargin
-				- (reclaimTopSpace ? st::historySendPadding : 0));
+				+ 2 * st::historyComposeCapsuleMargin);
 		} else if (_sendRestriction) {
 			newScrollHeight -= _sendRestriction->height()
 				+ 2 * st::historyComposeCapsuleMargin;
 		}
-		if (hasFieldHeader) {
+		if (_editMsgId
+			|| replyTo()
+			|| readyToForward()
+			|| _previewDrawPreview
+			|| _suggestOptions) {
 			newScrollHeight -= st::historyReplyHeight;
 		}
 		if (_kbShown) {

@@ -187,8 +187,7 @@ private:
 [[nodiscard]] base::unique_qptr<Ui::RpWidget> CreateDisabledFieldView(
 	QWidget *parent,
 	not_null<PeerData*> peer,
-	QWidget *toastParent = nullptr,
-	bool floatingSurface = true);
+	QWidget *toastParent = nullptr);
 [[nodiscard]] std::unique_ptr<Ui::RpWidget> TextErrorSendRestriction(
 	QWidget *parent,
 	const QString &text);
