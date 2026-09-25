@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_pinned_section.h"
+#include "ui/chat/floating_bar.h"
 
 #include "history/view/history_view_top_bar_widget.h"
 #include "history/view/history_view_translate_bar.h"
@@ -218,6 +219,10 @@ PinnedWidget::PinnedWidget(
 PinnedWidget::~PinnedWidget() = default;
 
 void PinnedWidget::setupClearButton() {
+	_clearButton->setObjectName(u"chatAction.unpinAll"_q);
+	Ui::ApplyChatControlSurface(
+		_clearButton.get(),
+		st::historyComposeCapsuleRadius);
 	Data::CanPinMessagesValue(
 		_history->peer
 	) | rpl::on_next([=] {
@@ -252,11 +257,18 @@ void PinnedWidget::setupTranslateBar() {
 		});
 	}, _translateBar->lifetime());
 
+	// 条目上下的间隙随条目一起出现，滚动补偿按整段占位计算。
+	const auto reserved = [](int height) {
+		auto bars = Ui::ChatBarStack();
+		bars.add(height);
+		return bars.height();
+	};
 	_translateBarHeight = 0;
 	_translateBar->heightValue(
 	) | rpl::on_next([=](int height) {
-		if (const auto delta = height - _translateBarHeight) {
-			_translateBarHeight = height;
+		const auto delta = reserved(height) - reserved(_translateBarHeight);
+		_translateBarHeight = height;
+		if (delta) {
 			setGeometryWithTopMoved(geometry(), delta);
 		}
 	}, _translateBar->lifetime());
@@ -536,15 +548,18 @@ void PinnedWidget::updateControlsGeometry() {
 	// 顶栏已是浮动卡片，分隔线高度置 0；多处直接调用 show，不能只靠隐藏。
 	_topBarShadow->resize(contentWidth, 0);
 
-	const auto bottom = height() - _clearButton->height();
-	_clearButton->resizeToWidth(width());
-	_clearButton->move(0, bottom);
-	const auto controlsHeight = 0;
+	// 与主聊天的底部动作一致：按钮四周留胶囊边距，列表止于按钮上方的边距。
+	const auto margin = st::historyComposeCapsuleMargin;
+	const auto innerWidth = std::max(contentWidth - 2 * margin, 0);
+	const auto bottom = height() - _clearButton->height() - 2 * margin;
+	_clearButton->resizeToWidth(innerWidth);
+	_clearButton->move(margin, bottom + margin);
 	auto top = _topBar->height();
-	_translateBar->move(0, top);
-	_translateBar->resizeToWidth(contentWidth);
-	top += _translateBarHeight;
-	const auto scrollHeight = bottom - top - controlsHeight;
+	auto bars = Ui::ChatBarStack();
+	_translateBar->move(margin, top + bars.add(_translateBarHeight));
+	_translateBar->resizeToWidth(innerWidth);
+	top += bars.height();
+	const auto scrollHeight = bottom - top;
 	const auto scrollSize = QSize(contentWidth, scrollHeight);
 	if (_scroll->size() != scrollSize) {
 		_skipScrollEvent = true;

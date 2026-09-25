@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/admin_log/history_admin_log_section.h"
+#include "ui/chat/floating_bar.h"
 
 #include "history/admin_log/history_admin_log_inner.h"
 #include "history/admin_log/history_admin_log_filter.h"
@@ -296,7 +297,7 @@ Widget::Widget(
 	this,
 	tr::lng_menu_settings(tr::now),
 	st::historyComposeButton)
-, _whatIsThis(this, st::historyAdminLogWhatIsThis)
+, _whatIsThis(_settingsFilter.data(), st::historyAdminLogWhatIsThis)
 , _scrollDown(_scroll, st::historyToDown) {
 	_fixedBar->move(0, 0);
 	_fixedBar->resizeToWidth(width());
@@ -353,6 +354,11 @@ Widget::Widget(
 		onScroll();
 	}, lifetime());
 
+	// 说明按钮挂在设置按钮内部，随胶囊表面一起裁切。
+	_settingsFilter->setObjectName(u"chatAction.adminLogSettings"_q);
+	Ui::ApplyChatControlSurface(
+		_settingsFilter.data(),
+		st::historyComposeCapsuleRadius);
 	_settingsFilter->setClickedCallback([=] {
 		showFilter();
 	});
@@ -594,10 +600,9 @@ void Widget::resizeEvent(QResizeEvent *e) {
 	// 与其它聊天分区一致，顶栏下不画分隔线；多处直接调用 show，不能只靠隐藏。
 	_fixedBarShadow->resize(contentWidth, 0);
 
-	const auto bottom = height();
-	const auto scrollHeight = bottom
-		- _fixedBar->height()
-		- _settingsFilter->height();
+	const auto margin = st::historyComposeCapsuleMargin;
+	const auto bottom = height() - _settingsFilter->height() - 2 * margin;
+	const auto scrollHeight = bottom - _fixedBar->height();
 	const auto scrollSize = QSize(contentWidth, scrollHeight);
 	if (_scroll->size() != scrollSize) {
 		_scroll->resize(scrollSize);
@@ -612,15 +617,14 @@ void Widget::resizeEvent(QResizeEvent *e) {
 		auto scrollTop = _scroll->scrollTop();
 		_inner->setVisibleTopBottom(scrollTop, scrollTop + _scroll->height());
 	}
-	const auto fullWidthButtonRect = myrtlrect(
-		0,
-		bottom - _settingsFilter->height(),
-		contentWidth,
-		_settingsFilter->height());
-	_settingsFilter->setGeometry(fullWidthButtonRect);
+	_settingsFilter->setGeometry(myrtlrect(
+		margin,
+		bottom + margin,
+		std::max(contentWidth - 2 * margin, 0),
+		_settingsFilter->height()));
 	_whatIsThis->moveToRight(
 		st::historySendRight,
-		bottom - _whatIsThis->height());
+		(_settingsFilter->height() - _whatIsThis->height()) / 2);
 
 	updateScrollDownPosition();
 }
