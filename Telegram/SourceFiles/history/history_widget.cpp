@@ -569,6 +569,7 @@ HistoryWidget::HistoryWidget(
 		showPremiumToast(document);
 		return false;
 	});
+	CenterMessageFieldText(_field);
 	InitMessageFieldFade(_field, st::historyComposeField.textBg);
 
 	setupFastButtonMode();

@@ -98,8 +98,11 @@ void InitMessageFieldHandlers(
 	not_null<Ui::InputField*> field,
 	ChatHelpers::PauseReason pauseReasonLevel,
 	Fn<bool(not_null<DocumentData*>)> allowPremiumEmoji = nullptr);
+// 单行时把最小高度多出的空白上下平分，文字、光标与占位文字垂直居中。
+// 须在 InitMessageField 之后调用，仅用于聊天输入胶囊。
 [[nodiscard]] QMargins MessageFieldCenteringMargins(
 	not_null<const Ui::InputField*> field);
+void CenterMessageFieldText(not_null<Ui::InputField*> field);
 std::shared_ptr<Ui::ChatStyle> InitMessageField(
 	std::shared_ptr<ChatHelpers::Show> show,
 	not_null<Ui::InputField*> field,

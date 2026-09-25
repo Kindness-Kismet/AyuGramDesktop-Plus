@@ -3216,6 +3216,9 @@ void ComposeControls::initField() {
 		}
 		return false;
 	});
+	if (ComposeOuterMargin(_st)) {
+		CenterMessageFieldText(_field);
+	}
 	InitMessageFieldFade(_field, _st.field.textBg);
 	_field->setEditLinkCallback(
 		DefaultEditLinkCallback(_show, _field, &_st.boxField));

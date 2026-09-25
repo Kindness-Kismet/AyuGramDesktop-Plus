@@ -709,9 +709,6 @@ void InitMessageFieldHandlers(
 
 QMargins MessageFieldCenteringMargins(
 		not_null<const Ui::InputField*> field) {
-	if (!field->st().borderRadius) {
-		return {};
-	}
 	const auto &fieldStyle = field->st();
 	const auto lineHeight = std::max(
 		fieldStyle.style.lineHeight,
@@ -729,6 +726,13 @@ QMargins MessageFieldCenteringMargins(
 	return { 0, top, 0, remaining - top };
 }
 
+void CenterMessageFieldText(not_null<Ui::InputField*> field) {
+	const auto scaledMargin = style::ConvertScale(4) - 4;
+	field->setAdditionalMargins(
+		QMargins(scaledMargin, scaledMargin, scaledMargin, scaledMargin)
+			+ MessageFieldCenteringMargins(field));
+}
+
 void InitMessageFieldGeometry(not_null<Ui::InputField*> field) {
 	field->setMinHeight(
 		st::historySendSize.height() - 2 * st::historySendPadding);
@@ -736,10 +740,7 @@ void InitMessageFieldGeometry(not_null<Ui::InputField*> field) {
 
 	// st::messageSendingAnimationTextFromOffset.
 	field->setDocumentMargin(4.);
-	const auto scaledMargin = style::ConvertScale(4) - 4;
-	field->setAdditionalMargins(
-		QMargins(scaledMargin, scaledMargin, scaledMargin, scaledMargin)
-			+ MessageFieldCenteringMargins(field));
+	field->setAdditionalMargin(style::ConvertScale(4) - 4);
 }
 
 std::shared_ptr<Ui::ChatStyle> InitMessageField(
