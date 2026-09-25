@@ -363,10 +363,7 @@ Ui::SettingsButton *SectionBuilder::addPremiumButton(PremiumButtonArgs &&args) {
 		.keywords = std::move(args.keywords),
 	});
 	if (result) {
-		AddPremiumStar(
-			result,
-			args.credits,
-			v::get<WidgetContext>(_context).isPaused);
+		AddPremiumStar(result, args.credits);
 	}
 	return result;
 }

@@ -334,8 +334,7 @@ void AddLottieIconWithCircle(
 
 void AddPremiumStar(
 	not_null<Button*> button,
-	bool credits,
-	Fn<bool()> isPaused);
+	bool credits);
 
 struct SectionSearchRow {
 	std::unique_ptr<Ui::SearchFieldController> controller;

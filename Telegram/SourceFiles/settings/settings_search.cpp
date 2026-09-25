@@ -222,22 +222,19 @@ void Search::setupContent() {
 }
 
 void Search::setupCustomizations() {
-	const auto isPaused = Window::PausedIn(
-		controller(),
-		Window::GifPauseReason::Layer);
 	const auto add = [&](const QString &id, ResultCustomization value) {
 		_customizations[id] = std::move(value);
 	};
 
 	add(u"main/credits"_q, {
 		.hook = [=](not_null<Ui::SettingsButton*> b) {
-			AddPremiumStar(b, true, isPaused);
+			AddPremiumStar(b, true);
 		},
 		.st = &st::settingsSearchResult,
 	});
 	add(u"main/premium"_q, {
 		.hook = [=](not_null<Ui::SettingsButton*> b) {
-			AddPremiumStar(b, false, isPaused);
+			AddPremiumStar(b, false);
 		},
 		.st = &st::settingsSearchResult,
 	});
