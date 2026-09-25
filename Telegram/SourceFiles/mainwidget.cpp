@@ -2150,8 +2150,6 @@ void MainWidget::showNewSection(
 
 	floatPlayerCheckVisibility();
 	orderWidgets();
-	// 新栏此时才可见,补一次布局让遮罩层收集到它的矩形,画出圆角和描边
-	updateControlsGeometry();
 }
 
 void MainWidget::checkMainSectionToLayer() {
@@ -2573,8 +2571,26 @@ void MainWidget::paintEvent(QPaintEvent *e) {
 	}
 }
 
+std::vector<QRect> MainWidget::cardRects() const {
+	auto result = std::vector<QRect>();
+	if (_dialogs && !_dialogs->isHidden()) {
+		result.push_back(_dialogs->geometry());
+	}
+	if (_mainSection && !_mainSection->isHidden()) {
+		result.push_back(_mainSection->geometry());
+	} else if (!_history->isHidden()) {
+		result.push_back(_history->geometry());
+	}
+	if (_thirdSection && !_thirdSection->isHidden()) {
+		result.push_back(_thirdSection->geometry());
+	}
+	return result;
+}
+
 void MainWidget::paintCardOverlay(QRect clip) {
-	if (_cardRects.empty()) {
+	// 绘制时实时收集：栏的显隐与位移会重绘所在区域，遮罩随之画对。
+	const auto rects = cardRects();
+	if (rects.empty()) {
 		return;
 	}
 	auto p = QPainter(_cardOverlay.data());
@@ -2583,7 +2599,7 @@ void MainWidget::paintCardOverlay(QRect clip) {
 	const auto fill = st::windowShellBg->c;
 	const auto radius = st::windowCardRadius;
 
-	for (const auto &r : _cardRects) {
+	for (const auto &r : rects) {
 		if (!r.intersects(clip)) {
 			continue;
 		}
@@ -2892,19 +2908,6 @@ void MainWidget::updateControlsGeometry() {
 	updateMediaPlaylistPosition(_playerPlaylist->x());
 	_contentScrollAddToY = 0;
 
-	// 单栏与多栏共用卡片边界，隐藏页面不参与圆角绘制。
-	_cardRects.clear();
-	if (_dialogs && !_dialogs->isHidden()) {
-		_cardRects.push_back(_dialogs->geometry());
-	}
-	if (_mainSection && !_mainSection->isHidden()) {
-		_cardRects.push_back(_mainSection->geometry());
-	} else if (!_history->isHidden()) {
-		_cardRects.push_back(_history->geometry());
-	}
-	if (_thirdSection && !_thirdSection->isHidden()) {
-		_cardRects.push_back(_thirdSection->geometry());
-	}
 	if (_cardOverlay) {
 		_cardOverlay->setGeometry(rect());
 		_cardOverlay->update();

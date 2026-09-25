@@ -244,6 +244,8 @@ private:
 	void handleAudioUpdate(const Media::Player::TrackState &state);
 	void updateMediaPlaylistPosition(int x);
 	void updateControlsGeometry();
+	// 按各栏当前位置与可见性收集卡片矩形，隐藏的栏不参与。
+	[[nodiscard]] std::vector<QRect> cardRects() const;
 	// 在 overlay 上画各卡片的圆角遮罩与描边
 	void paintCardOverlay(QRect clip);
 	void updateMainSectionShown();
@@ -360,7 +362,6 @@ private:
 	object_ptr<Ui::PlainShadow> _thirdShadow = { nullptr };
 	// 卡片圆角与描边遮罩层:透明鼠标、置顶,一次画所有卡的圆角和边框
 	object_ptr<Ui::RpWidget> _cardOverlay = { nullptr };
-	std::vector<QRect> _cardRects;
 	object_ptr<Ui::ResizeArea> _firstColumnResizeArea = { nullptr };
 	object_ptr<Ui::ResizeArea> _thirdColumnResizeArea = { nullptr };
 
