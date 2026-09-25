@@ -250,7 +250,9 @@ void Controller::setupSideBar() {
 		sideBarChanged();
 	}, _sessionController->lifetime());
 
-	if (_sessionController->enoughSpaceForFilters()) {
+	if (_sessionController->session().settings().dialogsFiltersEnabled()
+		&& _sessionController->enoughSpaceForFilters()
+		&& !Core::App().settings().chatFiltersHorizontal()) {
 		_sessionController->toggleFiltersMenu(true);
 	} else {
 		sideBarChanged();
