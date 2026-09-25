@@ -206,6 +206,8 @@ base::options::toggle OptionForumHideChatsList({
 	.id = kOptionForumHideChatsList,
 	.name = "Hide chat list in forums",
 	.description = "Don't keep a narrow column of chat list.",
+	// 默认不保留会话窄栏，话题列表直接占满左栏。
+	.defaultValue = true,
 });
 
 // An invisible, larger hit-area stacked under the main menu toggle so a mouse
