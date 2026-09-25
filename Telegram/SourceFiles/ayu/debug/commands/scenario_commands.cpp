@@ -213,8 +213,11 @@ void fillHistory(
 		session->sponsoredMessages().setLocalForDebug(history);
 	}
 	if (topic) {
-		peer->forum()->topicFor(kTopicRootId)->replies()
-			->setLocalMessagesForDebug(std::move(replyIds));
+		const auto forumTopic = peer->forum()->topicFor(kTopicRootId);
+		// 话题行的预览取自最后一条消息，缺少时行内只剩标题。
+		const auto last = session->data().message(peer->id, replyIds.back());
+		forumTopic->replies()->setLocalMessagesForDebug(std::move(replyIds));
+		forumTopic->applyMaybeLast(last);
 	}
 	history->setUnreadCount(0);
 	history->setInboxReadTill(kFirstMessageId + 100 * index + messageCount);
@@ -415,6 +418,9 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 				HistoryView::ChatViewId{ .history = history }),
 				Window::SectionShow::Way::ClearStack);
 		} else if (kScenarios[i].kind == Kind::Topic) {
+			// 与在会话列表里点开论坛一致：先在左栏展开话题列表，再进入话题。
+			controller->showForum(peer->forum(), Window::SectionShow(
+				Window::SectionShow::Way::ClearStack).withChildColumn());
 			controller->showTopic(peer->forum()->topicFor(kTopicRootId),
 				ShowAtTheEndMsgId, Window::SectionShow::Way::ClearStack);
 		} else {
