@@ -15,7 +15,9 @@
 #include "dialogs/dialogs_key.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "history/admin_log/history_admin_log_section.h"
 #include "history/view/history_view_chat_section.h"
+#include "history/view/history_view_pinned_section.h"
 #include "history/view/history_view_scheduled_section.h"
 #include "main/main_session.h"
 #include "spellcheck/spellcheck_types.h"
@@ -44,6 +46,7 @@ enum class Kind {
 	Paid,
 	Keyboard,
 	Sponsored,
+	Pinned,
 };
 
 struct Scenario {
@@ -69,6 +72,7 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "paid", u"14 付费消息提示", Kind::Paid },
 	Scenario{ "keyboard", u"15 机器人键盘", Kind::Keyboard },
 	Scenario{ "sponsored", u"16 顶部广告样本", Kind::Sponsored },
+	Scenario{ "pinned", u"17 多条置顶消息", Kind::Pinned },
 };
 
 constexpr auto kFirstPeerId = uint64(810000001);
@@ -178,6 +182,7 @@ void fillHistory(
 	history->addOlderSlice({});
 	const auto topic = kScenarios[index].kind == Kind::Topic;
 	const auto translating = kScenarios[index].kind == Kind::Translate;
+	const auto pinAll = kScenarios[index].kind == Kind::Pinned;
 	const auto sender = peer->isBroadcast() ? peer->id
 		: peer->isUser() ? peer->id
 		: peerFromUser(UserId(kFirstPeerId));
@@ -200,7 +205,7 @@ void fillHistory(
 			&& (topic || kScenarios[index].kind == Kind::Private);
 		messages.prepend(makeMessage(peer,
 			outgoing ? session->userPeerId() : sender, id,
-			text, pinned && i == 0, topic, 0,
+			text, pinned && (i == 0 || pinAll), topic, 0,
 			kScenarios[index].kind == Kind::Keyboard && i == messageCount - 1));
 		replyIds.push_back(id);
 	}
@@ -294,7 +299,8 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 	}
 	const auto pinned = spec.kind == Kind::Broadcast
 		|| spec.kind == Kind::Discussion || spec.kind == Kind::Translate
-		|| spec.kind == Kind::Requests || spec.kind == Kind::Call;
+		|| spec.kind == Kind::Requests || spec.kind == Kind::Call
+		|| spec.kind == Kind::Pinned;
 	fillHistory(session, peer, index, pinned);
 	if (spec.kind == Kind::Translate) {
 		peer->setTranslationDisabled(false);
@@ -328,7 +334,7 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 
 [[nodiscard]] Result openScenario(const QStringList &args) {
 	if (args.empty() || !(args.size() % 2)) {
-		return Result::Err(u"usage: scenario.open <key> [--view main|alternate|scheduled|shortcuts] [--input keep|empty|reply|edit]"_q);
+		return Result::Err(u"usage: scenario.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions] [--input keep|empty|reply|edit]"_q);
 	}
 	auto view = u"main"_q;
 	auto input = u"keep"_q;
@@ -342,14 +348,16 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 		}
 	}
 	if (view != u"main"_q && view != u"alternate"_q
-		&& view != u"scheduled"_q && view != u"shortcuts"_q) {
+		&& view != u"scheduled"_q && view != u"shortcuts"_q
+		&& view != u"pinned"_q && view != u"actions"_q) {
 		return Result::Err(u"unknown view"_q);
 	}
 	if (input != u"keep"_q && input != u"empty"_q
 		&& input != u"reply"_q && input != u"edit"_q) {
 		return Result::Err(u"unknown input state"_q);
 	}
-	if ((view == u"scheduled"_q || view == u"shortcuts"_q)
+	if ((view == u"scheduled"_q || view == u"shortcuts"_q
+			|| view == u"pinned"_q || view == u"actions"_q)
 		&& input != u"keep"_q) {
 		return Result::Err(u"input states require main or alternate view"_q);
 	}
@@ -409,6 +417,26 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 					MTP_int(kShortcutMessageId), MTP_int(1)),
 			})).c_updateQuickReplies());
 			controller->showSettings(Settings::ShortcutMessagesId(1));
+		} else if (view == u"pinned"_q) {
+			const auto thread = (kind == Kind::Topic)
+				? static_cast<Data::Thread*>(peer->forum()->topicFor(kTopicRootId))
+				: history.get();
+			// 置顶列表为空时分区会立即退回，先在这里给出明确错误。
+			if (!thread->hasPinnedMessages()) {
+				return Result::Err(u"scenario has no pinned messages"_q);
+			}
+			controller->showSection(
+				std::make_shared<HistoryView::PinnedMemento>(thread),
+				Window::SectionShow::Way::ClearStack);
+		} else if (view == u"actions"_q) {
+			// 假会话拿不到服务器日志，只用于检查分区外框与底部按钮。
+			const auto channel = peer->asChannel();
+			if (!channel || !(channel->hasAdminRights() || channel->amCreator())) {
+				return Result::Err(u"scenario has no recent actions"_q);
+			}
+			controller->showSection(
+				std::make_shared<AdminLog::SectionMemento>(channel),
+				Window::SectionShow::Way::ClearStack);
 		} else if (view == u"scheduled"_q) {
 			controller->showSection(
 				std::make_shared<HistoryView::ScheduledMemento>(history),

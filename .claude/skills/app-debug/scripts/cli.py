@@ -147,7 +147,7 @@ def register_commands(sub) -> None:
     sub.add_parser("scenario.list", help="列出固定场景的名称、键名与会话编号")
     command = sub.add_parser("scenario.open", help="打开固定场景，先执行 scenario.seed")
     command.add_argument("key")
-    command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts"), default="main", help="主聊天、另一套聊天、计划消息或快捷回复")
+    command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts", "pinned", "actions"), default="main", help="主聊天、另一套聊天、计划消息、快捷回复、置顶消息列表或最近操作")
 
     command.add_argument("--input", choices=("keep", "empty", "reply", "edit"), default="keep", help="保留、清空、回复或编辑输入状态，仅用于普通私聊和话题")
 

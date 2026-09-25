@@ -9,7 +9,7 @@ AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py sc
 
 - `scenario.seed`：向本进程创建的假会话注入固定数据，重复调用复用同一列表。
 - `scenario.list`：返回场景的 `key`、`name`、`peerId`，可在初始化前查看。
-- `scenario.open <key> [--view main|alternate|scheduled|shortcuts] [--input keep|empty|reply|edit]`：打开列表中的场景，话题场景先在左栏展开话题列表，再进入真实话题输入区。
+- `scenario.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions] [--input keep|empty|reply|edit]`：打开列表中的场景，话题场景先在左栏展开话题列表，再进入真实话题输入区。
 - `app.info` 的 `fakeSession` 表示当前会话是否由本进程创建，重启后失效。
 
 | 键名 | 展示内容 |
@@ -30,6 +30,7 @@ AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py sc
 | paid | 付费消息提示 |
 | keyboard | 机器人键盘与输入区 |
 | sponsored | 本地广告样本与顶部条 |
+| pinned | 多条置顶消息，可取消全部置顶的群组 |
 
 这些场景使用正式界面的数据与控件路径，数据存在内存中；按钮仍保留原有业务行为。
 布局检查使用截图、控件树和内部悬停，涉及发送、加入、通话等业务操作时单独安排测试。
@@ -37,6 +38,6 @@ AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py sc
 
 `--view alternate` 进入另一套聊天组件，`--view scheduled` 进入计划消息输入区，默认 `main` 使用主聊天。三种入口共用同一份本地会话数据，可用于检查组件差异。
 
-`--view shortcuts` 打开本地快捷回复输入区。`--input reply` 和 `--input edit` 为普通私聊或话题安装本地回复／编辑草稿，`empty` 清空，默认 `keep` 保留。草稿状态只用于主聊天和另一套聊天组件。机器人每次打开时恢复启动参数。
+`--view shortcuts` 打开本地快捷回复输入区。`--view pinned` 打开置顶消息列表，场景须含置顶消息：`pinned` 显示“取消置顶所有消息”，`channel` 显示“隐藏置顶消息”。`--view actions` 打开最近操作，仅限有管理权限的 `requests`、`call`；假会话没有服务器日志，只用于检查外框和底部按钮。`--input reply` 和 `--input edit` 为普通私聊或话题安装本地回复／编辑草稿，`empty` 清空，默认 `keep` 保留。草稿状态只用于主聊天和另一套聊天组件。机器人每次打开时恢复启动参数。
 
 机器人键盘使用真实消息标记。广告布局样本在假会话中固定显示，只使用本地数据，便于单独检查广告条；广告开关的真实业务验证另行安排。
