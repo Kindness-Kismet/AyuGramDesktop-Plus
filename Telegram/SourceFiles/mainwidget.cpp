@@ -47,6 +47,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_controller.h"
 #include "window/window_peer_menu.h"
 #include "window/window_session_controller_link_info.h"
+#include "window/window_shell_color.h"
 #include "window/themes/window_theme.h"
 #include "chat_helpers/bot_command.h"
 #include "chat_helpers/tabbed_selector.h" // TabbedSelector::refreshStickers
@@ -2565,7 +2566,7 @@ void MainWidget::paintEvent(QPaintEvent *e) {
 		checkChatBackground();
 	}
 	auto p = QPainter(this);
-	p.fillRect(e->rect(), st::windowShellBg);
+	p.fillRect(e->rect(), Window::ShellBackgroundColor(this));
 	if (_showAnimation) {
 		_showAnimation->paintContents(p);
 	}
@@ -2596,7 +2597,7 @@ void MainWidget::paintCardOverlay(QRect clip) {
 	auto p = QPainter(_cardOverlay.data());
 	p.setRenderHint(QPainter::Antialiasing);
 
-	const auto fill = st::windowShellBg->c;
+	const auto fill = Window::ShellBackgroundColor(this)->c;
 	const auto radius = st::windowCardRadius;
 
 	for (const auto &r : rects) {
@@ -3177,6 +3178,14 @@ bool MainWidget::eventFilter(QObject *o, QEvent *e) {
 				_controller->widget()->setInnerFocus();
 			});
 		}
+#ifdef Q_OS_MAC
+	} else if (widget == window()
+		&& (e->type() == QEvent::WindowActivate
+			|| e->type() == QEvent::WindowDeactivate)) {
+		crl::on_main(this, [=] {
+			Ui::ForceFullRepaint(window());
+		});
+#endif
 	} else if (e->type() == QEvent::MouseButtonPress) {
 		if (widget && (widget->window() == window())) {
 			const auto event = static_cast<QMouseEvent*>(e);

@@ -2352,6 +2352,7 @@ PRIVATE
     window/window_session_controller_link_info.h
     window/window_setup_email.cpp
     window/window_setup_email.h
+    window/window_shell_color.h
     window/window_top_bar_wrap.h
     window/window_unlock_passcode_box.cpp
     window/window_unlock_passcode_box.h

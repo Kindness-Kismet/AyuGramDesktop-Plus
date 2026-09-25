@@ -497,6 +497,7 @@
       "Telegram/SourceFiles/window/window_peer_menu.h",
       "Telegram/SourceFiles/window/window_session_controller.cpp",
       "Telegram/SourceFiles/window/window_session_controller.h",
+      "Telegram/SourceFiles/window/window_shell_color.h",
       "Telegram/Telegram.plist",
       "Telegram/Telegram/Images.xcassets/Icon.appiconset/icon128.png",
       "Telegram/Telegram/Images.xcassets/Icon.appiconset/icon128@2x.png",

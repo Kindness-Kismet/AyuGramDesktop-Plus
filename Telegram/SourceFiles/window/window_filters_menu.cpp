@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_controller.h"
 #include "window/window_main_menu.h"
 #include "window/window_peer_menu.h"
+#include "window/window_shell_color.h"
 #include "window/window_filters_favorite.h"
 #include "main/main_session.h"
 #include "base/event_filter.h"
@@ -140,7 +141,7 @@ void FiltersMenu::setup() {
 	}, _outer.lifetime());
 	_outer.paintRequest() | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(&_outer);
-		p.fillRect(clip, st::windowShellBg);
+		p.fillRect(clip, ShellBackgroundColor(&_outer));
 		p.fillRect(QRect(gap, gap, _outer.width() - gap,
 			_outer.height() - 2 * gap), st::windowBg);
 	}, _outer.lifetime());
@@ -162,7 +163,7 @@ void FiltersMenu::setup() {
 		rounded.addRoundedRect(card, st::windowCardRadius, st::windowCardRadius);
 		// 只裁外侧两个圆角，让导航与会话列表共用连续白底。
 		p.setClipRect(QRect(card.x(), card.y(), card.width() / 2, card.height()));
-		p.fillPath(square.subtracted(rounded), st::windowShellBg);
+		p.fillPath(square.subtracted(rounded), ShellBackgroundColor(&_outer));
 		p.setClipping(false);
 		p.fillRect(_outer.width() - st::lineWidth, gap, st::lineWidth,
 			card.height(), st::windowDividerFg);
