@@ -786,7 +786,9 @@ void HistoryWidget::sendTextWithTags(
 		controller()->sendingAnimation().appendSending({
 			.type = Ui::MessageSendingAnimationFrom::Type::Text,
 			.localId = nextLocalMessageId,
-			.globalStartGeometry = _field->mapToGlobal(Rect(_field->size())),
+			.globalStartGeometry = _field->mapToGlobal(
+				Rect(_field->size()).translated(
+					0, MessageFieldCenteringMargins(_field.data()).top())),
 		});
 	}
 

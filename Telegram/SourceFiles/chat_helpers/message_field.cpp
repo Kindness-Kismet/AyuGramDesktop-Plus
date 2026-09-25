@@ -67,6 +67,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QClipboard>
 #include <QtWidgets/QApplication>
 
+#include <cmath>
+
 // AyuGram includes
 #include "ayu/features/forward/ayu_forward.h"
 
@@ -706,6 +708,28 @@ void InitMessageFieldHandlers(
 	});
 }
 
+QMargins MessageFieldCenteringMargins(
+		not_null<const Ui::InputField*> field) {
+	if (!field->st().borderRadius) {
+		return {};
+	}
+	const auto &fieldStyle = field->st();
+	const auto lineHeight = std::max(
+		fieldStyle.style.lineHeight,
+		fieldStyle.style.font->height);
+	const auto documentMargins = 2 * int(std::ceil(
+		field->document()->documentMargin()));
+	const auto scaledMargin = style::ConvertScale(4) - 4;
+	const auto minHeight = st::historySendSize.height()
+		- 2 * st::historySendPadding;
+	const auto remaining = std::max(0,
+		minHeight - lineHeight - documentMargins
+			- fieldStyle.textMargins.top() - fieldStyle.textMargins.bottom()
+			- 2 * scaledMargin);
+	const auto top = remaining / 2;
+	return { 0, top, 0, remaining - top };
+}
+
 void InitMessageFieldGeometry(not_null<Ui::InputField*> field) {
 	field->setMinHeight(
 		st::historySendSize.height() - 2 * st::historySendPadding);
@@ -713,7 +737,10 @@ void InitMessageFieldGeometry(not_null<Ui::InputField*> field) {
 
 	// st::messageSendingAnimationTextFromOffset.
 	field->setDocumentMargin(4.);
-	field->setAdditionalMargin(style::ConvertScale(4) - 4);
+	const auto scaledMargin = style::ConvertScale(4) - 4;
+	field->setAdditionalMargins(
+		QMargins(scaledMargin, scaledMargin, scaledMargin, scaledMargin)
+			+ MessageFieldCenteringMargins(field));
 }
 
 std::shared_ptr<Ui::ChatStyle> InitMessageField(

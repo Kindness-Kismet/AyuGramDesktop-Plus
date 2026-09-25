@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "spellcheck/spelling_highlighter.h"
 #endif // TDESKTOP_DISABLE_SPELLCHECK
 
+#include <QtCore/QMargins>
 #include <QtGui/QClipboard>
 
 namespace tr {
@@ -97,6 +98,8 @@ void InitMessageFieldHandlers(
 	not_null<Ui::InputField*> field,
 	ChatHelpers::PauseReason pauseReasonLevel,
 	Fn<bool(not_null<DocumentData*>)> allowPremiumEmoji = nullptr);
+[[nodiscard]] QMargins MessageFieldCenteringMargins(
+	not_null<const Ui::InputField*> field);
 std::shared_ptr<Ui::ChatStyle> InitMessageField(
 	std::shared_ptr<ChatHelpers::Show> show,
 	not_null<Ui::InputField*> field,

@@ -2643,7 +2643,8 @@ void ChatWidget::sendTextWithTags(
 			.type = Ui::MessageSendingAnimationFrom::Type::Text,
 			.localId = nextLocalMessageId,
 			.globalStartGeometry = field->mapToGlobal(
-				Rect(field->size())),
+				Rect(field->size()).translated(
+					0, MessageFieldCenteringMargins(field).top())),
 		});
 	}
 
