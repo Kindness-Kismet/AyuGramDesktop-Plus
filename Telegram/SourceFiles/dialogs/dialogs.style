@@ -300,11 +300,11 @@ dialogsMenuToggle: IconButton {
 
 dialogsCalendar: IconButton {
 	width: 32px;
-	height: 35px;
+	height: 40px;
 
 	icon: icon {{ "dialogs/dialogs_calendar", dialogsMenuIconFg }};
 	iconOver: icon {{ "dialogs/dialogs_calendar", dialogsMenuIconFgOver }};
-	iconPosition: point(1px, 6px);
+	iconPosition: point(1px, 8px);
 }
 dialogsSearchFrom: IconButton(dialogsCalendar) {
 	width: 29px;
@@ -318,11 +318,11 @@ dialogsSearchType: IconButton(dialogsCalendar) {
 }
 
 dialogsFilterSearch: icon {{ "menu/search", windowSubTextFg }};
-dialogsFilterSearchSkip: 6px;
+dialogsFilterSearchSkip: 9px;
 dialogsFilter: InputField(defaultInputField) {
 	textBg: filterInputInactiveBg;
 	textBgActive: filterInputActiveBg;
-	textMargins: margins(34px, 8px, 30px, 5px);
+	textMargins: margins(42px, 10px, 30px, 8px);
 
 	placeholderFg: placeholderFg;
 	placeholderFgActive: placeholderFgActive;
@@ -338,12 +338,12 @@ dialogsFilter: InputField(defaultInputField) {
 
 	border: 1px;
 	borderActive: 1px;
-	borderRadius: 12px;
+	borderRadius: 10px;
 	borderDenominator: 1;
 
 	style: defaultTextStyle;
 
-	heightMin: 35px;
+	heightMin: 40px;
 }
 dialogsCancelSearchInPeer: IconButton(dialogsMenuToggle) {
 	icon: icon {{ "dialogs/dialogs_cancel_search", dialogsMenuIconFg }};
@@ -354,7 +354,7 @@ dialogsCancelSearchInPeer: IconButton(dialogsMenuToggle) {
 }
 dialogsCancelSearch: CrossButton {
 	width: 35px;
-	height: 35px;
+	height: 40px;
 
 	cross: CrossAnimation {
 		size: 35px;
@@ -364,7 +364,7 @@ dialogsCancelSearch: CrossButton {
 	}
 	crossFg: dialogsMenuIconFg;
 	crossFgOver: dialogsMenuIconFgOver;
-	crossPosition: point(0px, 0px);
+	crossPosition: point(0px, 2px);
 
 	duration: 150;
 	loadingPeriod: 1000;
