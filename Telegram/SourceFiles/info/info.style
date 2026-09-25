@@ -953,8 +953,8 @@ topBarCall: IconButton(topBarSearch) {
 	iconOver: icon {{ "top_bar_call", menuIconFgOver }};
 }
 topBarVideoCall: IconButton(topBarSearch) {
-	icon: icon {{ "menu/video_chat", menuIconFg }};
-	iconOver: icon {{ "menu/video_chat", menuIconFgOver }};
+	icon: icon {{ "top_bar_video_call", menuIconFg }};
+	iconOver: icon {{ "top_bar_video_call", menuIconFgOver }};
 	iconPosition: point(-1px, -1px);
 }
 topBarGroupCall: IconButton(topBarSearch) {
