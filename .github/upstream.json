@@ -605,7 +605,7 @@
       "repository": "desktop-app/cmake_helpers",
       "branch": "master",
       "fork_point": "5e21e7ac353138128145ec4419c0666dc9959347",
-      "$patches_comment": "使用官方子模块，构建时由 scripts/build_support/cmake_patch.py 应用定制：覆盖依赖目录、保护 Python 路径、关闭 cmark-gfm 警告，并为 VS 2026 使用 /DEBUG:FULL。",
+      "$patches_comment": "使用官方子模块，构建时由 scripts/build_support/cmake_patch.py 应用定制：覆盖依赖目录、保护 Python 路径、关闭 cmark-gfm 警告，为 VS 2026 使用 /DEBUG:FULL，并让 Debug 增量链接。",
       "customised_paths": [
         "external/cmark_gfm/CMakeLists.txt",
         "options_win.cmake",
