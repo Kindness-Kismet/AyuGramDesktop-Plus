@@ -20,7 +20,8 @@ description: 更新本应用的发布版本号并编写更新说明。用于升�
    python scripts/build_support/version.py <官方版本>[.<本库修订号>]
    ```
 
-   脚本只改 `Telegram/build/version`，并检查前三段与已登记的官方版本一致。
+   脚本只改 `Telegram/build/version`，并检查前三段与已登记的官方版本一致、
+   `.github/CHANGELOG.md` 里有目标版本的小节。
 
 `AppVersion` 使用官方整数编码，负责数据兼容；
 `AppUpdateVersion` 负责打包、版本比较和更新索引。
@@ -31,8 +32,7 @@ description: 更新本应用的发布版本号并编写更新说明。用于升�
 只写用户能直接看到或使用的功能、界面及问题修复，内容须有代码和验证依据。
 完成官方适配时写“适配官方 Telegram Desktop x.y.z”。
 
-默认将 `.github/CHANGELOG.md` 更新为目标版本的唯一小节，
-同步 `changelog.txt` 的当前版本条目，后者更简短。
+`.github/CHANGELOG.md` 只保留目标版本这一个小节，发布正文由它生成。
 构建、测试、重构和内部实现写在提交或本地过程记录中；隐藏功能信息保留在内部。
 
 用户明确要求维护旧日志时，按指定版本和范围处理。

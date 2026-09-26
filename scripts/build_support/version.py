@@ -15,7 +15,7 @@ _PATTERN = re.compile(r"^\s*(\d+)\.(\d+)\.(\d+)(?:\.(\d+|beta))?\s*$")
 _PACKER_VERSION_MAX = 999_999_999
 
 _UPSTREAM_TRACKING = ROOT / ".github" / "upstream.json"
-_CHANGELOG = ROOT / "changelog.txt"
+_CHANGELOG = ROOT / ".github" / "CHANGELOG.md"
 
 
 @dataclass(frozen=True)
@@ -146,12 +146,13 @@ def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
 def _check_changelog(version: Version) -> None:
     if not _CHANGELOG.is_file():
         raise SystemExit(f"{_CHANGELOG} not found.")
-    prefix = f"{version.text_small} "
-    count = sum(1 for line in _CHANGELOG.read_text(encoding="utf-8").splitlines() if line.startswith(prefix))
+    # 发布正文按二级标题提取，与 scripts/release_notes.py 的规则一致。
+    heading = re.compile(rf"^##[ \t]+{re.escape(version.text_small)}[ \t]*$")
+    count = sum(1 for line in _CHANGELOG.read_text(encoding="utf-8").splitlines() if heading.match(line))
     if count == 0:
-        raise SystemExit(f"Changelog entry for {version.text_small} not found.")
+        raise SystemExit(f"Changelog section '## {version.text_small}' not found in {_CHANGELOG}.")
     if count > 1:
-        raise SystemExit(f"Found {count} changelog entries for {version.text_small}, expected one.")
+        raise SystemExit(f"Found {count} changelog sections for {version.text_small}, expected one.")
 
 
 def _replace(path: Path, rules: list[tuple[str, str]]) -> list[str]:
@@ -191,7 +192,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--skip-changelog",
         action="store_true",
-        help="Do not require a matching changelog.txt entry",
+        help="Do not require a matching section in .github/CHANGELOG.md",
     )
     args = parser.parse_args(argv)
 
