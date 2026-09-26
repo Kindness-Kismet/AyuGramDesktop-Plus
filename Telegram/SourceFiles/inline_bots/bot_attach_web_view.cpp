@@ -878,10 +878,20 @@ MenuBotIcon::MenuBotIcon(
 	show();
 }
 
+void MenuBotIcon::setColor(const style::color &color) {
+	_color = &color;
+	_image = QImage();
+	update();
+}
+
 void MenuBotIcon::paintEvent(QPaintEvent *e) {
 	if (_icon) {
 		auto p = QPainter(this);
-		_icon->paint(p, 0, 0, width());
+		if (_color) {
+			_icon->paint(p, 0, 0, width(), (*_color)->c);
+		} else {
+			_icon->paint(p, 0, 0, width());
+		}
 		return;
 	}
 	validate();
@@ -910,7 +920,9 @@ void MenuBotIcon::validate() {
 		}
 	}
 	if (_image.isNull()) {
-		_image = style::colorizeImage(_mask, st::menuIconColor);
+		_image = style::colorizeImage(
+			_mask,
+			_color ? *_color : st::menuIconColor);
 	}
 }
 

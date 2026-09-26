@@ -617,7 +617,7 @@ void MainMenu::setupArchive() {
 		inner,
 		tr::lng_archived_name(),
 		st::mainMenuButton,
-		{ &st::menuIconArchiveOpen });
+		{ .icon = &st::menuIconArchiveOpen, .color = &st::menuIconFg });
 	inner->add(
 		object_ptr<Ui::PlainShadow>(inner, st::windowDividerFg),
 		st::mainMenuSeparatorPadding);
@@ -769,6 +769,7 @@ void MainMenu::setupMenu() {
 			rpl::producer<QString> text,
 			IconDescriptor &&descriptor,
 			QString name = {}) {
+		descriptor.color = &st::menuIconFg;
 		const auto button = AddButtonWithIcon(
 			section,
 			std::move(text),
