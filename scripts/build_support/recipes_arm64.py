@@ -1,7 +1,6 @@
 """winarm64 配方相对 win64 的差异。
 
-由上游 prepare.py 的 winarm 作用域求值得到（win64 自检 21/32 阶段逐字一致），
-重新生成见 build/tools/gen_recipes.py 与 gen_arm64_recipes.py。
+由上游 prepare.py 的 winarm 作用域求值得到（win64 自检 21/32 阶段逐字一致）。
 """
 
 from build_support.recipe import Stage

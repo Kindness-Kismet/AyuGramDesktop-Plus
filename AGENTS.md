@@ -328,7 +328,7 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 
 ## AI 助手配置目录
 
-`.claude/skills/` 与 `.codex/skills/` 内容完全相同，分别供不同的 AI 工具读取，修改时两边同步。`CLAUDE.md` 只有一行 `@AGENTS.md`，规范只维护本文件这一份。`.claude/` 另有 `commands/` 与 `scripts/`，存放崩溃报告处理流程及其脚本。
+`.claude/skills/` 与 `.codex/skills/` 内容完全相同，分别供不同的 AI 工具读取，修改时两边同步。`CLAUDE.md` 只有一行 `@AGENTS.md`，规范只维护本文件这一份。
 
 `.pi/` 只有 `settings.json` 进入版本控制，运行时产生的 `tasks/` 已被忽略。
 
