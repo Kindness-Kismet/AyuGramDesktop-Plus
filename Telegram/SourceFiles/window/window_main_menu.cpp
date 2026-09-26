@@ -743,10 +743,11 @@ void MainMenu::setupMenu() {
 				_menu,
 				object_ptr<Ui::PlainShadow>(_menu, st::windowDividerFg),
 				st::mainMenuSeparatorPadding));
-		separator->toggleOn(section->heightValue() | rpl::map([](int height) {
-			return height > 0;
-		}));
-		separator->finishAnimating();
+		// 分隔线随分组布局立即显隐，让菜单入场截图包含最终状态。
+		separator->setDuration(0)->toggleOn(
+			section->heightValue() | rpl::map([](int height) {
+				return height > 0;
+			}));
 		section = _menu->add(object_ptr<Ui::VerticalLayout>(_menu));
 	};
 	const auto addAction = [&](
