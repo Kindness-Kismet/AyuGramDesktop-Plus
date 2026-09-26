@@ -43,9 +43,12 @@ IDI_ICON1               ICON                    "..\\art\\icon256.ico"
 // Version
 //
 
+// 版本数值由 Telegram/build/version 在配置阶段生成。
+#include "ayugram_app_version.h"
+
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 7,2,9,8
- PRODUCTVERSION 7,2,9,8
+ FILEVERSION AYUGRAM_FILE_VERSION_COMMA
+ PRODUCTVERSION AYUGRAM_FILE_VERSION_COMMA
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -62,10 +65,10 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Radolyn Labs"
             VALUE "FileDescription", "AyuGram Desktop"
-            VALUE "FileVersion", "7.2.9.8"
+            VALUE "FileVersion", AYUGRAM_FILE_VERSION_STR
             VALUE "LegalCopyright", "Copyright (C) 2014-2026"
             VALUE "ProductName", "AyuGram Desktop"
-            VALUE "ProductVersion", "7.2.9.8"
+            VALUE "ProductVersion", AYUGRAM_FILE_VERSION_STR
         END
     END
     BLOCK "VarFileInfo"

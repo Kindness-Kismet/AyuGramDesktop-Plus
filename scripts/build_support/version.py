@@ -14,9 +14,6 @@ from build_support.paths import ROOT, VERSION_FILE
 _PATTERN = re.compile(r"^\s*(\d+)\.(\d+)\.(\d+)(?:\.(\d+|beta))?\s*$")
 _PACKER_VERSION_MAX = 999_999_999
 
-_CORE_VERSION = ROOT / "Telegram" / "SourceFiles" / "core" / "version.h"
-_TELEGRAM_RC = ROOT / "Telegram" / "Resources" / "winrc" / "Telegram.rc"
-_UPDATER_RC = ROOT / "Telegram" / "Resources" / "winrc" / "Updater.rc"
 _UPSTREAM_TRACKING = ROOT / ".github" / "upstream.json"
 _CHANGELOG = ROOT / "changelog.txt"
 
@@ -130,17 +127,8 @@ def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
     if check_changelog:
         _check_changelog(version)
 
-    comma = ",".join(str(p) for p in (version.major, version.minor, version.patch, version.revision))
-    dot = ".".join(str(p) for p in (version.major, version.minor, version.patch, version.revision))
-    rc_rules = [
-        (r"(FILEVERSION\s+)\d+,\d+,\d+,\d+", r"\g<1>" + comma),
-        (r"(PRODUCTVERSION\s+)\d+,\d+,\d+,\d+", r"\g<1>" + comma),
-        (r'("FileVersion",\s+)"\d+\.\d+\.\d+\.\d+"', r"\g<1>" + f'"{dot}"'),
-        (r'("ProductVersion",\s+)"\d+\.\d+\.\d+\.\d+"', r"\g<1>" + f'"{dot}"'),
-    ]
-
-    touched: list[str] = []
-    touched += _replace(VERSION_FILE, [
+    # 版本文件是唯一来源，代码与 Windows 资源在 CMake 配置阶段从它生成。
+    return _replace(VERSION_FILE, [
         (r"(AppVersion\s+)\d+", r"\g<1>" + str(version.full)),
         (r"(AppUpdateVersion\s+)\d+", r"\g<1>" + str(version.update)),
         (r"(AppStorageReadVersion\s+)\d+", r"\g<1>" + str(version.storage_read)),
@@ -153,17 +141,6 @@ def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
         (r"(AlphaVersion\s+)\d+", r"\g<1>0"),
         (r"(AppVersionOriginal\s+)\d[\d\.beta]*", r"\g<1>" + version.original),
     ])
-    touched += _replace(_CORE_VERSION, [
-        (r"(TDESKTOP_REQUESTED_ALPHA_VERSION\s+)\(\d+ULL\)", r"\g<1>(0ULL)"),
-        (r"(AppVersion\s+=\s+)\d+", r"\g<1>" + str(version.full)),
-        (r"(AppUpdateVersion\s+=\s+)\d+", r"\g<1>" + str(version.update)),
-        (r"(AppStorageReadVersion\s+=\s+)\d+", r"\g<1>" + str(version.storage_read)),
-        (r"(AppVersionStr\s+=\s+)[^;]+", r"\g<1>" + f'"{version.text_small}"'),
-        (r"(AppBetaVersion\s+=\s+)[a-z]+", r"\g<1>" + ("true" if version.beta else "false")),
-    ])
-    touched += _replace(_TELEGRAM_RC, rc_rules)
-    touched += _replace(_UPDATER_RC, rc_rules)
-    return touched
 
 
 def _check_changelog(version: Version) -> None:
@@ -202,7 +179,7 @@ def main(argv: list[str] | None = None) -> None:
 
     parser = argparse.ArgumentParser(
         prog="python -m build_support.version",
-        description="Show or set the AyuGram version across build files",
+        description="Show or set the AyuGram version in Telegram/build/version",
         formatter_class=MultilineHelpFormatter,
     )
     parser.add_argument(

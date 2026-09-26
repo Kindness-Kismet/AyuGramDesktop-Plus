@@ -301,7 +301,7 @@ that Claude Code, Codex CLI and similar harnesses pick up automatically:
 |---|---|
 | `app-debug` | Drives a running Debug build: read and write settings, send real messages, take screenshots, click widgets, inject a local session |
 | `upstream-diff` | Tracks official Telegram Desktop updates, generates adaptation material, records the adapted baseline |
-| `version-bump` | Updates release versions and notes, checks version consistency, and separately verifies the recorded upstream baseline |
+| `version-bump` | Updates the app version in its single source file and writes the release notes |
 | `commit` | Atomic, scoped commits with path-by-path staging |
 | `pull-request` | PR structure, review checklist, scope control |
 
@@ -375,7 +375,8 @@ fork's own revision on that base.
 
 Releasing is driven entirely by the version file:
 
-1. Bump `Telegram/build/version` (and the four files that mirror it) and write
+1. Bump `Telegram/build/version`, the only place the app version lives (CMake
+   generates the values for the code and Windows resources from it), and write
    the notes into `.github/CHANGELOG.md`.
 2. Push to `main`. The **Version tag** workflow notices the version change,
    checks that release notes for it exist, and creates the `v<version>` tag.
