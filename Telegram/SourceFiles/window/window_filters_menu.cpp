@@ -146,6 +146,22 @@ void FiltersMenu::setup() {
 			_outer.height() - 2 * gap), st::windowBg);
 	}, _outer.lifetime());
 
+	// 菜单悬停会重绘不透明按钮，圆角遮罩必须跟随按钮一起绘制。
+	const auto corner = Ui::CreateChild<Ui::RpWidget>(&_menu);
+	corner->setAttribute(Qt::WA_TransparentForMouseEvents);
+	corner->resize(st::windowCardRadius, st::windowCardRadius);
+	corner->paintRequest() | rpl::on_next([=] {
+		const auto radius = st::windowCardRadius;
+		auto square = QPainterPath();
+		square.addRect(QRect(0, 0, radius, radius));
+		auto rounded = QPainterPath();
+		rounded.addEllipse(QRect(0, 0, radius * 2, radius * 2));
+		auto p = QPainter(corner);
+		p.setRenderHint(QPainter::Antialiasing);
+		p.fillPath(square.subtracted(rounded), ShellBackgroundColor(&_outer));
+	}, corner->lifetime());
+	corner->show();
+
 	const auto overlay = Ui::CreateChild<Ui::RpWidget>(&_outer);
 	overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
 	_outer.sizeValue() | rpl::on_next([=](QSize size) {
@@ -153,20 +169,9 @@ void FiltersMenu::setup() {
 		overlay->raise();
 	}, overlay->lifetime());
 	overlay->paintRequest() | rpl::on_next([=] {
-		const auto card = QRect(gap, gap, _outer.width() - gap,
-			_outer.height() - 2 * gap);
 		auto p = QPainter(overlay);
-		p.setRenderHint(QPainter::Antialiasing);
-		auto square = QPainterPath();
-		square.addRect(card);
-		auto rounded = QPainterPath();
-		rounded.addRoundedRect(card, st::windowCardRadius, st::windowCardRadius);
-		// 只裁外侧两个圆角，让导航与会话列表共用连续白底。
-		p.setClipRect(QRect(card.x(), card.y(), card.width() / 2, card.height()));
-		p.fillPath(square.subtracted(rounded), ShellBackgroundColor(&_outer));
-		p.setClipping(false);
 		p.fillRect(_outer.width() - st::lineWidth, gap, st::lineWidth,
-			card.height(), st::windowDividerFg);
+			_outer.height() - 2 * gap, st::windowDividerFg);
 	}, overlay->lifetime());
 	overlay->show();
 
