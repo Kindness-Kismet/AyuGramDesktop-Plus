@@ -2604,12 +2604,13 @@ void MainWidget::paintCardOverlay(QRect clip) {
 		if (!r.intersects(clip)) {
 			continue;
 		}
-		// 用底色填掉方角与圆角之间的四角,制造圆角观感
+		// 只遮住顶部方角，让各栏底边保持直角。
 		auto square = QPainterPath();
 		square.addRect(r);
 		auto rounded = QPainterPath();
 		rounded.addRoundedRect(r, radius, radius);
 		p.save();
+		p.setClipRect(QRect(r.x(), r.y(), r.width(), radius));
 		// 连接处不裁圆角，遮罩只覆盖面板外角。
 		if (_controller->filtersWidth()
 			&& (isOneColumn()

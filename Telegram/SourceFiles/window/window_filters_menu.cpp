@@ -161,8 +161,9 @@ void FiltersMenu::setup() {
 		square.addRect(card);
 		auto rounded = QPainterPath();
 		rounded.addRoundedRect(card, st::windowCardRadius, st::windowCardRadius);
-		// 只裁外侧两个圆角，让导航与会话列表共用连续白底。
-		p.setClipRect(QRect(card.x(), card.y(), card.width() / 2, card.height()));
+		// 只裁外侧顶部圆角，让导航与会话列表共用连续白底。
+		p.setClipRect(QRect(card.x(), card.y(), card.width() / 2,
+			st::windowCardRadius));
 		p.fillPath(square.subtracted(rounded), ShellBackgroundColor(&_outer));
 		p.setClipping(false);
 		p.fillRect(_outer.width() - st::lineWidth, gap, st::lineWidth,
