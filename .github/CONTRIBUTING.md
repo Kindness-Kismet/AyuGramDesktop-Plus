@@ -1,12 +1,12 @@
 # Contributing
 
-This document describes how you can contribute to AyuGram Desktop.
+This document describes how you can contribute to AyuGram Desktop Plus.
 
 **Table of Contents**
 
 * [What contributions are accepted](#what-contributions-are-accepted)
 * [Build instructions](#build-instructions)
-* [Pull upstream changes into your fork regularly](#pull-upstream-changes-into-your-fork-regularly)
+* [Keep your branch up to date](#keep-your-branch-up-to-date)
 * [How to get your pull request accepted](#how-to-get-your-pull-request-accepted)
   * [Keep your pull requests limited to a single issue](#keep-your-pull-requests-limited-to-a-single-issue)
     * [Squash your commits to a single commit](#squash-your-commits-to-a-single-commit)
@@ -17,43 +17,41 @@ This document describes how you can contribute to AyuGram Desktop.
 
 ## What contributions are accepted
 
-We highly appreciate your contributions in the matter of fixing bugs and optimizing the AyuGram Desktop source code and its documentation. In case of fixing the existing user experience please push to your fork and [submit a pull request][pr].
-
-If you have a translations-related contribution, check out [our Crowdin][translate].
+We highly appreciate your contributions in the matter of fixing bugs and optimizing the AyuGram Desktop Plus source code and its documentation. In case of fixing the existing user experience please push to your fork and [submit a pull request][pr].
 
 Highly appreciated feature implementations from [Android app][android_repo].
 
 ## Build instructions
 
-See [folder with instructions][build_instructions] for details on the various build
-environments.
+See [Building from Source][build_instructions] in the README for Windows, Linux
+and macOS.
 
-## Pull upstream changes into your fork regularly
+## Keep your branch up to date
 
-Telegram Desktop is advancing quickly. It is therefore critical that you pull upstream changes into your fork on a regular basis. Nothing is worse than putting in a days of hard work into a pull request only to have it rejected because it has diverged too far from upstream.
+Upstream means the official [Telegram Desktop][tdesktop] stable releases. Maintainers
+merge each new stable release into this repository, so contributors never pull from
+Telegram Desktop directly.
 
-To pull in upstream changes:
+Before opening a pull request, bring your branch up to date with this repository's
+`main` branch:
 
-    git remote add upstream https://github.com/AyuGram/AyuGramDesktop.git
-    git fetch upstream master
+    git remote add plus https://github.com/Kindness-Kismet/AyuGramDesktop-Plus.git
+    git fetch plus main
 
-Check the log to be sure that you actually want the changes, before merging:
+Check the log to be sure that you actually want the changes, before rebasing:
 
-    git log upstream/master
+    git log HEAD..plus/main
 
-Then rebase your changes on the latest commits in the `master` branch:
+Then rebase your changes on top of it:
 
-    git rebase upstream/master
+    git rebase plus/main
 
-After that, you have to force push your commits:
-
-    git push --force
-
-For more info, see [GitHub Help][help_fork_repo].
+Rebasing rewrites your branch, so push it with `git push --force-with-lease`. Only do
+this on your own pull request branch.
 
 ## How to get your pull request accepted
 
-We want to improve AyuGram Desktop with your contributions. But we also want to provide a stable experience for our users and the community. Follow these rules and you should succeed without a problem!
+We want to improve AyuGram Desktop Plus with your contributions. But we also want to provide a stable experience for our users and the community. Follow these rules and you should succeed without a problem!
 
 ### Keep your pull requests limited to a single issue
 
@@ -92,7 +90,7 @@ Furthermore, the pixel shortage is over. We want to see:
 
 ### Test your changes!
 
-Before you submit a pull request, please test your changes. Verify that Telegram Desktop still works and your changes don't cause other issue or crashes.
+Before you submit a pull request, please test your changes. Verify that AyuGram Desktop Plus still works and your changes don't cause other issue or crashes.
 
 ### Write a good commit message
 
@@ -103,12 +101,9 @@ Before you submit a pull request, please test your changes. Verify that Telegram
   For example: `Fix #545`
 
 [//]: # (LINKS)
-[telegram]: https://telegram.org/
-[help_fork_repo]: https://help.github.com/articles/fork-a-repo/
-[help_change_commit_message]: https://help.github.com/articles/changing-a-commit-message/
+[tdesktop]: https://github.com/telegramdesktop/tdesktop
 [commit_message]: http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
-[pr]: https://github.com/AyuGram/AyuGramDesktop/compare
-[build_instructions]: https://github.com/AyuGram/AyuGramDesktop/blob/dev/docs
+[pr]: https://github.com/Kindness-Kismet/AyuGramDesktop-Plus/compare
+[build_instructions]: ../README.md#-building-from-source
 [closing-issues-via-commit-messages]: https://help.github.com/articles/closing-issues-via-commit-messages/
-[translate]: https://crowdin.com/project/ayugram
 [android_repo]: https://github.com/AyuGram/AyuGram4A
