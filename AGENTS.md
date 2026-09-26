@@ -38,14 +38,14 @@ AyuGramDesktop/
 │   ├── lib_base / lib_crl / lib_rpl / lib_storage / ...  # 其余 desktop-app 子模块，一般不改
 │   └── 其余文件             # 均为上游原样
 ├── scripts/                 # prebuild.py / build.py（见构建章节）
-└── .github/upstream.json    # 与上游的分叉基线记录
+└── .github/upstream.json    # 已适配的官方稳定版号与同步跳过规则
 ```
 
-**子模块约定**：`lib_ui`、`lib_tl`、`codegen`、`cmake` 是 fork，改动必须记入 `.github/upstream.json` 对应条目的 `customised_paths`。其余 `lib_*` 视为只读依赖。
+**子模块约定**：`lib_ui`、`lib_tl`、`codegen` 是 fork，改动先推到 fork 仓库，再更新主仓库的子模块指针；`cmake` 用官方子模块，定制由构建脚本打补丁。其余 `lib_*` 视为只读依赖。
 
 ### SourceFiles 分层
 
-按职责分四层理解（目录名沿用 tdesktop 原名，改动上游文件需要登记）：
+按职责分四层理解（目录名沿用 tdesktop 原名）：
 
 **进程与生命周期**
 
@@ -116,15 +116,15 @@ ayu/
 
 **改动位置对照表**：
 
-| 要做的事 | 放在哪里 | 登记要求 |
+| 要做的事 | 放在哪里 | 附加要求 |
 |---|---|---|
 | 新增 AyuGram 功能 | `ayu/features/<名称>/`，并在 `Telegram/CMakeLists.txt` 的 `ayugram_files` 逐文件添加 | — |
 | 新增设置项 | `ayu_settings.{h,cpp}`：成员、`to_json`、`from_json` 三处同步 | — |
 | 设置项的界面 | `ayu/ui/settings/`，入口注册在 `settings_main.cpp` | — |
 | 需要持久化的数据 | `ayu/data/` | — |
 | 新增调试指令 | `ayu/debug/commands/<领域>_commands.cpp` + CMake 登记 | 必须包在 `#ifdef _DEBUG` 里 |
-| 修改上游行为（渲染、菜单等） | 直接改上游文件 | 记入 `.github/upstream.json` |
-| 界面基础控件改动 | `Telegram/lib_ui/` | fork 仓库与 upstream.json 两处都要 |
+| 修改上游行为（渲染、菜单等） | 直接改上游文件 | — |
+| 界面基础控件改动 | `Telegram/lib_ui/` | 先推 fork 仓库，再更新主仓库子模块指针 |
 
 ---
 
@@ -134,7 +134,7 @@ ayu/
 
 - 主仓库自行维护的 `.cpp` 文件不超过 2000 行，含注释与空行；新增文件和拆分后的文件都按此判断。
 - 既有超限文件按任务分批整改，先处理万行业务源码；按职责拆分，不用编号分片或互相包含实现文件来规避上限。
-- 拆分前记录职责、依赖与验证方案，保持对外接口和行为，同步构建清单及上游定制路径。
+- 拆分前记录职责、依赖与验证方案，保持对外接口和行为，同步更新构建清单。
 - 本次拆分只修改主仓库，不修改子仓库；自动生成文件和原样引入的第三方库源码不作业务拆分。
 
 ### 命名
@@ -231,7 +231,7 @@ python scripts/prebuild.py --stage openssl3 --stage qt_5.15.19   # 只跑指定�
 python scripts/prebuild.py --clean    # 清空依赖缓存
 ```
 
-- **只在依赖变化时需要跑**（首次构建、`upstream.json` 里的库指针更新、`build/version` 变更），日常改代码不需要
+- **只在依赖变化时需要跑**（首次构建、子模块指针更新、`build/version` 变更），日常改代码不需要
 - 自动探测 MSVC 环境，进度输出强制 UTF-8，避免 cp936 控制台报错
 - 阶段的定义（含注释）参与缓存键计算，改注释也会导致该阶段重新编译
 
@@ -308,21 +308,21 @@ Settings → AyuGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` 或
 
 ---
 
-## upstream-diff skill
+## upstream-sync skill
 
-跟踪官方 tdesktop 的更新与 AyuGram 的定制路径，基线记录在 `.github/upstream.json`：
+同步官方 Telegram Desktop 稳定版。`.github/upstream.json` 只登记已适配的官方版本号，子模块基线取官方该版本记录的子模块指针，本地定制用 git diff 计算：
 
 ```bash
-python .claude/skills/upstream-diff/scripts/upstream.py status          # 上游新提交
-python .claude/skills/upstream-diff/scripts/upstream.py prepare          # 生成到最新稳定版的适配材料
-python .claude/skills/upstream-diff/scripts/upstream.py files Telegram/lib_ui   # 定制路径与冲突
-python .claude/skills/upstream-diff/scripts/upstream.py bump tdesktop <sha>     # 适配完成后更新基线
+python scripts/upstream.py check              # 官方有没有更新的稳定版
+python scripts/upstream.py report             # 生成各仓库的改动报告，保存在 build/upstream-sync/
+python scripts/upstream.py done <官方版本>     # 适配并编译通过后登记
 ```
 
-- `prepare` 锚在官方稳定版（dev 分支最新 Version 提交），只提取 `Telegram/` 范围，材料落 `build/upstream-adapt/`（可再生不进 git），`deferred` 段登记的跳过项会标注进清单
-- `customised_paths` 里列出的文件，上游更新时需要手动合并
+- 只跟随官方正式版，测试版不参与比较；官方标签放在 `refs/upstream-tags/`，不和本仓库同名的发布标签混在一起
+- 报告按“需要合并 / 直接采用 / 官方新增 / 官方删除 / 已与目标一致 / 按 skip 跳过”分类，需要合并的文件已预演三方合并
+- `upstream.json` 里 `skip` 是长期不跟进的路径，`notes` 是跟进时要注意的路径，`deferred` 是暂缓、以后要补的改动
 - `lib_ui` 是 fork 的子模块：改动先推到 fork 仓库，再在主仓库更新子模块指针，两步都要做
-- `cmake` 是官方子模块，定制由 `scripts/build_support/cmake_patch.py` 构建时动态 patch，`git status` 里 `modified: cmake (modified content)` 是预期状态；patch 锚点漂移时构建会直接报错，此时按报错更新锚点
+- `cmake` 是官方子模块，定制由 `scripts/build_support/cmake_patch.py` 构建时动态 patch，`git status` 里 `modified: cmake (modified content)` 是预期状态；报告会检查补丁锚点在官方新版里是否还在
 
 ---
 
@@ -363,7 +363,7 @@ python .claude/skills/upstream-diff/scripts/upstream.py bump tdesktop <sha>     
 3. 在主线程调用阻塞接口——`AyuSync::*Sync` 系列会运行事件循环等待 MTProto 响应，导致界面无响应
 4. 在 `Telegram/lib_ui/` 之外引用 `ayu/ayu_ui_settings.h`——codegen 硬编码了该 include 路径（`codegen/style/generator.cpp:676`）
 5. 提交 `build/`、`tdata/`、`.user` 文件
-6. 在 fork 的依赖（`lib_ui` / `lib_tl` 等）里做未记录的改动——必须写进 upstream.json
+6. 只在本地提交 fork 依赖（`lib_ui` / `lib_tl` 等）的改动就更新主仓库指针——子模块提交必须先推到 fork 仓库
 7. 用异常做错误处理——见"不要过度防御"
 
 ---
@@ -382,12 +382,11 @@ python .claude/skills/upstream-diff/scripts/upstream.py bump tdesktop <sha>     
 - [ ] 跨线程调用走了 `dispatchToMainThread`？
 - [ ] 优先用卫语句，没有深层嵌套，没有过度防御？
 - [ ] 注释是中文、不超过两行、不用行话？
-- [ ] 改了上游文件或 lib_ui，已记入 upstream.json？
+- [ ] 改了 lib_ui 等 fork 子模块，已推到 fork 仓库再更新指针？
 - [ ] 提交前 `git diff --cached` 确认内容都属于本次改动？
 
 ---
 
 ## 上游与社区
 
-- 上游项目与翻译平台的入口见 `upstream-diff` skill 与 `.github/upstream.json`
-- 上游定制路径的登记与冲突预警统一走 `upstream-diff` skill
+- 官方稳定版的检查、改动报告与登记统一走 `upstream-sync` skill

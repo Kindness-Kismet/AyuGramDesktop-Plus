@@ -300,7 +300,7 @@ that Claude Code, Codex CLI and similar harnesses pick up automatically:
 | Skill | What it does |
 |---|---|
 | `app-debug` | Drives a running Debug build: read and write settings, send real messages, take screenshots, click widgets, inject a local session |
-| `upstream-diff` | Tracks official Telegram Desktop updates, generates adaptation material, records the adapted baseline |
+| `upstream-sync` | Checks for new official stable releases, reports what changed in tdesktop and every submodule since the adapted version, and records the new version once adapted |
 | `version-bump` | Updates the app version in its single source file and writes the release notes |
 | `commit` | Atomic, scoped commits with path-by-path staging |
 | `pull-request` | PR structure, review checklist, scope control |
@@ -353,8 +353,8 @@ Telegram/
   lib_ui, lib_tl, codegen  forked submodules; the other lib_* modules are
                            upstream and treated as read-only
 .github/
-  upstream.json            adaptation baseline: which upstream commit is
-                           merged and which files carry local changes
+  upstream.json            the official stable version this fork is
+                           adapted to, and paths the sync report skips
   CHANGELOG.md             release notes for the current version
   workflows/               release pipeline and version tagging
 AGENTS.md                  the specification (CLAUDE.md imports it)

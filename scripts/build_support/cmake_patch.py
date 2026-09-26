@@ -108,6 +108,11 @@ _PATCHES = (
 )
 
 
+def patch_anchors() -> list[tuple[str, str]]:
+    """返回 (相对仓库根的路径, 官方原文)，同步上游时据此检查补丁锚点是否还在。"""
+    return [(path.relative_to(ROOT).as_posix(), original) for path, _, original, _ in _PATCHES]
+
+
 def ensure_libs_loc_override() -> list[str]:
     """幂等地为 cmake 子模块与根 CMakeLists 打补丁。"""
     notes: list[str] = []
