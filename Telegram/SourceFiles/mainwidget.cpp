@@ -2912,6 +2912,7 @@ void MainWidget::updateControlsGeometry() {
 
 	if (_cardOverlay) {
 		_cardOverlay->setGeometry(rect());
+		_cardOverlay->raise();
 		_cardOverlay->update();
 	}
 
