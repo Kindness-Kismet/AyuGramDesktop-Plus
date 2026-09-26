@@ -255,8 +255,8 @@ void HistoryWidget::scrollToCurrentVoiceMessage(
 	if (const auto toView = to->mainView()) {
 		auto toTop = _list->itemTop(toView);
 		if (toTop >= 0 && !isItemCompletelyHidden(from)) {
-			auto scrollTop = _scroll->scrollTop();
-			auto scrollBottom = scrollTop + visibleScrollHeight();
+			auto scrollTop = visibleScrollTop();
+			auto scrollBottom = visibleScrollBottom();
 			auto toBottom = toTop + toView->height();
 			if ((toTop < scrollTop && toBottom < scrollBottom)
 				|| (toTop > scrollTop && toBottom > scrollBottom)) {
@@ -279,7 +279,7 @@ void HistoryWidget::animatedScrollToItem(MsgId msgId) {
 	}
 
 	auto scrollTo = std::clamp(
-		itemTopForHighlight(to->mainView()),
+		physicalScrollTop(itemTopForHighlight(to->mainView())),
 		0,
 		_scroll->scrollTopMax());
 	animatedScrollToY(scrollTo, to);
@@ -754,8 +754,8 @@ bool HistoryWidget::isItemCompletelyHidden(HistoryItem *item) const {
 	}
 
 	const auto bottom = top + view->height();
-	const auto scrollTop = _scroll->scrollTop();
-	const auto scrollBottom = scrollTop + visibleScrollHeight();
+	const auto scrollTop = visibleScrollTop();
+	const auto scrollBottom = visibleScrollBottom();
 	return (top >= scrollBottom || bottom <= scrollTop);
 }
 
@@ -763,12 +763,47 @@ int HistoryWidget::composeOverlap() const {
 	return _composeOverlap;
 }
 
+int HistoryWidget::topBarsOverlap() const {
+	if (!_pinnedBar || !_pinnedBar->height()) {
+		return 0;
+	}
+	auto bars = Ui::ChatBarStack();
+	bars.add(_groupCallBar ? _groupCallBar->height() : 0);
+	bars.add(_requestsBar ? _requestsBar->height() : 0);
+	bars.add(_pinnedBar->height());
+	bars.add(_sponsoredMessageBar ? _sponsoredMessageBar->height() : 0);
+	bars.add(_translateBar ? _translateBar->height() : 0);
+	bars.add(_paysStatus ? _paysStatus->bar().height() : 0);
+	bars.add(_contactStatus ? _contactStatus->bar().height() : 0);
+	bars.add(_businessBotStatus ? _businessBotStatus->bar().height() : 0);
+	return bars.height();
+}
+
 int HistoryWidget::visibleScrollHeight() const {
-	return _scroll->height() - _composeOverlap;
+	return std::max(0,
+		_scroll->height() - topBarsOverlap() - _composeOverlap);
+}
+
+int HistoryWidget::visibleScrollTop() const {
+	return std::min(
+		_scroll->scrollTop() + topBarsOverlap(),
+		visibleScrollBottom());
+}
+
+int HistoryWidget::visibleScrollBottom() const {
+	return _scroll->scrollTop() + _scroll->height() - _composeOverlap;
+}
+
+int HistoryWidget::physicalScrollTop(int visibleTop) const {
+	return (visibleTop == ScrollMax)
+		? ScrollMax
+		: (visibleTop - topBarsOverlap());
 }
 
 QRect HistoryWidget::visibleScrollGeometry() const {
-	return _scroll->geometry().marginsRemoved({ 0, 0, 0, _composeOverlap });
+	const auto available = std::max(0, _scroll->height() - _composeOverlap);
+	return _scroll->geometry().marginsRemoved({
+		0, std::min(topBarsOverlap(), available), 0, _composeOverlap });
 }
 
 void HistoryWidget::updateScrollMask(QRect capsule) {
@@ -792,9 +827,9 @@ void HistoryWidget::updateScrollMask(QRect capsule) {
 
 void HistoryWidget::visibleAreaUpdated() {
 	if (_list && !_firstLoadRequest && !_scroll->isHidden()) {
-		const auto scrollTop = _scroll->scrollTop();
-		const auto scrollBottom = scrollTop + visibleScrollHeight();
-		_list->visibleAreaUpdated(scrollTop, scrollBottom);
+		_list->visibleAreaUpdated(
+			visibleScrollTop(),
+			visibleScrollBottom());
 		controller()->floatPlayerAreaUpdated();
 		session().data().itemVisibilitiesUpdated();
 	}
@@ -883,7 +918,7 @@ void HistoryWidget::checkReplyReturns() {
 		|| !_historyInited) {
 		return;
 	}
-	auto scrollTop = _scroll->scrollTop();
+	auto scrollTop = visibleScrollTop();
 	auto scrollTopMax = _scroll->scrollTopMax();
 	auto scrollHeight = visibleScrollHeight();
 	while (const auto replyReturn = _cornerButtons.replyReturn()) {
@@ -906,7 +941,7 @@ void HistoryWidget::checkReplyReturns() {
 					< _migrated->blocks.back()->messages.back()->data()->id);
 		}
 		if (!below && replyReturn->mainView()) {
-			below = (scrollTop >= scrollTopMax)
+			below = (_scroll->scrollTop() >= scrollTopMax)
 				|| (_list->itemTop(replyReturn)
 					< scrollTop + scrollHeight / 2);
 		}
@@ -1068,8 +1103,17 @@ void HistoryWidget::updateControlsGeometry() {
 	if (_businessBotStatus) {
 		_businessBotStatus->bar().move(0, businessBotTop);
 	}
-	const auto scrollAreaTop = _topBars->y() + stack.height();
+	const auto overlap = _pinnedBar && _pinnedBar->height()
+		? stack.height()
+		: 0;
+	const auto scrollAreaTop = _topBars->y() + stack.height() - overlap;
 	_topBars->resize(innerWidth, stack.height());
+	if (overlap) {
+		_topBars->setMask(stack.cardRegion(innerWidth));
+	} else {
+		_topBars->clearMask();
+	}
+	_scroll->setBarTopInset(overlap);
 	if (_scroll->y() != scrollAreaTop || _scroll->x() != tabsLeftSkip) {
 		_scroll->moveToLeft(tabsLeftSkip, scrollAreaTop);
 		if (_autocomplete) {
@@ -1084,6 +1128,7 @@ void HistoryWidget::updateControlsGeometry() {
 		false,
 		false,
 		{ ScrollChangeAdd, base::take(_topDelta) });
+	_lastScrollAreaY = scrollAreaTop;
 
 	updateFieldSize();
 
@@ -1170,7 +1215,7 @@ bool HistoryWidget::hasSavedScroll() const {
 
 int HistoryWidget::countInitialScrollTop() {
 	if (hasSavedScroll()) {
-		return _list->historyScrollTop();
+		return physicalScrollTop(_list->historyScrollTop());
 	} else if (_showAtMsgId
 		&& (IsServerMsgId(_showAtMsgId)
 			|| IsClientMsgId(_showAtMsgId)
@@ -1191,7 +1236,7 @@ int HistoryWidget::countInitialScrollTop() {
 			});
 			const auto result = itemTopForHighlight(view);
 			createUnreadBarIfBelowVisibleArea(result);
-			return result;
+			return physicalScrollTop(result);
 		}
 	} else if (_showAtMsgId == ShowAtTheEndMsgId) {
 		return ScrollMax;
@@ -1202,7 +1247,7 @@ int HistoryWidget::countInitialScrollTop() {
 		createUnreadBarIfBelowVisibleArea(0);
 		return 0;
 	} else if (const auto top = unreadBarTop()) {
-		return *top;
+		return physicalScrollTop(*top);
 	} else {
 		_history->calculateFirstUnreadMessage();
 		return countAutomaticScrollTop();
@@ -1242,6 +1287,7 @@ int HistoryWidget::countAutomaticScrollTop() {
 	if (const auto unread = _history->firstUnreadMessage()) {
 		const auto firstUnreadTop = _list->itemTop(unread);
 		const auto possibleUnreadBarTop = _scroll->scrollTopMax()
+			+ topBarsOverlap()
 			+ HistoryView::UnreadBar::height()
 			- HistoryView::UnreadBar::marginTop();
 		if (firstUnreadTop < possibleUnreadBarTop) {
@@ -1344,7 +1390,7 @@ void HistoryWidget::updateHistoryGeometry(
 	bars.add(_paysStatus ? _paysStatus->bar().height() : 0);
 	bars.add(_contactStatus ? _contactStatus->bar().height() : 0);
 	bars.add(_businessBotStatus ? _businessBotStatus->bar().height() : 0);
-	newScrollHeight -= bars.height();
+	newScrollHeight -= bars.height() - topBarsOverlap();
 	// 输入区悬浮在列表底部之上，四周留白透出消息，只有胶囊本身遮挡。
 	const auto margin = st::historyComposeCapsuleMargin;
 	auto composeHeight = 0;
@@ -1404,13 +1450,25 @@ void HistoryWidget::updateHistoryGeometry(
 		composeHeight = 0;
 		capsule = QRect();
 	}
-	if (newScrollHeight - composeHeight <= 0) {
+	if (newScrollHeight - composeHeight - topBarsOverlap() <= 0) {
 		return;
 	}
 	// 列表占用胶囊上方一半留白，最近一条消息更贴近输入区。
 	const auto overlap = composeHeight ? (composeHeight - margin / 2) : 0;
 	const auto overlapChanged = (_composeOverlap != overlap);
 	_composeOverlap = overlap;
+	const auto topOverlap = topBarsOverlap();
+	const auto topOverlapChanged = (_lastTopBarsOverlap != topOverlap);
+	auto topShift = 0;
+	if (topOverlapChanged && _historyInited && !initial) {
+		const auto newScrollY = _topBars->y() + bars.height() - topOverlap;
+		topShift = _preserveScrollTop
+			? 0
+			: (newScrollY - _lastScrollAreaY)
+				+ (topOverlap - _lastTopBarsOverlap);
+		_topDelta = 0;
+	}
+	_lastTopBarsOverlap = topOverlap;
 	const auto wasScrollTop = _scroll->scrollTop();
 	const auto wasAtBottom = (wasScrollTop >= _scroll->scrollTopMax());
 	const auto needResize = (_scroll->width() != newScrollWidth)
@@ -1422,10 +1480,12 @@ void HistoryWidget::updateHistoryGeometry(
 	// on initial updateListSize we didn't put the _scroll->scrollTop
 	// correctly yet so visibleAreaUpdated() call will erase it
 	// with the new (undefined) value
-	if ((needResize || overlapChanged) && !initial) {
+	if ((needResize || overlapChanged)
+		&& !topOverlapChanged
+		&& !initial) {
 		visibleAreaUpdated();
 	}
-	if (needResize || overlapChanged || initial) {
+	if (needResize || overlapChanged || topOverlapChanged || initial) {
 		if (_autocomplete) {
 			_autocomplete->setBoundings(visibleScrollGeometry());
 		}
@@ -1473,12 +1533,14 @@ void HistoryWidget::updateHistoryGeometry(
 		newScrollTop = countAutomaticScrollTop();
 	} else {
 		newScrollTop = std::min(
-			_list->historyScrollTop(),
+			physicalScrollTop(_list->historyScrollTop()),
 			_scroll->scrollTopMax());
 		if (change.type == ScrollChangeAdd) {
-			newScrollTop += change.value;
+			newScrollTop += topOverlapChanged ? topShift : change.value;
 		} else if (change.type == ScrollChangeNoJumpToBottom) {
 			newScrollTop = wasScrollTop;
+		} else if (topOverlapChanged) {
+			newScrollTop += topShift;
 		}
 	}
 	const auto toY = std::clamp(newScrollTop, 0, _scroll->scrollTopMax());
@@ -1532,7 +1594,7 @@ void HistoryWidget::revealItemsCallback() {
 
 		const auto newScrollTop = (wasAtBottom && !_history->unreadBar())
 			? countAutomaticScrollTop()
-			: _list->historyScrollTop();
+			: physicalScrollTop(_list->historyScrollTop());
 		const auto toY = std::clamp(newScrollTop, 0, _scroll->scrollTopMax());
 		synteticScrollToY(toY);
 	}

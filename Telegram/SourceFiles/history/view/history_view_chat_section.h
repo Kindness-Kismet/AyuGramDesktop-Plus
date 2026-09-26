@@ -611,6 +611,7 @@ private:
 
 	int _lastScrollTop = 0;
 	int _scrollTopDelta = 0;
+	int _topBarsOverlap = 0;
 	int _composeControlsTop = 0;
 	crl::time _lastUserScrolled = 0;
 

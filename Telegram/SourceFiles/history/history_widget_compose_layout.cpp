@@ -1306,7 +1306,7 @@ std::optional<bool> HistoryWidget::cornerButtonsDownShown() {
 			return false;
 		}
 		const auto top = _list->itemTop(unread);
-		return (top >= _scroll->scrollTop() + visibleScrollHeight());
+		return (top >= visibleScrollBottom());
 	};
 	if (haveUnreadBelowBottom(_history)
 		|| haveUnreadBelowBottom(_migrated)) {

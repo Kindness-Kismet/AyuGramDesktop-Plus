@@ -91,6 +91,7 @@ public:
 	void addTranslatedItems(not_null<TranslateTracker*> tracker);
 
 	[[nodiscard]] int height() const;
+	[[nodiscard]] int pinnedOverlayHeight() const;
 	[[nodiscard]] rpl::producer<int> heightValue() const;
 
 private:

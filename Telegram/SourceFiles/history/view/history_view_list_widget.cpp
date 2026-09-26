@@ -254,14 +254,14 @@ ListWidget::MouseState::MouseState(
 }
 
 template <ListWidget::EnumItemsDirection direction, typename Method>
-void ListWidget::enumerateItems(Method method) {
+void ListWidget::enumerateItems(Method method, int visibleTop) {
 	constexpr auto TopToBottom = (direction == EnumItemsDirection::TopToBottom);
 
 	// No displayed messages in this history.
 	if (_items.empty()) {
 		return;
 	}
-	if (_visibleBottom <= _itemsTop || _itemsTop + _itemsHeight <= _visibleTop) {
+	if (_visibleBottom <= _itemsTop || _itemsTop + _itemsHeight <= visibleTop) {
 		return;
 	}
 
@@ -276,7 +276,7 @@ void ListWidget::enumerateItems(Method method) {
 		? std::lower_bound(
 			beginning,
 			ending,
-			_visibleTop - collapseGapTotal,
+			visibleTop - collapseGapTotal,
 			[this](auto &elem, int top) {
 				return this->itemTop(elem) + elem->height() <= top;
 			})
@@ -330,7 +330,7 @@ void ListWidget::enumerateItems(Method method) {
 		auto itembottom = itemtop + view->height();
 
 		if (TopToBottom) {
-			if (itembottom <= _visibleTop) {
+			if (itembottom <= visibleTop) {
 				if (++from == ending) {
 					break;
 				}
@@ -356,7 +356,7 @@ void ListWidget::enumerateItems(Method method) {
 				return;
 			}
 		} else {
-			if (itemtop <= _visibleTop) {
+			if (itemtop <= visibleTop) {
 				return;
 			}
 		}
@@ -375,7 +375,7 @@ void ListWidget::enumerateItems(Method method) {
 }
 
 template <typename Method>
-void ListWidget::enumerateUserpics(Method method) {
+void ListWidget::enumerateUserpics(Method method, int visibleTop) {
 	// Find and remember the top of an attached messages pack
 	// -1 means we didn't find an attached to next message yet.
 	int lowestAttachedItemTop = -1;
@@ -425,7 +425,8 @@ void ListWidget::enumerateUserpics(Method method) {
 		return true;
 	};
 
-	enumerateItems<EnumItemsDirection::TopToBottom>(userpicCallback);
+	enumerateItems<EnumItemsDirection::TopToBottom>(
+		userpicCallback, visibleTop);
 }
 
 template <typename Method>
@@ -475,7 +476,8 @@ void ListWidget::enumerateDates(Method method) {
 		return true;
 	};
 
-	enumerateItems<EnumItemsDirection::BottomToTop>(dateCallback);
+	enumerateItems<EnumItemsDirection::BottomToTop>(
+		dateCallback, _visibleTop);
 }
 
 template <typename Method>
@@ -534,7 +536,8 @@ void ListWidget::enumerateForumThreadBars(Method method) {
 		return true;
 	};
 
-	enumerateItems<EnumItemsDirection::BottomToTop>(barCallback);
+	enumerateItems<EnumItemsDirection::BottomToTop>(
+		barCallback, _visibleTop);
 }
 
 ListWidget::ListWidget(
@@ -1101,7 +1104,7 @@ std::optional<int> ListWidget::scrollTopForView(
 			}
 		}
 	}
-	const auto top = view->y();
+	const auto top = itemTop(view);
 	const auto height = view->height();
 	const auto available = _visibleBottom - _visibleTop;
 	const auto heightLeft = (available - height);
@@ -1541,6 +1544,12 @@ void ListWidget::visibleTopBottomUpdated(
 		int visibleTop,
 		int visibleBottom) {
 	if (!(visibleTop < visibleBottom)) {
+		_visibleTop = _visibleBottom = visibleTop;
+		markReadMetricsStale();
+		if (_readMetricsTracker) {
+			_readMetricsTracker->setScreenActive(false);
+		}
+		session().data().itemVisibilitiesUpdated();
 		return;
 	}
 
@@ -1581,7 +1590,9 @@ void ListWidget::applyUpdatedScrollState() {
 }
 
 bool ListWidget::atNewestEdge() const {
-	return _inverted ? (_visibleTop == 0) : (_visibleBottom == height());
+	return _inverted
+		? (_visibleTop == _topPadding)
+		: (_visibleBottom == height());
 }
 
 void ListWidget::updateVisibleTopItem() {
@@ -2756,6 +2767,10 @@ void ListWidget::resizeToWidth(int newWidth, int minHeight) {
 	}
 }
 
+bool ListWidget::setTopPadding(int padding) {
+	return std::exchange(_topPadding, padding) != padding;
+}
+
 void ListWidget::startItemRevealAnimations() {
 	for (const auto &view : base::take(_itemRevealPending)) {
 		if (const auto height = view->height()) {
@@ -2798,7 +2813,9 @@ void ListWidget::startMessageSendingAnimation(
 		if (!view) {
 			return std::nullopt;
 		}
-		const auto additional = !_visibleTop ? view->height() : 0;
+		const auto additional = (_visibleTop == _topPadding)
+			? view->height()
+			: 0;
 		return mapToGlobal(QPoint(0, itemTop(view) - additional));
 	});
 
@@ -2900,7 +2917,8 @@ int ListWidget::resizeGetHeight(int newWidth) {
 		if (aboutAboveHistory) {
 			about->top = std::min(
 				_itemsTop - about->height,
-				std::max(0, (_minHeight - about->height) / 2));
+				std::max(_topPadding,
+					(_minHeight + _topPadding - about->height) / 2));
 		} else {
 			about->top = std::max(
 				std::max(0, (_minHeight - about->height) / 2),
@@ -2997,6 +3015,7 @@ Ui::ChatPaintContext ListWidget::preparePaintContext(
 bool ListWidget::markingContentsRead() const {
 	return _showFinished
 		&& !_refreshingViewer
+		&& (_visibleTop < _visibleBottom)
 		&& _delegate->listMarkingContentRead();
 }
 
@@ -3178,7 +3197,10 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 		if (_translateTracker) {
 			_translateTracker->add(view);
 		}
-		if (metricsStale && height > 0) {
+		if (metricsStale
+			&& height > 0
+			&& top + height > _visibleTop
+			&& top < _visibleBottom) {
 			_readMetricsTracker->push(item, top, height);
 		}
 		const auto isSponsored = item->isSponsored();
@@ -3186,12 +3208,16 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 			&& item->isRegular();
 		const auto withReaction = context.reactionInfo
 			&& item->hasUnreadReaction();
+		const auto readable = (_visibleTop < _visibleBottom);
 		const auto yShown = [&](int y) {
-			return (_visibleBottom >= y && _visibleTop <= y);
+			return readable
+				&& (_visibleBottom >= y && _visibleTop <= y);
 		};
-		const auto markShown = (_context != Context::ChatPreview)
+		const auto markShown = readable
+			&& (_context != Context::ChatPreview)
 			&& (isSponsored
 				? view->markSponsoredViewed(_visibleBottom - top)
+					&& !view->markSponsoredViewed(_visibleTop - top)
 				: withReaction
 				? yShown(top + context.reactionInfo->position.y())
 				: isUnread
@@ -3327,7 +3353,7 @@ void ListWidget::paintUserpics(
 			}
 		}
 		return true;
-	});
+	}, _visibleTop - _topPadding);
 }
 
 ListWidget::VideoUserpic *ListWidget::validateVideoUserpic(
@@ -3350,7 +3376,8 @@ ListWidget::VideoUserpic *ListWidget::validateVideoUserpic(
 			if (userpicTop >= _visibleBottom) {
 				return false;
 			}
-			if (userpicTop + st::msgPhotoSize > _visibleTop) {
+			if (userpicTop + st::msgPhotoSize
+				> _visibleTop - _topPadding) {
 				if (const auto from = view->data()->displayFrom()) {
 					if (from == peer) {
 						rtlupdate(
@@ -3362,7 +3389,7 @@ ListWidget::VideoUserpic *ListWidget::validateVideoUserpic(
 				}
 			}
 			return true;
-		});
+		}, _visibleTop - _topPadding);
 	};
 	return _videoUserpics.emplace(peer, std::make_unique<VideoUserpic>(
 		peer,
@@ -5105,7 +5132,10 @@ void ListWidget::mouseActionUpdate() {
 	auto mousePosition = mapFromGlobal(_mousePosition);
 	auto point = QPoint(
 		std::clamp(mousePosition.x(), 0, width()),
-		std::clamp(mousePosition.y(), _visibleTop, _visibleBottom));
+		std::clamp(
+			mousePosition.y(),
+			_visibleTop - _topPadding,
+			_visibleBottom));
 
 	const auto reactionState = _reactionsManager
 		? _reactionsManager->buttonTextState(point)
@@ -5326,7 +5356,7 @@ void ListWidget::mouseActionUpdate() {
 							return false;
 						}
 						return true;
-					});
+					}, _visibleTop - _topPadding);
 				}
 			}
 		}
@@ -5562,10 +5592,12 @@ int ListWidget::countItemsTop() const {
 	const auto full = _itemsHeight
 		+ collapseGapsTotal()
 		+ countBottomPadding();
-	const auto result = (_minHeight > full) ? (_minHeight - full) : 0;
+	const auto result = std::max(
+		_topPadding,
+		(_minHeight > full) ? (_minHeight - full) : 0);
 	const auto about = aboutView();
 	return (about && about->view() && about->aboveHistory())
-		? std::max(result, about->height)
+		? std::max(result, _topPadding + about->height)
 		: result;
 }
 

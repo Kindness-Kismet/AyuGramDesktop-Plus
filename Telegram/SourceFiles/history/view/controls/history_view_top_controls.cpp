@@ -358,6 +358,12 @@ int TopControls::height() const {
 	return _height.current();
 }
 
+int TopControls::pinnedOverlayHeight() const {
+	return (_pinnedBar || _hidingPinnedBar) && _pinnedBarHeight > 0
+		? height()
+		: 0;
+}
+
 rpl::producer<int> TopControls::heightValue() const {
 	return _height.value();
 }
@@ -1179,6 +1185,11 @@ void TopControls::updateLayout() {
 	const auto height = stack.height();
 	_topBars->resize(innerWidth, height);
 	_wrap->resize(_width, height);
+	if (pinnedBar && _pinnedBarHeight > 0) {
+		_wrap->setMask(stack.cardRegion(innerWidth).translated(margin, 0));
+	} else {
+		_wrap->clearMask();
+	}
 	_height = height;
 }
 

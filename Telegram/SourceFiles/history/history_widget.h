@@ -167,6 +167,7 @@ public:
 	void windowShown();
 	// 消息列表底部被悬浮输入区遮住的高度。
 	[[nodiscard]] int composeOverlap() const;
+	[[nodiscard]] int topBarsOverlap() const;
 	[[nodiscard]] bool markingMessagesRead() const;
 	[[nodiscard]] bool markingContentsRead() const;
 	bool skipItemRepaint();
@@ -714,6 +715,9 @@ private:
 		FieldHistoryAction fieldHistoryAction = FieldHistoryAction::Clear);
 	[[nodiscard]] int fieldHeight() const;
 	[[nodiscard]] int visibleScrollHeight() const;
+	[[nodiscard]] int visibleScrollTop() const;
+	[[nodiscard]] int visibleScrollBottom() const;
+	[[nodiscard]] int physicalScrollTop(int visibleTop) const;
 	[[nodiscard]] QRect visibleScrollGeometry() const;
 	void updateScrollMask(QRect capsule);
 	[[nodiscard]] bool fieldOrDisabledShown() const;
@@ -881,6 +885,8 @@ private:
 	object_ptr<HistoryView::TopBarWidget> _topBar;
 	object_ptr<Ui::ElasticScroll> _scroll;
 	int _composeOverlap = 0;
+	int _lastTopBarsOverlap = 0;
+	int _lastScrollAreaY = 0;
 	QPointer<HistoryInner> _list;
 	History *_migrated = nullptr;
 	History *_history = nullptr;
